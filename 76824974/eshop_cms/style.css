@@ -1,0 +1,48 @@
+textarea {
+    width: 100%;
+    font-size: 30px;
+}
+input {
+    width: 100%;
+    font-size: 30px;
+    height: 35px;
+}
+body {
+    padding: 0cm 1cm;
+    font-size: 30px;
+}
+.buttons {
+    text-align: center;
+}
+table {
+    border-style: solid none;
+    width: 100%;
+}
+td.article-name {
+    width: 100%;
+}
+td.button {
+    padding-left: 1cm;
+}
+#pageCount {
+    font-size: 20px;
+}
+.show-button {
+    color: deepskyblue;
+}
+.edit-button {
+    color: deepskyblue;
+}
+.delete-button {
+    color: red;
+    padding-left: 1cm;
+}
+#editButton {
+    background-color: dodgerblue;
+}
+#saveButton {
+    background-color: greenyellow;
+}
+#backButton {
+    background-color: red;
+}
