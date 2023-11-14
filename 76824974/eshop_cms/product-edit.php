@@ -17,7 +17,7 @@ try {
     <form action="#"  enctype="multipart/form-data">
         <label for="name">Name: </label>
         <input type="hidden" id="add_time"  value="<?php echo $product->add_time?>">
-        <input type="text" id="name" name="name" required maxlength="<?php echo NAME_MAX_LENGTH?>" value="<?php echo $product->name?>"><br>
+        <input type="text" id="name" required maxlength="<?php echo NAME_MAX_LENGTH?>" value="<?php echo $product->name?>"><br>
         <p id="last modified">Added time: <?php echo $product->add_time?></p>
         <label for="kategory">Kategory</label><br>
         <input type="text" id="kategory" name="kategory" value="<?php echo $product->kategory?>"><br>
@@ -50,7 +50,7 @@ try {
         </div>
     </form>
 <script>    
-    console.log("tadyta stranka");
+    //console.log("tadyta stranka");
     var nameElement = document.getElementById("name");
     var kategoryElement = document.getElementById("kategory");
     var descriptionElement = document.getElementById("description");
@@ -179,7 +179,7 @@ try {
 
     //https://blog.51cto.com/zhezhebie/5445075 - can't name function as save()
     async function save_() {
-        console.log("addTimeElement,",addTimeElement.value)
+        //console.log("addTimeElement,",addTimeElement.value)
 
         await fetch('<?php echo APP_DIRECTORY ?>product-save/<?php echo $page["id"]?>', {
             method: "POST",

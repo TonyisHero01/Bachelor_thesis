@@ -1,7 +1,7 @@
 <?php
 require_once "constants.php";
 require_once "db_config.php";
-require_once "index.php"
+require_once "index.php";
 ?>
 <!DOCTYPE html>
 <html>
@@ -131,27 +131,6 @@ require_once "index.php"
                 submitElement.setAttribute("disabled", "disabled");
             }
         }
-        /*
-        async function create() {
-            console.log("funguje create");
-            var response = await fetch("<?php echo APP_DIRECTORY?>product-create/",{
-                method: "POST",
-                headers: {
-                    'content-type' : 'application/json'
-                },
-                body: JSON.stringify({
-                    "name" : nameElement.value,
-                    "number_in_stock" :numberInStockElement.value,
-                    "add_time" : "<?php echo date("H:i:s d.m.Y") ?>",
-                    "price" :priceElement.value
-                })
-            });
-            //console.log(await response.text());
-            var id = (await response.json())["id"];
-            console.log(id);
-            //{id:1}
-            window.location.href = "<?php echo APP_DIRECTORY?>product-edit/" + id;
-        }*/
         async function create() {
             console.log("funguje create");
             console.log("<?php echo APP_DIRECTORY?>product-create/");

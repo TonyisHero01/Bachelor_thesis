@@ -12,16 +12,23 @@ if ($conn->connect_error) {
     exit();
 }
 $database = new Database("Product", $conn);
+$userDB = new Database("User", $conn);
 //echo var_dump($_GET);
 
 $page = parsePage($_GET["page"]);
 //echo "Hello";
 
-
+//echo $page["action"];
 switch ($page["action"]) {
+    case "login":
+        require_once "./admin_login.php";
+        break;
+    case "login-check":
+        require_once "./login-check.php";
+        break;
     case "product":
-
-        require_once "./product-page.php";
+        //require_once "./product-page.php";
+        require_once "./product.php";
         break;
     case "products": 
         require_once "./products.php";
@@ -54,7 +61,7 @@ function parsePage($page) {
         }
     }
     else {
-        if ($action != "products") {
+        if ($action != "login") {
             $action = null;
         }
         $id = null;

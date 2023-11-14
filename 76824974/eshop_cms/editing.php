@@ -3,11 +3,25 @@ class Database {
     public $tableName;
     private $conn;
 
+    
     function __construct($tableName, $conn) {
         $this->tableName = $tableName;
         $this->conn = $conn;
     }
-    function containsId($id): bool {
+    function check_login($username, $password) {
+        $stmt = $this->conn->prepare("SELECT * FROM User WHERE username = ? AND password = ?");
+        $stmt->bind_param("ss", $username, $password);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+        if ($result->num_rows == 1) {
+            [$username, $password, $position, $is_client] = $result->fetch_row();
+            return new Login_Info($username, $password, $position, $is_client);
+        }
+        
+        return false;
+    }
+    function contains_id($id): bool {
         $stmt = $this->conn->prepare("SELECT COUNT(*) FROM $this->tableName WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
@@ -15,7 +29,7 @@ class Database {
         $stmt->close();
         return $exists;
     }
-    function containsName($name): bool {
+    function contains_name($name): bool {
         $stmt = $this->conn->prepare("SELECT COUNT(*) FROM $this->tableName WHERE name = ?");
         $stmt->bind_param("s", $name);
         $stmt->execute();
@@ -33,7 +47,7 @@ class Database {
         }
     }
     public function get_product_by_id($product_id): Product {
-        if (!$this->containsId($product_id)) {
+        if (!$this->contains_id($product_id)) {
             throw new MissingIdException();
         }
         $stmt = $this->conn->prepare("SELECT * FROM $this->tableName WHERE id = ?");
@@ -47,7 +61,7 @@ class Database {
         return $product;
     }
     public function get_product_by_name($product_name): Product {
-        if (!$this->containsName($product_name)) {
+        if (!$this->contains_name($product_name)) {
             throw new MissingIdException();
         }
         $stmt = $this->conn->prepare("SELECT * FROM $this->tableName WHERE name = ?");
@@ -76,7 +90,7 @@ class Database {
     }
     public function edit($product) {
         //true false
-        if (!$this->containsId($product->id)) {
+        if (!$this->contains_id($product->id)) {
             throw new MissingIdException();
         }
         elseif ($product->name == "" || strlen($product->name) > NAME_MAX_LENGTH || strlen($product->content) > CONTENT_MAX_LENGTH) {
@@ -91,7 +105,7 @@ class Database {
         $stmt->close();
     }
     public function delete($id) {
-        if (!$this->containsId($id)) {
+        if (!$this->contains_id($id)) {
             throw new MissingIdException();
         }
         $stmt = $this->conn->prepare("DELETE FROM $this->tableName WHERE id = ?");
