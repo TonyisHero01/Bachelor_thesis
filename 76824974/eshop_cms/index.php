@@ -1,6 +1,5 @@
 <?php
-
-require_once "db_config.php";
+require_once "./config/db_config.php";
 require_once "constants.php";
 require_once "editing.php";
 require_once "product.php";
@@ -13,12 +12,9 @@ if ($conn->connect_error) {
 }
 $database = new Database("Product", $conn);
 $userDB = new Database("User", $conn);
-//echo var_dump($_GET);
 
 $page = parsePage($_GET["page"]);
-//echo "Hello";
 
-//echo $page["action"];
 switch ($page["action"]) {
     case "login":
         require_once "./admin_login.php";
@@ -27,7 +23,6 @@ switch ($page["action"]) {
         require_once "./login-check.php";
         break;
     case "product":
-        //require_once "./product-page.php";
         require_once "./product.php";
         break;
     case "products": 
@@ -61,7 +56,7 @@ function parsePage($page) {
         }
     }
     else {
-        if ($action != "login") {
+        if ($action != "products") {
             $action = null;
         }
         $id = null;
@@ -69,5 +64,3 @@ function parsePage($page) {
     $result = ["action" => $action, "id" => $id];
     return $result;
 }
-
-//echo "Hello";

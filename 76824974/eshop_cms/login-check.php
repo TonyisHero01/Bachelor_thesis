@@ -5,15 +5,12 @@ $inputJSON = file_get_contents('php://input');
 $input = json_decode($inputJSON, TRUE);
 $username = $input["username"];
 $password = $input["password"];
-//echo "false";
 try {
     $login_info = $userDB->check_login($username, $password);
-    
 } catch (WrongFormatException $wfe) {
     http_response_code(400);
 }
 if ($login_info == false) {
-    //echo "false";
     http_response_code(400);
 }
 

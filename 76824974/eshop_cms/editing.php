@@ -2,7 +2,6 @@
 class Database {
     public $tableName;
     private $conn;
-
     
     function __construct($tableName, $conn) {
         $this->tableName = $tableName;
@@ -18,7 +17,6 @@ class Database {
             [$username, $password, $position, $is_client] = $result->fetch_row();
             return new Login_Info($username, $password, $position, $is_client);
         }
-        
         return false;
     }
     function contains_id($id): bool {
@@ -89,7 +87,6 @@ class Database {
         return $result->fetch_row()[0];
     }
     public function edit($product) {
-        //true false
         if (!$this->contains_id($product->id)) {
             throw new MissingIdException();
         }
