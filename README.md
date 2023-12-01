@@ -1,4 +1,5 @@
 ## Bachelor thesis 
 This is an E-shop program.  
 Now it has only function for product manager.  
-Enter your server address(for example: localhost:81) + /76824974/eshop_cms/login to access login page
+Enter your server address(for example: localhost:81) + /76824974/eshop_cms/login to access login page (This is not working now!!!)  
+(Now please enter your server address(for example: ;+localhost:81) + /76824974/eshop_cms/products to access main page)
