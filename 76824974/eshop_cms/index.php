@@ -3,6 +3,7 @@ require_once "./config/db_config.php";
 require_once "constants.php";
 require_once "editing.php";
 require_once "product.php";
+require_once "login_info.php";
 define("ACTIONS_WITH_ID", ["product", "product-edit", "product-save", "product-delete", "product-create"]);
 
 $conn = new mysqli($db_config["server"], $db_config["login"], $db_config["password"], $db_config["database"]);
@@ -12,7 +13,7 @@ if ($conn->connect_error) {
 }
 $database = new Database("Product", $conn);
 $userDB = new Database("User", $conn);
-
+//echo $_GET["page"];
 $page = parsePage($_GET["page"]);
 
 switch ($page["action"]) {
@@ -46,7 +47,9 @@ switch ($page["action"]) {
 }
 
 function parsePage($page) {
+    //echo $page;
     $partsOfPage = explode("/", $page);
+    //echo var_dump($partsOfPage);
     $action = $partsOfPage[0];
     $result = [];
     if (in_array($action, ACTIONS_WITH_ID)) {
@@ -56,11 +59,12 @@ function parsePage($page) {
         }
     }
     else {
-        if ($action != "products") {
+        if ($action != "login" && $action != "products" && $action != "login-check") {
             $action = null;
         }
         $id = null;
     }
     $result = ["action" => $action, "id" => $id];
+    //echo var_dump($result);
     return $result;
 }

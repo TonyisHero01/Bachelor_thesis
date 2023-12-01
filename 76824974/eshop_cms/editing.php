@@ -19,6 +19,7 @@ class Database {
         }
         return false;
     }
+    
     function contains_id($id): bool {
         $stmt = $this->conn->prepare("SELECT COUNT(*) FROM $this->tableName WHERE id = ?");
         $stmt->bind_param("i", $id);
