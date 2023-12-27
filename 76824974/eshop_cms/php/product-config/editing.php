@@ -91,7 +91,7 @@ class Database {
         if (!$this->contains_id($product->id)) {
             throw new MissingIdException();
         }
-        elseif ($product->name == "" || strlen($product->name) > NAME_MAX_LENGTH || strlen($product->content) > CONTENT_MAX_LENGTH) {
+        elseif ($product->name == "" || strlen($product->name) > NAME_MAX_LENGTH || strlen($product->description) > CONTENT_MAX_LENGTH) {
             throw new WrongFormatException();
         }
         $name = htmlspecialchars($product->name);

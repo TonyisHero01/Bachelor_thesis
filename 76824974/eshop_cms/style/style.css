@@ -46,3 +46,6 @@ td.button {
 #backButton {
     background-color: red;
 }
+img[src=""] {
+    display: none;
+}

@@ -5,7 +5,7 @@ const NAME_MAX_LENGTH_Element = document.getElementById("NAME_MAX_LENGTH");
 const CONTENT_MAX_LENGTH_Element = document.getElementById("CONTENT_MAX_LENGTH");
 const APP_DIRECTORY_Element = document.getElementById("APP_DIRECTORY");
 const MAX_ARTICLES_COUNT_PER_PAGE_Element = document.getElementById("MAX_ARTICLES_COUNT_PER_PAGE");
-
+const LANGUAGE_Element = document.getElementById("language");
 const constants = {
     NAME_MAX_LENGTH: NAME_MAX_LENGTH_Element.getAttribute('data-name-max-length'),
     CONTENT_MAX_LENGTH: CONTENT_MAX_LENGTH_Element.getAttribute('data-content-max-length'),
@@ -33,6 +33,9 @@ function previousPage() {
 }
 
 function showPage() {
+    console.log(ids.length-1);
+    console.log(constants.MAX_ARTICLES_COUNT_PER_PAGE);
+    console.log((ids.length-1) / constants.MAX_ARTICLES_COUNT_PER_PAGE);
     let lastPageNumber = Math.trunc((ids.length-1) / constants.MAX_ARTICLES_COUNT_PER_PAGE);
     pageCountText.textContent = "Page Count " + (lastPageNumber+1);
     if (pageNumber == lastPageNumber+1) {
@@ -125,14 +128,16 @@ function show(id) {
     window.location.href = constants.APP_DIRECTORY + "product/" + id;
 }
 function edit(id) {
-    window.location.href = constants.APP_DIRECTORY + "product-edit/" + id;
+    window.location.href = constants.APP_DIRECTORY + "product-edit/" + id + "/" +LANGUAGE_Element.getAttribute("language-data");
 }
 function delete_(id) {
-    const response = fetch(constants.APP_DIRECTORY + "product-delete/" + id, {
+    fetch(constants.APP_DIRECTORY + "product-delete/" + id, {
         method: "DELETE"
     });
     const row = document.getElementById(id);
     row.remove();
+    id = id + ",";
     ids.splice(ids.indexOf(id), 1);
+    productIdsElement.setAttribute('data-product-ids', ids);
     showPage();
 }

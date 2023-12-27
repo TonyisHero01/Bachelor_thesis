@@ -5,9 +5,18 @@ try {
     http_response_code(404);
     exit();
 }
+$filePath = "locale/" . $page["language"] . ".json";
+
+$jsonData = file_get_contents($filePath);
+
+$decodedData = json_decode($jsonData, true);
 
 $html = file_get_contents("./html/product-edit_template.html");
+
+require_once "./php/locale-config/setting-language.php";
+
 $html = str_replace("{{APP_DIRECTORY}}",APP_DIRECTORY, $html);
+$html = str_replace("{{LANGUAGE}}", $page["language"], $html);
 $html = str_replace("{{PAGE_ID}}",$page["id"], $html);
 $html = str_replace("{{PRODUCT_ADD_TIME}}", $product->add_time, $html);
 $html = str_replace("{{NAME_MAX_LENGTH}}", NAME_MAX_LENGTH, $html);

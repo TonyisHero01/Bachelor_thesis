@@ -3,9 +3,10 @@
 <head>
     <title>product list</title>
     <link rel="stylesheet" type="text/css" href="{{APP_DIRECTORY}}/style/style.css">
+    <div id="language" language-data="{{LANGUAGE}}"></div>
 </head>
 <body>
-    <h1>Product List</h1>
+    <h1>{{PRODUCT_LIST_TITLE}}</h1>
     <table>
         {{PRODUCT_LIST}}
     </table>
@@ -15,10 +16,10 @@
     <div id="APP_DIRECTORY" data-app-directory='{{APP_DIRECTORY}}'></div>
     <div id="MAX_ARTICLES_COUNT_PER_PAGE" data-articles-count-per-page='{{MAX_ARTICLES_COUNT_PER_PAGE}}'></div>
     <div class="buttons">
-        <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
-        <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
+        <button id="previousPageButton" type="button" onclick="previousPage()">{{PREVIOUS_BUTTON_TITLE}}</button>
+        <button id="nextPageButton" type="button" onclick="nextPage()">{{NEXT_BUTTON_TITLE}}</button>
         <span id="pageCount">Page Count </span>
-        <button class="popup" onclick="openCreateForm()">Create Product</button>
+        <button class="popup" onclick="openCreateForm()">{{CREATE_PRODUCT_BUTTON_TITLE}}</button>
     </div>
 
     <div class="popuptext" id="myPopup" style="display: none;">
@@ -29,10 +30,10 @@
             <input type="text" id="number_in_stock" name="number_in_stock">
             <label for="price">Price in CZK</label>
             <input type="text" id="price" name="price">
-            <button type="button" id="createButton" onclick="create()" disabled>Create</button>
-            <button id="cancelButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+            <button type="button" id="createButton" onclick="create()" disabled>{{CREATE_BUTTON_TITLE}}</button>
+            <button id="cancelButton" type="button" onclick="cancelCreateForm()" style="display: none;">{{CANCEL_BUTTON_TITLE}}</button>
         </form>
     </div>
-    <script type="text/javascript" src="./js/products.js"></script>
+    <script type="text/javascript" src="{{APP_DIRECTORY}}/js/products.js"></script>
 </body>
 </html>

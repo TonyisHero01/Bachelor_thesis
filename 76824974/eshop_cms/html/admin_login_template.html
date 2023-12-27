@@ -5,8 +5,13 @@
     <link rel="stylesheet" type="text/css" href="{{APP_DIRECTORY}}/style/style.css">
 </head>
 <body>
+    SELECT LANGUAGE:
+    <form action="">
+        <select id="languages" name="languages">
+            {{LANGUAGE_OPTIONS}}
+        </select>
+    </form>
     <form action="#" enctype="multipart/form-data">
-
         <label for="username">Username: </label>
         <input type="text" id="username" name="username">
         <input type="password" id="password" name="password">

@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-require_once "./constants.php";
+require_once "constants.php";
 $inputJSON = file_get_contents('php://input');
 $input = json_decode($inputJSON, TRUE);
 $name = $input["name"];
