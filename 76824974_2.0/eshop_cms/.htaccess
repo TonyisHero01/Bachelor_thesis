@@ -1,0 +1,19 @@
+RewriteEngine On
+RewriteBase /76824974_2.0/eshop_cms/
+#RewriteBase /
+
+#RewriteCond %{REQUEST_URI} !index\.php
+#RewriteCond %{REQUEST_URI} !\.(html|css|jpg|jpeg|png|gif)$
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+?)/?$ index.php?page=$1 [L]
+
+#RewriteRule ^([-a-zA-Z0-9_/]+)$ /index.php?%{QUERY_STRING}&page=$1 [L]
+#RewriteRule ^(.*/)$ index.php?page=$1 [L]
+
+
+#RewriteRule ^(.*/)$ /index.php?page=$1 [R=301, L]
+#RewriteRule ^test-page$ /index.php?page=test [L]
+
+# neprepsat vsechno na index.php, pr html, obrazky css 
