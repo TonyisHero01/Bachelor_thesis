@@ -20,6 +20,7 @@ async function login_() {
     try {
         const responseData = await response.json();
         if (responseData.position == "product_manager") {
+            console.log("is product manager");
             window.location.href = APP_DIRECTORY_Element.getAttribute('data-app-directory')+"products"+"/"+languageElement.value;
         }
         else if (responseData.position == "translator") {

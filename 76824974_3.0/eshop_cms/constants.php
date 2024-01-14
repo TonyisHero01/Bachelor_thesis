@@ -1,7 +1,7 @@
 <?php
 define("NAME_MAX_LENGTH", 32);
 define('CONTENT_MAX_LENGTH', 1024);
-define('APP_DIRECTORY', "/76824974/eshop_cms/");
+define('APP_DIRECTORY', "/76824974_3.0/eshop_cms/");
 define('MAX_ARTICLES_COUNT_PER_PAGE', 10);
 define("HTML_TRANSLATION_ELEMENTS_TO_CHANGE", ["{{LANGUAGE}}", "{{USERNAME}}", "{{PASSWORD}}", "{{PRODUCT_NAME}}", "{{ADD_TIME}}", "{{KATEGORY}}", "{{DESCRIPTION}}", "{{NUMBER_IN_STOCK}}", "{{IMAGE}}", "{{WIDTH}}", "{{HEIGHT}}", "{{LENGTH}}", "{{WEIGHT}}", "{{MATERIAL}}", "{{COLOR}}", "{{PRICE}}", "{{EDIT}}", "{{DELETE}}", "{{CREATE_PRODUCT}}", "{{CREATE}}", "{{CANCEL}}", "{{NEXT}}", "{{PREVIOUS}}", "{{SAVE}}", "{{BACK_TO_PRODUCT_LIST}}", "{{LOGIN}}", "{{PRODUCT_LIST}}"]);
 define("ELEMENT_IDS", ["language", "username", "password", "product_name", "add_time", "kategory", "description", "number_in_stock", "image", "width", "height", "length", "weight", "material", "color", "price", "edit", "delete", "create_product", "create", "cancel", "next", "previous", "save", "back_to_product_list", "login", "product_list"]);
