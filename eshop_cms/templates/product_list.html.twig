@@ -1,0 +1,74 @@
+{# templates/product_list.html.twig #}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Product List</title>
+    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+</head>
+<body>
+    <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
+    <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
+    <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
+    <h1>Product List</h1>
+    <form id="search">
+        <label for="searchInput"></label>
+        <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search Product">
+        <button type="button" id="searchButton" onclick="search_()" >Search</button>
+    </form>
+    <table>
+        {% set productIds = '' %}
+        {% for product in products %}
+            {% set productIds = productIds ~ product.id ~ ',' %}
+            <tr id="{{ product.id }}" data-edit-route="{{ path('product_edit', {'id': product.id}) }}"> 
+            {# <tr id="{{ product.id }}" data-edit-route="{{ path('save_product') }}"> #}
+                </div>
+                <td class="product-name">{{ product.name }}</td> 
+                <td class="number-in-stock">{{ product.numberInStock }}</td> 
+                <td class="add-time">{{ product.addTime }}</td> 
+                <td class="price">{{ product.price }}</td> 
+                <td class="button"><span class="edit-button" type="button" onclick="edit({{ product.id }})">Edit</span></td>
+                <td class="button"><span class="delete-button" type="button" onclick="delete_({{ product.id }})">Delete</span></td>
+            </tr>
+        {% endfor %}
+        <div id="productIds" data-ids="{{ productIds }}" style="display: none;"></div>
+    </table>
+    
+    <div class="buttons">
+        <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
+        <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
+        <span id="pageCount">Page Count </span>
+        <button class="popup" onclick="openCreateForm()">Create Product</button>
+    </div>
+    
+     <div class="popuptext" id="myPopup" style="display: none;">
+        <div id="routeData" data-create-route="{{ path('create_product') }}" {# data-edit-route="{{ path('edit_product') }}" #}></div>
+        <form action="#" oninput="enableCreateButton()">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
+            <label for="number_in_stock">Number in stock</label>
+            <input type="text" id="number_in_stock" name="number_in_stock">
+            <label for="price">Price in CZK</label>
+            <input type="text" id="price" name="price">
+            <button type="button" id="createButton" onclick="create()" disabled>Create</button>
+            <button id="cancelButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+        </form>
+        
+        {#
+        {{ form_start(form) }}
+            {{ form_widget(form._token) }}
+            {{ form_row(form.name) }}
+            {{ form_row(form.number_in_stock) }}
+            {{ form_row(form.price) }}
+            
+            <button type="submit">Save</button>
+        {{ form_end(form) }}
+        #}
+    </div>
+    <script src="{{ asset('../assets/productList.js') }}"></script>
+    <script src="{{ asset('../assets/showPage.js') }}"></script>
+    <script src="{{ asset('../assets/delete.js') }}"></script>
+    <script src="{{ asset('../assets/search.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+{# templates/product_edit.html.twig #}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Product List</title>
+    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+</head>
+<body>
+    <h1>Product Edit</h1>
+    <div id=productId product-id-data={{ product.id }}></div>
+    <div id="routeData" data-product_list-route="{{ path('show_All_products') }}"></div>
+    <div id="body">
+    
+    <form action="#"  enctype="multipart/form-data">
+
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ product.name }}"><br>
+        <p id="last modified">Added time: </p>
+        <p id="add_time">{{ product.addTime }}</p>
+        
+        <label for="kategory">Kategory</label><br>
+        <input type="text" id="kategory" name="kategory" value="{{ product.kategory }}"><br>
+        <label for="description">Description</label><br>
+        <textarea id="description" name="description" rows="15" value="{{ product.description }}">{{ product.description }}</textarea><br>
+        <label for="number_in_stock">Number in stock</label><br>
+        <input type="text" id="number_in_stock" name="numberInStock" value="{{ product.numberInStock }}"><br>
+        <label for="image_url">Image</label><br>
+        <img border="0" src="{{ product.imageUrl }}" alt="{{ product.name }}" id="image" width="304" height="228"><br>
+
+        <input id="image_url" type="file">
+        <input type="hidden" id="image_path">
+        <label for="width">Width</label><br>
+        <input type="text" id="width" name="width" value="{{ product.width }}"><br>
+        <label for="height">Height</label>
+        <input type="text" id="height" name="height" value="{{ product.height }}">
+        <label for="length">Length</label>
+        <input type="text" id="length" name="length" value="{{ product.length }}"><br>
+        <label for="weight">Weight</label>
+        <input type="text" id="weight" name="weight" value="{{ product.weight }}"><br>
+        <label for="material">Material</label>
+        <input type="text" id="material" name="material" value="{{ product.material }}"><br>
+        <label for="color">Color</label>
+        <input type="text" id="color" name="color" value="{{ product.color }}"><br>
+        <label for="price">Price</label>
+        <input type="text" id="price" name="price" value="{{ product.price }}"><br>
+        <div class="buttons">
+        <button type="button" id="saveButton" onclick="save_()">Save</button>
+        <button type="button" id="backButton" onclick="backToProducts()">Back to products</button>
+        <script src="{{ asset('../assets/edit.js') }}"></script>
+    </form>
+    
+    {#
+    {{ form_start(form) }}
+        {{ form_row(form.name) }}
+        {{ form_row(form.kategory) }}
+        {{ form_row(form.description) }}
+        {{ form_row(form.number_in_stock) }}
+        {{ form_row(form.image_url) }}
+        {{ form_row(form.width) }}
+        {{ form_row(form.height) }}
+        {{ form_row(form.length) }}
+        {{ form_row(form.weight) }}
+        {{ form_row(form.material) }}
+        {{ form_row(form.color) }}
+        {{ form_row(form.price) }}
+        <button type="submit">Save</button>
+    {{ form_end(form) }}
+    #}
+    </div>
+</body>
+</html>

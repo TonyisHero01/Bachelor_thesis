@@ -3,3 +3,12 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+product_edit:
+    path: '/product_edit/{id}'
+    controller: App\Controller\ProductController::edit
+save_product:
+    path: '/product_save/{id}'
+    controller: App\Controller\ProductController::saveProduct
+save_image:
+    path: '/image_save/'
+    controller: App\Controller\ProductController::saveImage

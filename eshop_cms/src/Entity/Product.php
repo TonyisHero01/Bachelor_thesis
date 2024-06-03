@@ -52,6 +52,11 @@ class Product
     #[ORM\Column]
     private ?int $price = null;
 
+    public function __toString(): string
+    {
+        return $this->getName(); // 返回产品名称作为字符串
+    }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -219,4 +224,5 @@ class Product
 
         return $this;
     }
+    
 }

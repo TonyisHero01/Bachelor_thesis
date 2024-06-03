@@ -48,10 +48,33 @@ class ProductRepository extends ServiceEntityRepository
 
     public function findAllProducts(): array
     {
+        return $this->findBy([], ['id' => 'DESC']);
+    }
+
+    public function findProductById($id): ?Product
+    {
+        return $this->find($id);
+    }
+    public function findOneByMaxId(): ?Product
+    {
+        return $this->createQueryBuilder('p')
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+    public function deleteProduct(Product $product): void
+    {
         $entityManager = $this->getEntityManager();
-
-        $query = $entityManager->createQuery('SELECT p FROM App\Entity\Product p');
-
-        return $query->getResult();
+        $entityManager->remove($product);
+        $entityManager->flush();
+    }
+    public function findByIds(array $ids): array
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
     }
 }
