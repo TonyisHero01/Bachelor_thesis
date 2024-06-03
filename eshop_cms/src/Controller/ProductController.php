@@ -127,15 +127,15 @@ class ProductController extends AbstractController
             $name = $input["name"];
             $category = $input["kategory"];
             $description = $input["description"];
-            $number_in_stock = $input["number_in_stock"];
+            $number_in_stock = !empty($input["number_in_stock"]) ? intval($input["number_in_stock"]) : null;
             $image_url = $input["image_url"];
-            $width = $input["width"];
-            $height = $input["height"];
-            $length = $input["length"];
-            $weight = $input["weight"];
+            $width = !empty($input["width"]) ? intval($input["width"]) : null;
+            $height = !empty($input["height"]) ? intval($input["height"]) : null;
+            $length = !empty($input["length"]) ? intval($input["length"]) : null;
+            $weight = !empty($input["weight"]) ? intval($input["weight"]) : null;
             $material = $input["material"];
             $color = $input["color"];
-            $price = $input["price"];
+            $price = !empty($input["price"]) ? intval($input["price"]) : null;
 
             $product->setName($name);
             $product->setKategory($category);
