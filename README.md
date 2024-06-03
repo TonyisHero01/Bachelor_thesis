@@ -10,7 +10,7 @@ For detail of requirements please visit [requirements.txt](/eshop_cms/python_scr
 ### Get Started
 
 #### Database Configuration:
-Configure your database in file [.env](/.env) on line:
+Configure your database in file [.env](/eshop_cms/.env) on line:
 ``` 
 DATABASE_URL="mysql://<username>:<password>@<host>:<port>/<db_name>?serverVersion=5.7"
 ```
