@@ -27,3 +27,4 @@ $ symfony server:start
 ```
 
 Then visit main page: [http://127.0.0.1:8000/product_list](http://127.0.0.1:8000/product_list)
+For visiting employee registration page: [http://127.0.0.1:8000/register_employee](http://127.0.0.1:8000/register_employee)
