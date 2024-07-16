@@ -63,6 +63,8 @@ class ProductController extends AbstractController
         return new JsonResponse(['id' => $new_product_info['id']]);
     }
 
+    
+
     #[Route('/product/{id}', name: 'show_product')]
     public function show(EntityManagerInterface $entityManager, int $id): Response
     {

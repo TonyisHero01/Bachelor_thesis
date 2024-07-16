@@ -15,6 +15,11 @@ Configure your database in file [.env](/eshop_cms/.env) on line:
 DATABASE_URL="mysql://<username>:<password>@<host>:<port>/<db_name>?serverVersion=5.7"
 ```
 You cannot use other database because of python script.  
+#### Before First Running:
+Please run command:
+``` 
+$ composer install
+``` 
 #### Run Symfony server:
 After downloading run command in repository [eshop_cms](/eshop_cms/): 
 ``` 

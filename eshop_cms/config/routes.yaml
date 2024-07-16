@@ -12,3 +12,12 @@ save_product:
 save_image:
     path: '/image_save/'
     controller: App\Controller\ProductController::saveImage
+register_employee:
+    path: 'register_employee'
+    controller: App\Controller\EmployeeController::registerEmployee
+register_succesfull:
+    path: 'register_succesfull'
+    controller: App\Controller\EmployeeController::registerSuccessfullNotificate
+employee_save:
+    path: 'employee_save'
+    controller: App\Controller\EmployeeController::employeeSave
