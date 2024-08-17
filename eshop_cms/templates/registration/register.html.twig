@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Employee Registration{% endblock %}
+
+{% block body %}
+    <h1>Employee Registration</h1>
+
+    {{ form_start(registrationForm) }}
+    
+    {{ form_row(registrationForm.surname, {'label': 'Surname'}) }}
+    {{ form_row(registrationForm.name, {'label': 'Name'}) }}
+    {{ form_row(registrationForm.username, {'label': 'Username'}) }}
+    {{ form_row(registrationForm.plainPassword, {'label': 'Password'}) }}
+    {{ form_row(registrationForm.phoneNumber, {'label': 'Phone Number'}) }}
+    {{ form_row(registrationForm.email, {'label': 'Email'}) }}
+
+    <fieldset>
+        <legend>Choose Employee's Positions</legend>
+        {{ form_row(registrationForm.roles) }}
+    </fieldset>
+
+    <div class="buttons">
+        <button type="submit" class="btn">Register</button>
+        <button type="reset" class="btn">Cancel</button>
+    </div>
+
+    {{ form_end(registrationForm) }}
+{% endblock %}

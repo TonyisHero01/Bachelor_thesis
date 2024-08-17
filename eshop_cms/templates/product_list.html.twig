@@ -11,6 +11,9 @@
     <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
     <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
+    {% if app.user %}
+        {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+    {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Product List</h1>
     <form id="search">
         <label for="searchInput"></label>

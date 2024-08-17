@@ -19,6 +19,9 @@ final class Version20240226191549 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
+        if ($schema->hasTable('product')) {
+            return;
+        }
         // this up() migration is auto-generated, please modify it to your needs
         $this->addSql('CREATE TABLE product (id INT AUTO_INCREMENT NOT NULL, name VARCHAR(255) NOT NULL, kategory VARCHAR(255) DEFAULT NULL, description VARCHAR(255) DEFAULT NULL, number_in_stock INT NOT NULL, image_url VARCHAR(255) DEFAULT NULL, add_time VARCHAR(255) NOT NULL, width INT DEFAULT NULL, height INT DEFAULT NULL, length INT DEFAULT NULL, weight INT DEFAULT NULL, material VARCHAR(255) DEFAULT NULL, color VARCHAR(255) DEFAULT NULL, price INT NOT NULL, PRIMARY KEY(id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
     }
