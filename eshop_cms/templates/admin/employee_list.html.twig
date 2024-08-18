@@ -1,0 +1,50 @@
+{# templates/admin/employee_list.html.twig #}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Employee List</title>
+    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+</head>
+<body>
+    <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
+    <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
+    <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
+    {% if app.user %}
+        {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+    {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
+    <h1>Employee List</h1>
+    <button id="addEmployee" type="button" onclick="window.location.href='{{ path('app_register') }}';">Add Employee</button>
+    <!--
+    <form id="search">
+        <label for="searchInput"></label>
+        <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search employee">
+        <button type="button" id="searchButton" onclick="search_()" >Search</button>
+    </form>
+    -->
+    <table>
+        {% set employeeIds = '' %}
+        {% for employee in employees %}
+            {% set employeeIds = employeeIds ~ employee.id ~ ',' %}
+            <tr id="{{ employee.id }}" data-edit-route="{{ path('employee_edit', {'id': employee.id}) }}"> 
+            {# <tr id="{{ employee.id }}" data-edit-route="{{ path('save_employee') }}"> #}
+                </div>
+                <td class="employee-name">{{ employee.name }}</td> 
+                <td class="employee-surname">{{ employee.surname }}</td>
+                <td class="button"><span class="delete-button" type="button" onclick="delete_({{ employee.id }})">Delete</span></td>
+            </tr>
+        {% endfor %}
+        <div id="employeeIds" data-ids="{{ employeeIds }}" style="display: none;"></div>
+    </table>
+    
+    <div class="buttons">
+        <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
+        <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
+        <span id="pageCount">Page Count </span>
+    </div>
+    <script src="{{ asset('../assets/search.js') }}"></script>
+    <script src="{{ asset('../assets/showPage.js') }}"></script>
+    <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
+</body>
+</html>

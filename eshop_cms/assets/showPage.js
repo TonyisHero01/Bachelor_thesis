@@ -5,7 +5,7 @@ var pageCountText = document.getElementById("pageCount");
 var max_articles_count_per_page_value = parseInt(document.getElementById('MAX_ARTICLES_COUNT_PER_PAGE').getAttribute('max_articles_count_per_page_value'))
 
 var ids = document.getElementById('productIds').getAttribute('data-ids').split(',');
-
+var employeeIds = document.getElementById('employeeIds').getAttribute('data-ids').split(',');
 
 var previousPageButton = document.getElementById("previousPageButton");
 var nextPageButton = document.getElementById("nextPageButton");

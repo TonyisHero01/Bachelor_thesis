@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Form;
 
 use App\Entity\Employee;
@@ -7,13 +8,37 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
 class RegistrationFormType extends AbstractType
 {
+    private $tokenStorage;
+    private $authorizationChecker;
+
+    public function __construct(TokenStorageInterface $tokenStorage, AuthorizationCheckerInterface $authorizationChecker)
+    {
+        $this->tokenStorage = $tokenStorage;
+        $this->authorizationChecker = $authorizationChecker;
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $rolesChoices = [
+            'Warehouseman' => 'ROLE_WAREHOUSEMAN',
+            'Warehouse Manager' => 'ROLE_WAREHOUSE_MANAGER',
+            'Translator' => 'ROLE_TRANSLATOR',
+            'Event Manager' => 'ROLE_EVENT_MANAGER',
+            'Accounting' => 'ROLE_ACCOUNTING',
+        ];
+
+        // 如果当前用户是超级管理员，则显示 Administrator 选项
+        if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
+            $rolesChoices['Administrator'] = 'ROLE_ADMIN';
+        }
+
         $builder
             ->add('surname')
             ->add('name')
@@ -28,7 +53,6 @@ class RegistrationFormType extends AbstractType
                     new Length([
                         'min' => 6,
                         'minMessage' => 'Your password should be at least {{ limit }} characters',
-                        // max length allowed by Symfony for security reasons
                         'max' => 4096,
                     ]),
                 ],
@@ -36,14 +60,7 @@ class RegistrationFormType extends AbstractType
             ->add('phoneNumber')
             ->add('email')
             ->add('roles', ChoiceType::class, [
-                'choices' => [
-                    'Administrator' => 'ROLE_ADMIN',
-                    'Warehouseman' => 'ROLE_WAREHOUSEMAN',
-                    'Warehouse Manager' => 'ROLE_WAREHOUSE_MANAGER',
-                    'Translator' => 'ROLE_TRANSLATOR',
-                    'Event Manager' => 'ROLE_EVENT_MANAGER',
-                    'Accounting' => 'ROLE_ACCOUNTING',
-                ],
+                'choices' => $rolesChoices,
                 'multiple' => true,
                 'expanded' => true,
             ])

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Home</title>
+        <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+    </head>
+    <body>
+        <div class="content">
+            Hello {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+            <br>
+            <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
+        </div>
+        <div class="sidebar">
+            <h3>Your Roles</h3>
+            <ul>
+                {% if 'ROLE_SUPER_ADMIN' in roles %}
+                    <li><a href='{{ path('show_All_admins') }}'>{{ 'SUPER ADMIN' }}</a></li>
+                {% endif %}
+
+                {# 判断是否显示 ROLE_ADMIN #}
+                {% if 'ROLE_ADMIN' in roles %}
+                    <li><a href='{{ path('show_All_employees') }}'>{{ 'ADMINISTRATOR' }}</a></li>
+                {% endif %}
+
+                {# 判断是否显示 ROLE_WAREHOUSEMAN #}
+                {% if 'ROLE_WAREHOUSEMAN' in roles %}
+                    <li>{{ 'WAREHOUSEMAN' }}</li>
+                {% endif %}
+
+                {# 判断是否显示 ROLE_WAREHOUSE_MANAGER #}
+                {% if 'ROLE_WAREHOUSE_MANAGER' in roles %}
+                    <li><a href='{{ path('show_All_products') }}' >{{ 'WAREHOUSE MANAGER' }}</a></li>
+                {% endif %}
+
+                {# 判断是否显示 ROLE_TRANSLATOR #}
+                {% if 'ROLE_TRANSLATOR' in roles %}
+                    <li>{{ 'TRANSLATOR' }}</li>
+                {% endif %}
+
+                {# 判断是否显示 ROLE_EVENT_MANAGER #}
+                {% if 'ROLE_EVENT_MANAGER' in roles %}
+                    <li>{{ 'EVENT MANAGER' }}</li>
+                {% endif %}
+
+                {# 判断是否显示 ROLE_ACCOUNTING #}
+                {% if 'ROLE_ACCOUNTING' in roles %}
+                    <li>{{ 'ACCOUNTING' }}</li>
+                {% endif %}
+            </ul>
+        </div>
+    </body>
+</html>

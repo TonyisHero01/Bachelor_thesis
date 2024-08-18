@@ -38,7 +38,25 @@ class EmployeeRepository extends ServiceEntityRepository implements PasswordUpgr
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
+    public function findAllEmployees(): array
+    {
+        return $this->findBy([], ['id' => 'DESC']);
+    }
+    public function deleteEmployee(Employee $employee): void
+    {
+        $entityManager = $this->getEntityManager();
+        $entityManager->remove($employee);
+        $entityManager->flush();
+    }
+    public function findAllWithRoleAdmin(): array
+    {
+        $qb = $this->createQueryBuilder('e');
 
+        $qb->where('e.roles LIKE :role')
+           ->setParameter('role', '%"ROLE_ADMIN"%');
+
+        return $qb->getQuery()->getResult();
+    }
 //    /**
 //     * @return Employee[] Returns an array of Employee objects
 //     */

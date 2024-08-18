@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use App\Entity\Product;
 use App\Form\ProductType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,9 +28,11 @@ class ProductController extends AbstractController
         $this->params = $params;
     }
     #[Route('/product_create', name: 'create_product')]
-    public function createProduct(EntityManagerInterface $entityManager): Response
+    public function createProduct(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
-        
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $inputJSON = file_get_contents('php://input');
         $input = json_decode($inputJSON, TRUE);
         $name = $input["name"];
@@ -40,14 +43,11 @@ class ProductController extends AbstractController
         $product = new Product();
         $product->setName($name);
         $product->setNumberInStock($number_in_stock);
-        #$product->setAddTime(date("Y-m-d H:i:s"));
         $product->setAddTime($add_time);
         $product->setPrice($price);
 
-        // tell Doctrine you want to (eventually) save the Product (no queries yet)
         $entityManager->persist($product);
 
-        // actually executes the queries (i.e. the INSERT query)
         $entityManager->flush();
 
         $productRepository = $entityManager->getRepository(Product::class);
@@ -58,16 +58,17 @@ class ProductController extends AbstractController
             'number_in_stock' => $new_product->getNumberInStock(),
             'price' => $new_product->getPrice()
         ];
-        //return new Response(json_encode(["id" => $$new_product->getId()]));
-        //return $this->redirectToRoute('edit-product', $new_product_info);
         return new JsonResponse(['id' => $new_product_info['id']]);
     }
 
     
 
     #[Route('/product/{id}', name: 'show_product')]
-    public function show(EntityManagerInterface $entityManager, int $id): Response
+    public function show(EntityManagerInterface $entityManager, int $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $product = $entityManager->getRepository(Product::class)->findProductById($id);
         if(!$product)
         {
@@ -82,8 +83,12 @@ class ProductController extends AbstractController
     }
 
     #[Route('/product_list', name: 'show_All_products')]
-    public function showAllProducts(EntityManagerInterface $entityManager): Response
+    public function showAllProducts(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
+
         $products = $entityManager->getRepository(Product::class)->findAllProducts();
         $form = $this->createForm(ProductType::class, new Product());
 
@@ -92,24 +97,26 @@ class ProductController extends AbstractController
         foreach ($products as $product) 
         {
             $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getAddTime() . ' ' . $product->getPrice() . '</div>' . '<br>';
-
         }
+
         return $this->render('product_list.html.twig', [
             'products' => $products,
-            'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
-            'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
-            'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
+            'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
+            'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
+            'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
             'form' => $form
         ]);
     }
 
     #[Route('/product_edit/{id}', name: 'edit_product')]
-    public function edit(EntityManagerInterface $entityManager, $id, Request $request): Response
+    public function edit(EntityManagerInterface $entityManager, $id, Request $request, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $productRepository = $entityManager->getRepository(Product::class);
         $product = $productRepository->find($id);
         
-        // Render the form view
         return $this->render('product_edit.html.twig', [
             'product' => $product,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -118,8 +125,11 @@ class ProductController extends AbstractController
         ]);
     }
     #[Route('/product_save/{id}', name: 'save_product', methods: ['POST'])]
-    public function saveProduct(Request $request, EntityManagerInterface $entityManager, $id, LoggerInterface $logger): Response
+    public function saveProduct(Request $request, EntityManagerInterface $entityManager, $id, LoggerInterface $logger, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         try {
             $productRepository = $entityManager->getRepository(Product::class);
             $product = $productRepository->find($id);
@@ -152,25 +162,23 @@ class ProductController extends AbstractController
             $product->setColor($color);
             $product->setPrice($price);
 
-            // tell Doctrine you want to (eventually) save the Product (no queries yet)
             $entityManager->persist($product);
 
-            // actually executes the queries (i.e. the INSERT query)
             $entityManager->flush();
-            
-            // Render the form view
+
             return new JsonResponse(["status" => "Success"]);
         } catch (Exception $e) {
-            // Log the error
             $logger->error('An error occurred: ' . $e->getMessage());
-            // Optionally, you can log the stack trace as well
             $logger->error('Stack trace: ' . $e->getTraceAsString());
         }
         
     }
     #[Route('/product_delete/{id}', name: 'delete_product', methods: ['DELETE'])]
-    public function deleteProduct($id,  EntityManagerInterface $entityManager): Response
+    public function deleteProduct($id,  EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $productRepository = $entityManager->getRepository(Product::class);
         $product = $productRepository->find($id);
 
@@ -182,8 +190,11 @@ class ProductController extends AbstractController
         }
     }
     #[Route('/image_save', name: 'save_image')]
-    public function saveImage(Request $request, EntityManagerInterface $entityManager): Response
+    public function saveImage(Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $response = [];
 
         $file = $request->files->get('myFile');
@@ -211,8 +222,11 @@ class ProductController extends AbstractController
     }
     
     #[Route('/search', name: 'search', methods: ['POST'])]
-    public function search(EntityManagerInterface $entityManager, SessionInterface $session): Response
+    public function search(EntityManagerInterface $entityManager, SessionInterface $session, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $inputJSON = file_get_contents('php://input');
         $input = json_decode($inputJSON, TRUE);
         $query = $input["query"];
@@ -223,15 +237,15 @@ class ProductController extends AbstractController
         
         $session->set('search_results', $results);
 
-        // Redirect to the results route
-        //return $this->redirectToRoute('results');
         return new JsonResponse(["results" => $results]);
     }
     #[Route('/results', name: 'results')]
-    public function results(SessionInterface $session, EntityManagerInterface $entityManager): Response
+    public function results(SessionInterface $session, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
         $output = $session->get('search_results', '');
-        // This method will render the results.html.twig template
         $ids = array_column($output, 'product_id');
         $productRepository = $entityManager->getRepository(Product::class);
         $products = [];

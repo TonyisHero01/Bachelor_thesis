@@ -58,3 +58,24 @@ td.button {
 #backButton {
     background-color: red;
 }
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.sidebar {
+    width: 350px; /* 你可以根据需要调整宽度 */
+    height: 100%; /* 使侧边栏占据整个页面高度 */
+    position: fixed; /* 使其固定在页面左侧 */
+    top: 0;
+    left: 0;
+    background-color: #e0e0e0; /* 灰色背景色 */
+    padding: 20px; /* 内部间距 */
+    box-sizing: border-box; /* 包括内边距在宽度计算中 */
+}
+
+.content {
+    margin-left: 370px; /* 适配左侧导航栏的宽度 */
+    padding: 20px;
+}
