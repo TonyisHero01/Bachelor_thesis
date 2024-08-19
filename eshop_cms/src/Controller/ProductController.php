@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use App\Entity\Product;
+use App\Entity\Category;
 use App\Form\ProductType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -61,8 +62,6 @@ class ProductController extends AbstractController
         return new JsonResponse(['id' => $new_product_info['id']]);
     }
 
-    
-
     #[Route('/product/{id}', name: 'show_product')]
     public function show(EntityManagerInterface $entityManager, int $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
@@ -116,12 +115,15 @@ class ProductController extends AbstractController
         }
         $productRepository = $entityManager->getRepository(Product::class);
         $product = $productRepository->find($id);
-        
+
+        $categories = $entityManager->getRepository(Category::class)->findAllCategories();
+
         return $this->render('product_edit.html.twig', [
             'product' => $product,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
+            'categories' => $categories
         ]);
     }
     #[Route('/product_save/{id}', name: 'save_product', methods: ['POST'])]
@@ -137,17 +139,19 @@ class ProductController extends AbstractController
             $inputJSON = file_get_contents('php://input');
             $input = json_decode($inputJSON, TRUE);
             $name = $input["name"];
-            $category = $input["kategory"];
+            $category = $input["category"];
             $description = $input["description"];
             $number_in_stock = !empty($input["number_in_stock"]) ? intval($input["number_in_stock"]) : null;
             $image_url = $input["image_url"];
-            $width = !empty($input["width"]) ? intval($input["width"]) : null;
-            $height = !empty($input["height"]) ? intval($input["height"]) : null;
-            $length = !empty($input["length"]) ? intval($input["length"]) : null;
-            $weight = !empty($input["weight"]) ? intval($input["weight"]) : null;
+            $width = !empty($input["width"]) ? floatval($input["width"]) : null;
+            $height = !empty($input["height"]) ? floatval($input["height"]) : null;
+            $length = !empty($input["length"]) ? floatval($input["length"]) : null;
+            $weight = !empty($input["weight"]) ? floatval($input["weight"]) : null;
             $material = $input["material"];
             $color = $input["color"];
-            $price = !empty($input["price"]) ? intval($input["price"]) : null;
+            $price = !empty($input["price"]) ? floatval($input["price"]) : null;
+            $hidden = $input["hidden"];
+            $discount = !empty($input["discount"]) ? floatval($input["discount"]) : null;
 
             $product->setName($name);
             $product->setKategory($category);
@@ -161,7 +165,8 @@ class ProductController extends AbstractController
             $product->setMaterial($material);
             $product->setColor($color);
             $product->setPrice($price);
-
+            $product->setHidden($hidden);
+            $product->setDiscount($discount);
             $entityManager->persist($product);
 
             $entityManager->flush();
@@ -261,5 +266,23 @@ class ProductController extends AbstractController
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
         ]);
     }
-    
+    #[Route('/save_category', name: 'save_category')]
+    public function createCategory(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee_not_logged.html.twig', []);
+        }
+        $inputJSON = file_get_contents('php://input');
+        $input = json_decode($inputJSON, TRUE);
+        $name = $input["name"];
+
+        $category = new Category();
+        $category->setName($name);
+
+        $entityManager->persist($category);
+
+        $entityManager->flush();
+
+        return new JsonResponse([]);
+    }
 }

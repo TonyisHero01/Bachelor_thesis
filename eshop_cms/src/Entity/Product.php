@@ -32,16 +32,16 @@ class Product
     private ?string $add_time = null;
 
     #[ORM\Column(nullable: true)]
-    private ?int $width = null;
+    private ?float $width = null;
 
     #[ORM\Column(nullable: true)]
-    private ?int $height = null;
+    private ?float $height = null;
 
     #[ORM\Column(nullable: true)]
-    private ?int $length = null;
+    private ?float $length = null;
 
     #[ORM\Column(nullable: true)]
-    private ?int $weight = null;
+    private ?float $weight = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $material = null;
@@ -50,7 +50,13 @@ class Product
     private ?string $color = null;
 
     #[ORM\Column]
-    private ?int $price = null;
+    private ?float $price = null;
+
+    #[ORM\Column(type: 'boolean')]
+    private bool $hidden = false;
+
+    #[ORM\Column]
+    private float $discount = 100.0;
 
     public function __toString(): string
     {
@@ -141,48 +147,48 @@ class Product
         return $this;
     }
 
-    public function getWidth(): ?int
+    public function getWidth(): ?float
     {
         return $this->width;
     }
 
-    public function setWidth(?int $width): static
+    public function setWidth(?float $width): static
     {
         $this->width = $width;
 
         return $this;
     }
 
-    public function getHeight(): ?int
+    public function getHeight(): ?float
     {
         return $this->height;
     }
 
-    public function setHeight(?int $height): static
+    public function setHeight(?float $height): static
     {
         $this->height = $height;
 
         return $this;
     }
 
-    public function getLength(): ?int
+    public function getLength(): ?float
     {
         return $this->length;
     }
 
-    public function setLength(?int $length): static
+    public function setLength(?float $length): static
     {
         $this->length = $length;
 
         return $this;
     }
 
-    public function getWeight(): ?int
+    public function getWeight(): ?float
     {
         return $this->weight;
     }
 
-    public function setWeight(?int $weight): static
+    public function setWeight(?float $weight): static
     {
         $this->weight = $weight;
 
@@ -213,16 +219,38 @@ class Product
         return $this;
     }
 
-    public function getPrice(): ?int
+    public function getPrice(): ?float
     {
         return $this->price;
     }
 
-    public function setPrice(int $price): static
+    public function setPrice(float $price): static
     {
         $this->price = $price;
 
         return $this;
     }
-    
+
+    public function getHidden(): bool
+    {
+        return $this->hidden;
+    }
+
+    public function setHidden(bool $hidden): static
+    {
+        $this->hidden = $hidden;
+
+        return $this;
+    }
+    public function getDiscount(): ?float
+    {
+        return $this->discount;
+    }
+
+    public function setDiscount(float $discount): static
+    {
+        $this->discount = $discount;
+
+        return $this;
+    }
 }

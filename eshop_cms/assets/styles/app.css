@@ -27,14 +27,32 @@ body {
     text-align: center;
 }
 table {
-    border-style: solid none;
     width: 100%;
+    border-collapse: collapse;
+}
+
+#product_list_header {
+    border-bottom: 2px solid #000; /* 在表头下方添加边框 */
+}
+td, th {
+    padding: 10px;
+    text-align: left;
+    vertical-align: middle; /* 确保内容在单元格中垂直居中 */
 }
 td.article-name {
     width: 100%;
 }
-td.button {
-    padding-left: 1cm;
+td.editButton {
+    width: 50px; /* 设置固定宽度，确保对齐 */
+    padding-left: 20px;
+    padding-right: 50px;
+}
+.deleteButton {
+    width: 50px; /* 设置固定宽度，确保对齐 */
+    margin-left: 0px;
+}
+tr {
+    border: none; /* 取消行的默认边框 */
 }
 #pageCount {
     font-size: 20px;

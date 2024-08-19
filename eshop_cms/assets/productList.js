@@ -12,25 +12,46 @@ function edit(productId) {
 
 var popup = document.getElementById("myPopup");
 var cancelButton = document.getElementById("cancelButton");
+var cancelCategoryAddButton = document.getElementById("cancelCategoryAddButton");
+var categoryPopup = document.getElementById("myCategoryPopup");
 function openCreateForm() {
     popup.removeAttribute("style");
     cancelButton.removeAttribute("style");
 }
 
+function openCategoryAddForm() {
+    categoryPopup.removeAttribute("style");
+    cancelCategoryAddButton.removeAttribute("style");
+}
+
 function cancelCreateForm() {
     console.log("cancel");
     popup.setAttribute("style", "display: none;");
+    categoryPopup.setAttribute("style", "display: none;");
     cancelButton.setAttribute("style", "display: none;");
     //window.location.href = "<?php echo APP_DIRECTORY?>products;
 }
 var nameElement = document.getElementById("name");
 var numberInStockElement = document.getElementById("number_in_stock");
 var priceElement = document.getElementById("price");
+
+var categoryNameElement = document.getElementById("categoryName");
 function enableCreateButton () {
     console.log("called func");
     
     var submitElement = document.getElementById("createButton");
     if (nameElement.value != "" && nameElement.value.length <= 32 & numberInStockElement != "" & priceElement != "") {
+        submitElement.removeAttribute("disabled");
+    }
+    else {
+        submitElement.setAttribute("disabled", "disabled");
+    }
+}
+function enableCategoryAddButton() {
+    console.log("called func");
+    
+    var submitElement = document.getElementById("addCategoryButton");
+    if (categoryNameElement.value != "" && nameElement.value.length <= 32) {
         submitElement.removeAttribute("disabled");
     }
     else {
@@ -58,6 +79,26 @@ async function create() {
     var id = (await response.json())["id"];
     console.log(id);
     window.location.href = 'product_edit/' + id;
+    
+}
+
+async function createCategory() {
+    console.log("funguje create");
+    //var productListRoute = document.getElementById('routeData').getAttribute("data-edit-route")
+    var response = await fetch('save_category',{
+        method: "POST",
+        headers: {
+            'content-type' : 'application/json'
+        },
+        body: JSON.stringify({
+            "name" : categoryNameElement.value,
+        })
+    });
+    //console.log(await response.text());
+    
+    var id = (await response.json())["id"];
+    console.log(id);
+    window.location.href = 'product_list';
     
 }
 

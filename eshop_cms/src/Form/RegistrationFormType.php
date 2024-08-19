@@ -34,7 +34,6 @@ class RegistrationFormType extends AbstractType
             'Accounting' => 'ROLE_ACCOUNTING',
         ];
 
-        // 如果当前用户是超级管理员，则显示 Administrator 选项
         if ($this->authorizationChecker->isGranted('ROLE_SUPER_ADMIN')) {
             $rolesChoices['Administrator'] = 'ROLE_ADMIN';
         }

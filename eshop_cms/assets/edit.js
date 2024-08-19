@@ -1,6 +1,7 @@
 var idElement = document.getElementById("productId").getAttribute("product-id-data");
 var nameElement = document.getElementById("name");
-var kategoryElement = document.getElementById("kategory");
+//var kategoryElement = document.getElementById("kategory");
+var categoryElement = document.getElementById("categoryOptions")
 var descriptionElement = document.getElementById("description");
 var numberInStockElement = document.getElementById("number_in_stock");
 var imageURLElement = document.getElementById("image_url");
@@ -14,6 +15,10 @@ var colorElement = document.getElementById("color");
 var priceElement = document.getElementById("price");
 var imagePath =  document.getElementById("image_path");
 var date = new Date();
+var hideBox = document.getElementById('hideBox');
+var discountElement = document.getElementById("discount");
+//var hide = 0;
+
 const handleImageUpload = event => {
     const files = event.target.files
     const formData = new FormData();
@@ -90,6 +95,9 @@ function downloadBlob(blob, name = 'file.txt') {
 async function save_() {
     //console.log("addTimeElement,",addTimeElement.value)
     //var rote = document.getElementById('routeData').getAttribute("")
+    var hide = hideBox.checked ? 1 : 0;
+    var category = categoryElement.options[categoryElement.selectedIndex].text;
+
     await fetch("/product_save/" + idElement, {
         method: "POST",
         headers: {
@@ -97,7 +105,7 @@ async function save_() {
         },
         body: JSON.stringify({
             "name" : nameElement.value, 
-            "kategory" : kategoryElement.value,
+            "category" : category,
             "description" : descriptionElement.value,
             "number_in_stock" : numberInStockElement.value,
             "image_url" :imagePath.value ,
@@ -109,11 +117,13 @@ async function save_() {
             "weight" : weightElement.value,
             "material" : materialElement.value,
             "color" : colorElement.value,
-            "price" : priceElement.value
+            "price" : priceElement.value,
+            "hidden": hide,
+            "discount": discountElement.value
         })
     });
     console.log("name: " + nameElement.value)
-    console.log("kategory: " + kategoryElement.value)
+    console.log("kategory: " + category)
     console.log("description: " + descriptionElement.value)
     console.log("number_in_stock: " + numberInStockElement.value)
     console.log("image_url: " + imagePath.value)
