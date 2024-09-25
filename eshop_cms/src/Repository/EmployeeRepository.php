@@ -8,6 +8,7 @@ use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
+use Doctrine\ORM\Query\ResultSetMapping;
 
 /**
  * @extends ServiceEntityRepository<Employee>
@@ -50,12 +51,26 @@ class EmployeeRepository extends ServiceEntityRepository implements PasswordUpgr
     }
     public function findAllWithRoleAdmin(): array
     {
-        $qb = $this->createQueryBuilder('e');
+        $rsm = new ResultSetMapping();
+        $rsm->addEntityResult(Employee::class, 'e');
+        $rsm->addFieldResult('e', 'id', 'id');
+        $rsm->addFieldResult('e', 'username', 'username');
+        $rsm->addFieldResult('e', 'surname', 'surname');
+        $rsm->addFieldResult('e', 'name', 'name');
+        $rsm->addFieldResult('e', 'email', 'email');
+        $rsm->addFieldResult('e', 'phone_number', 'phone_number');
+        $rsm->addFieldResult('e', 'roles', 'roles');
+        
+        $sql = 'SELECT * FROM employee e WHERE e.roles @> :role';
+        
+        $entityManager = $this->getEntityManager();
+    
+        // 创建 Native Query
+        $query = $entityManager->createNativeQuery($sql, $rsm);
+        $query->setParameter('role', json_encode(['ROLE_ADMIN']));
 
-        $qb->where('e.roles LIKE :role')
-           ->setParameter('role', '%"ROLE_ADMIN"%');
+        return $query->getResult();
 
-        return $qb->getQuery()->getResult();
     }
 //    /**
 //     * @return Employee[] Returns an array of Employee objects

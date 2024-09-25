@@ -2,6 +2,7 @@ var searchInputElement = document.getElementById("searchInput");
 
 async function search_() {
     //TODO: rewrite function
+    console.log("clicked search")
     var response = await fetch('/search',{
         method: "POST",
         headers: {

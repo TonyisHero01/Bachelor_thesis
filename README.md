@@ -12,13 +12,17 @@ For detail of requirements please visit [requirements.txt](/eshop_cms/python_scr
 #### Database Configuration:
 Configure your database in file [.env](/eshop_cms/.env) on line:
 ``` 
-DATABASE_URL="mysql://<username>:<password>@<host>:<port>/<db_name>?serverVersion=5.7"
+DATABASE_URL="postgresql://app:!ChangeMe!@127.0.0.1:5432/app?serverVersion=16&charset=utf8"
 ```
 You cannot use other database because of python script.  
 #### Before First Running:
-Please run command:
+Please run command in eshop_cms repository:
 ``` 
 $ composer install
+``` 
+Then run the following command to set super administrator
+``` 
+$ php bin/console app:create-super-admin
 ``` 
 #### Run Symfony server:
 After downloading run command in repository [eshop_cms](/eshop_cms/): 

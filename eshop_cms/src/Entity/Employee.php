@@ -107,11 +107,14 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getRoles(): array
     {
+        /*
         $roles = $this->roles;
         // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
+        $roles[] = 'ROLE_WAREHOUSE_MANAGER';
 
         return array_unique($roles);
+        */
+        return array_unique($this->roles);
     }
 
     /**
@@ -141,7 +144,7 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getEmail(): string
     {
-        return $this->password;
+        return $this->email;
     }
 
     public function setEmail(string $email): static

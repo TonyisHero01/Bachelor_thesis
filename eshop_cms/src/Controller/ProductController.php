@@ -82,12 +82,23 @@ class ProductController extends AbstractController
     }
 
     #[Route('/product_list', name: 'show_All_products')]
-    public function showAllProducts(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    public function showAllProducts(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee_not_logged.html.twig', []);
         }
+        $user = $this->getUser();
 
+        if ($user) {
+            // 获取用户的角色，返回一个数组
+            $roles = $user->getRoles();
+            
+            // 打印用户角色以进行调试
+            $logger->info(json_encode($roles));  // 或使用日志记录
+        } else {
+            // 用户未登录
+            dump('用户未登录');
+        }
         $products = $entityManager->getRepository(Product::class)->findAllProducts();
         $form = $this->createForm(ProductType::class, new Product());
 
@@ -97,7 +108,7 @@ class ProductController extends AbstractController
         {
             $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getAddTime() . ' ' . $product->getPrice() . '</div>' . '<br>';
         }
-
+        $logger->info(json_encode($product_list));
         return $this->render('product_list.html.twig', [
             'products' => $products,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -225,45 +236,102 @@ class ProductController extends AbstractController
         }
         return new JsonResponse($response);
     }
-    
+    /**
+     * @Route("/search", name="search")
+     * @IsGranted("ROLE_WAREHOUSE_MANAGER")
+     */
     #[Route('/search', name: 'search', methods: ['POST'])]
-    public function search(EntityManagerInterface $entityManager, SessionInterface $session, AuthorizationCheckerInterface $authorizationChecker): Response
+    public function search(EntityManagerInterface $entityManager, SessionInterface $session, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
+        $logger->info('当前用户身份验证状态: ' . ($this->isGranted('IS_AUTHENTICATED_FULLY') ? '已认证' : '未认证'));
+        $logger->info('当前用户角色: ' . json_encode($this->getUser()->getRoles()));
+        
+        if (!$this->isGranted('ROLE_WAREHOUSE_MANAGER')) {
+            throw new AccessDeniedException('您没有权限执行此操作。');
+        }
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            $logger->info('未登录: ');
             return $this->render('employee_not_logged.html.twig', []);
+        }
+        $user = $this->getUser();
+        if ($user) {
+            $logger->info('用户身份认证: ' . json_encode([
+                'email' => $user->getEmail(),
+                'roles' => $user->getRoles(),
+            ]));
+        } else {
+            $logger->info('用户未找到。');
         }
         $inputJSON = file_get_contents('php://input');
         $input = json_decode($inputJSON, TRUE);
         $query = $input["query"];
-        $command = 'python ../python_scripts/tf-idf.py "' . $query . '"';
+        $command = 'python3 ../python_scripts/tf-idf.py "' . $query . '"';
         $output = shell_exec($command);
+        #$command = escapeshellcmd('python3 ../python_scripts/tf-idf.py "' . $query . '"');
+        #$output = shell_exec($command);
 
-        $results = json_decode($output, true);
-        
+        if ($output === null) {
+            $logger->error('命令执行失败: ' . $command);
+            return new JsonResponse(['error' => '命令执行失败'], 500);
+        }
+
+        preg_match_all('/"product_id":\s*(\d+)/', $output, $matches);
+
+        // 获取所有提取到的 product_id
+        $results = $matches[1];
         $session->set('search_results', $results);
-
+        $logger->info('Query：'.$query);
+        $logger->info('Python搜索结果：'.json_encode($results));
         return new JsonResponse(["results" => $results]);
     }
     #[Route('/results', name: 'results')]
     public function results(SessionInterface $session, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
+        // 检查用户是否登录
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee_not_logged.html.twig', []);
         }
-        $output = $session->get('search_results', '');
-        $ids = array_column($output, 'product_id');
-        $productRepository = $entityManager->getRepository(Product::class);
-        $products = [];
-        foreach($ids as $id) {
-            $product = $productRepository->find($id);
-            $products[] = $product;
+
+        // 从会话中获取 product_id 列表
+        $ids = $session->get('search_results', []);
+
+        // 确保 ids 不为空
+        if (empty($ids)) {
+            return $this->render('no_results.html.twig', []);
         }
 
+        // 使用 product_id 查询产品实体
+        $productRepository = $entityManager->getRepository(Product::class);
+        $products = $productRepository->findBy(['id' => $ids]);
+
+        // 根据 ids 的顺序对 products 进行排序
+        $productsById = [];
+        foreach ($products as $product) {
+            $productsById[$product->getId()] = $product;
+        }
+
+        // 按照 ids 的顺序重新排序
+        $sortedProducts = [];
+        foreach ($ids as $id) {
+            if (isset($productsById[$id])) {
+                $sortedProducts[] = $productsById[$id];
+            }
+        }
+        /*
         return $this->render('results.html.twig', [
-            'products' => $products,
+            'products' => $sortedProducts,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
+        ]);
+        */
+        $form = $this->createForm(ProductType::class, new Product());
+        return $this->render('product_list.html.twig', [
+            'products' => $sortedProducts,
+            'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
+            'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
+            'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
+            'form' => $form
         ]);
     }
     #[Route('/save_category', name: 'save_category')]

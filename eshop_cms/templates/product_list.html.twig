@@ -16,12 +16,13 @@
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Product List</h1>
+    
     <form id="search">
         <label for="searchInput"></label>
         <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search Product">
         <button type="button" id="searchButton" onclick="search_()" >Search</button>
     </form>
-
+    <script src="{{ asset('../assets/search.js') }}"></script>
     <table>
         <tr id="product_list_header">
             <td>Name</td>
@@ -82,6 +83,6 @@
     <script src="{{ asset('../assets/productList.js') }}"></script>
     <script src="{{ asset('../assets/showPage.js') }}"></script>
     <script src="{{ asset('../assets/delete.js') }}"></script>
-    <script src="{{ asset('../assets/search.js') }}"></script>
+
 </body>
 </html>
