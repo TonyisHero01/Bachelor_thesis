@@ -6,5 +6,5 @@ CREATE TABLE Employee (
     phone_number VARCHAR(255) NOT NULL,
     surname VARCHAR(180) NOT NULL,
     name VARCHAR(180) NOT NULL,
-    roles JSON NOT NULL
+    roles JSONB NOT NULL
 );
