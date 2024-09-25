@@ -1,11 +1,10 @@
 CREATE TABLE Employee (
-    id INT NOT NULL AUTO_INCREMENT,
+    id SERIAL PRIMARY KEY,
     username VARCHAR(180) NOT NULL,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     phone_number VARCHAR(255) NOT NULL,
     surname VARCHAR(180) NOT NULL,
     name VARCHAR(180) NOT NULL,
-    roles JSON NOT NULL,
-    PRIMARY KEY (id)
+    roles JSON NOT NULL
 );
