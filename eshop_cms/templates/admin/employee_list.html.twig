@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <title>Employee List</title>
     <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
@@ -24,18 +25,20 @@
     </form>
     -->
     <table>
-        {% set employeeIds = '' %}
+        {% set ids = '' %}
         {% for employee in employees %}
-            {% set employeeIds = employeeIds ~ employee.id ~ ',' %}
+            {% set ids = ids ~ employee.id ~ ',' %}
             <tr id="{{ employee.id }}" data-edit-route="{{ path('employee_edit', {'id': employee.id}) }}"> 
+            {#<tr>#}
             {# <tr id="{{ employee.id }}" data-edit-route="{{ path('save_employee') }}"> #}
                 </div>
                 <td class="employee-name">{{ employee.name }}</td> 
                 <td class="employee-surname">{{ employee.surname }}</td>
-                <td class="button"><span class="delete-button" type="button" onclick="delete_({{ employee.id }})">Delete</span></td>
+                <td class="editButton"><span class="edit-button" type="button" onclick="edit({{ employee.id }})"><i class="fa-regular fa-pen-to-square" style="color: green;"></i></span></td>
+                <td class="deleteButton"><span class="delete-button" type="button" onclick="delete_({{ employee.id }})"><i class="fas fa-trash" style="color: red;"></i></span></td>
             </tr>
         {% endfor %}
-        <div id="employeeIds" data-ids="{{ employeeIds }}" style="display: none;"></div>
+        <div id="ids" data-ids="{{ ids }}" style="display: none;"></div>
     </table>
     
     <div class="buttons">
@@ -46,5 +49,6 @@
     <script src="{{ asset('../assets/search.js') }}"></script>
     <script src="{{ asset('../assets/showPage.js') }}"></script>
     <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
+    <script src="{{ asset('../assets/employeeEdit.js') }}"></script>
 </body>
 </html>

@@ -39,9 +39,14 @@ class EmployeeRepository extends ServiceEntityRepository implements PasswordUpgr
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
-    public function findAllEmployees(): array
+    // 在 EmployeeRepository 中修改 findAllEmployees() 方法：
+    public function findAllEmployees()
     {
-        return $this->findBy([], ['id' => 'DESC']);
+        return $this->createQueryBuilder('e')
+                    ->where('e.id != :id')
+                    ->setParameter('id', 1)
+                    ->getQuery()
+                    ->getResult();
     }
     public function deleteEmployee(Employee $employee): void
     {
@@ -58,7 +63,7 @@ class EmployeeRepository extends ServiceEntityRepository implements PasswordUpgr
         $rsm->addFieldResult('e', 'surname', 'surname');
         $rsm->addFieldResult('e', 'name', 'name');
         $rsm->addFieldResult('e', 'email', 'email');
-        $rsm->addFieldResult('e', 'phone_number', 'phone_number');
+        $rsm->addFieldResult('e', 'phone_number', 'phoneNumber');
         $rsm->addFieldResult('e', 'roles', 'roles');
         
         $sql = 'SELECT * FROM employee e WHERE e.roles @> :role';

@@ -48,7 +48,7 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
      * @var string The mobile phone
      */
     #[ORM\Column]
-    private ?string $phone_number = null;
+    private ?string $phoneNumber = null;
 
     public function getId(): ?int
     {
@@ -156,12 +156,12 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getPhoneNumber(): string
     {
-        return $this->password;
+        return $this->phoneNumber;
     }
 
-    public function setPhoneNumber(string $phone_number): static
+    public function setPhoneNumber(string $phoneNumber): static
     {
-        $this->phone_number = $phone_number;
+        $this->phoneNumber = $phoneNumber;
 
         return $this;
     }

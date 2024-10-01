@@ -33,9 +33,9 @@
             <td>Edit</td>
             <td>Delete</td>
         </tr>
-        {% set productIds = '' %}
+        {% set ids = '' %}
         {% for product in products %}
-            {% set productIds = productIds ~ product.id ~ ',' %}
+            {% set ids = ids ~ product.id ~ ',' %}
             <tr id="{{ product.id }}" data-edit-route="{{ path('product_edit', {'id': product.id}) }}"> 
             {# <tr id="{{ product.id }}" data-edit-route="{{ path('save_product') }}"> #}
                 </div>
@@ -48,7 +48,7 @@
                 <td class="deleteButton"><span class="delete-button" type="button" onclick="delete_({{ product.id }})"><i class="fas fa-trash" style="color: red;"></i></span></td>
             </tr>
         {% endfor %}
-        <div id="productIds" data-ids="{{ productIds }}" style="display: none;"></div>
+        <div id="ids" data-ids="{{ ids }}" style="display: none;"></div>
     </table>
     
     <div class="buttons">

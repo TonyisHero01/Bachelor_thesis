@@ -16,5 +16,5 @@ register_succesfull:
     path: 'register_succesfull'
     controller: App\Controller\RegistrationController::registerSuccessfullNotificate
 home:
-    path: 'product_list'
-    controller: App\Controller\ProductController::showAllProducts
+    path: 'home'
+    controller: App\Controller\HomeController::home

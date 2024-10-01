@@ -1,5 +1,7 @@
-{# templates/product_list.html.twig #}
-
+{# templates/results.html.twig #}
+{% block search %}
+    {# 不显示搜索表单 #}
+{% endblock %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -12,6 +14,7 @@
     <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
     <h1>Product List</h1>
+    
     <table>
         {% set productIds = '' %}
         {% for product in products %}

@@ -13,7 +13,7 @@ window.onload = function() {
 
     // 确保元素存在并获取它们的值
     max_articles_count_per_page_value = parseInt(document.getElementById('MAX_ARTICLES_COUNT_PER_PAGE').getAttribute('max_articles_count_per_page_value'));
-    ids = document.getElementById('productIds').getAttribute('data-ids').split(',');
+    ids = document.getElementById('ids').getAttribute('data-ids').split(',');
 
     // 初始化页面展示
     showPage();
