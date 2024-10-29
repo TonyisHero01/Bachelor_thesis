@@ -17,9 +17,31 @@ DATABASE_URL="postgresql://app:!ChangeMe!@127.0.0.1:5432/app?serverVersion=16&ch
 You cannot use other database because of python script.  
 #### Before First Running:
 Please run command in eshop_cms repository:
+
+``` 
+$ sudo apt install php8.2-xml
+``` 
+``` 
+sudo apt install php8.2-pgsql
+``` 
 ``` 
 $ composer install
-``` 
+```
+In PostgreSQL:
+Create database eshop_cms and assign it to the user:
+```
+CREATE DATABASE your_dbname;
+GRANT ALL PRIVILEGES ON DATABASE your_dbname TO your_username;
+```
+Create tables using schema in DB repository   
+If the user needs permissions for all tables, you can run:
+```
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO your_user;
+```
+If the user needs to grant sequence privileges for all sequences:
+```
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO your_user;
+```
 Then run the following command to set super administrator
 ``` 
 $ php bin/console app:create-super-admin
