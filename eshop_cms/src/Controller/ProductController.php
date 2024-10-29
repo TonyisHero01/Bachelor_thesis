@@ -18,6 +18,7 @@ use App\Controller\ProductRepository;
 use Exception;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\Filesystem\Filesystem;
 function compareProductIds($a, $b) {
     return $a['similarity'] <=> $b['similarity'];
 }
@@ -28,6 +29,7 @@ class ProductController extends AbstractController
     {
         $this->params = $params;
     }
+    private $image_count = 1;
     #[Route('/product_create', name: 'create_product')]
     public function createProduct(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
@@ -119,7 +121,7 @@ class ProductController extends AbstractController
     }
 
     #[Route('/product_edit/{id}', name: 'edit_product')]
-    public function edit(EntityManagerInterface $entityManager, $id, Request $request, AuthorizationCheckerInterface $authorizationChecker): Response
+    public function edit(EntityManagerInterface $entityManager, $id, Request $request, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee_not_logged.html.twig', []);
@@ -128,7 +130,7 @@ class ProductController extends AbstractController
         $product = $productRepository->find($id);
 
         $categories = $entityManager->getRepository(Category::class)->findAllCategories();
-
+        //$logger->info($product->getImageUrl());
         return $this->render('product_edit.html.twig', [
             'product' => $product,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -143,32 +145,31 @@ class ProductController extends AbstractController
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee_not_logged.html.twig', []);
         }
+
         try {
             $productRepository = $entityManager->getRepository(Product::class);
             $product = $productRepository->find($id);
 
-            $inputJSON = file_get_contents('php://input');
-            $input = json_decode($inputJSON, TRUE);
-            $name = $input["name"];
-            $category = $input["category"];
-            $description = $input["description"];
-            $number_in_stock = !empty($input["number_in_stock"]) ? intval($input["number_in_stock"]) : null;
-            $image_url = $input["image_url"];
-            $width = !empty($input["width"]) ? floatval($input["width"]) : null;
-            $height = !empty($input["height"]) ? floatval($input["height"]) : null;
-            $length = !empty($input["length"]) ? floatval($input["length"]) : null;
-            $weight = !empty($input["weight"]) ? floatval($input["weight"]) : null;
-            $material = $input["material"];
-            $color = $input["color"];
-            $price = !empty($input["price"]) ? floatval($input["price"]) : null;
-            $hidden = $input["hidden"];
-            $discount = !empty($input["discount"]) ? floatval($input["discount"]) : null;
+            // 获取其他非文件数据
+            $name = $request->request->get('name');
+            $category = $request->request->get('category');
+            $description = $request->request->get('description');
+            $number_in_stock = $request->request->get('number_in_stock');
+            $width = $request->request->get('width');
+            $height = $request->request->get('height');
+            $length = $request->request->get('length');
+            $weight = $request->request->get('weight');
+            $material = $request->request->get('material');
+            $color = $request->request->get('color');
+            $price = $request->request->get('price');
+            $hidden = $request->request->get('hidden');
+            $discount = $request->request->get('discount');
 
+            // 更新产品属性
             $product->setName($name);
             $product->setKategory($category);
             $product->setDescription($description);
             $product->setNumberInStock($number_in_stock);
-            $product->setImageUrl($image_url);
             $product->setWidth($width);
             $product->setHeight($height);
             $product->setLength($length);
@@ -178,16 +179,23 @@ class ProductController extends AbstractController
             $product->setPrice($price);
             $product->setHidden($hidden);
             $product->setDiscount($discount);
-            $entityManager->persist($product);
 
+            // 获取从前端传递过来的图片路径
+            $imageUrls = $request->request->get('image_urls', []);
+
+            // 合并现有图片和新图片
+            $existingImageUrls = $product->getImageUrls() ?? [];
+            $product->setImageUrls(array_merge($existingImageUrls, $imageUrls));
+
+            $entityManager->persist($product);
             $entityManager->flush();
 
             return new JsonResponse(["status" => "Success"]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $logger->error('An error occurred: ' . $e->getMessage());
             $logger->error('Stack trace: ' . $e->getTraceAsString());
+            return new JsonResponse(["status" => "Error"], 500);
         }
-        
     }
     #[Route('/product_delete/{id}', name: 'delete_product', methods: ['DELETE'])]
     public function deleteProduct($id,  EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
@@ -205,36 +213,78 @@ class ProductController extends AbstractController
             return new JsonResponse();
         }
     }
-    #[Route('/image_save', name: 'save_image')]
-    public function saveImage(Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    #[Route('/image_save/{id}', name: 'save_image')]
+    public function saveImage($id, Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee_not_logged.html.twig', []);
         }
-        $response = [];
 
-        $file = $request->files->get('myFile');
-        $name = $request->request->get('name');
-
-        if ($file && $name) {
-            $uploadDir = 'images/';
-
-            $fileExtension = $file->getClientOriginalExtension();
-            $uniqueFileName = $name . '.' . $fileExtension;
-
-            $uploadFilePath = $uploadDir . $uniqueFileName;
-
-            try {
-                $file->move($uploadDir, $uniqueFileName);
-                $response['success'] = true;
-                $response['filePath'] = '../' . $uploadFilePath;
-            } catch (FileException $e) {
-                $response['error'] = 'File upload failed: ' . $e->getMessage();
-            }
-        } else {
-            $response['error'] = 'No file or name provided';
+        $product = $entityManager->getRepository(Product::class)->find($id);
+        if (!$product) {
+            $logger->error("Product not found. ID: ".$id);
+            return new JsonResponse(['status' => 'Product not found'], 404);
         }
-        return new JsonResponse($response);
+
+        $name = $product->getName();
+        $files = $request->files->get('images'); // 获取上传的图片
+        $existingImageUrls = $product->getImageUrls() ?? []; // 获取现有的图片路径数组
+
+        // 设置 image_count 从现有图片数量加 1 开始
+        $this->image_count = count($existingImageUrls) + 1;
+        $newImageUrls = []; // 存储新上传的图片路径
+
+        if (!$files) {
+            $logger->info('No files received');
+            return new JsonResponse(['status' => 'No files received'], 400);
+        }
+
+        $logger->info('Files received:', ['files' => $files]);
+        foreach ($files as $file) {
+            $newFilename = $name . $this->image_count . '.' . $file->guessExtension();
+            $file->move($this->getParameter('images_directory'), $newFilename);
+            
+            // 将新文件名添加到数组中
+            $newImageUrls[] = $newFilename;
+            $this->image_count++;
+        }
+
+        // 合并新旧图片路径并保存到数据库
+        $product->setImageUrls(array_merge($existingImageUrls, $newImageUrls));
+        $entityManager->persist($product);
+        $entityManager->flush();
+
+        return new JsonResponse(['filePaths' => $newImageUrls]);
+    }
+    #[Route('/delete_image/{id}', name: 'delete_image', methods: ['POST'])]
+    public function deleteImage($id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $imageUrl = $data['imageUrl'] ?? null;
+
+        if ($imageUrl) {
+            // 从产品的 imageUrls 字段中删除该图片路径
+            $product = $entityManager->getRepository(Product::class)->find($id);
+            if ($product) {
+                $imageUrls = $product->getImageUrls();
+                $updatedUrls = array_filter($imageUrls, fn($url) => $url !== $imageUrl);
+                $product->setImageUrls($updatedUrls);
+
+                $entityManager->persist($product);
+                $entityManager->flush();
+
+                // 删除图片文件
+                $fileSystem = new Filesystem();
+                $filePath = $this->getParameter('images_directory') . '/' . $imageUrl;
+                if ($fileSystem->exists($filePath)) {
+                    $fileSystem->remove($filePath);
+                }
+
+                return new JsonResponse(['status' => 'success']);
+            }
+        }
+
+        return new JsonResponse(['status' => 'error', 'message' => 'Image not found'], 400);
     }
     /**
      * @Route("/search", name="search")

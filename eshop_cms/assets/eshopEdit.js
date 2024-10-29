@@ -1,5 +1,4 @@
 document.querySelector('.image_upload_input').addEventListener('change', previewImages);
-var idElement = document.getElementById("productId").getAttribute("product-id-data");
 function previewImages(event) {
     const files = event.target.files;
     const previewContainer = document.getElementById('image_container');
@@ -32,7 +31,26 @@ function previewImages(event) {
         reader.readAsDataURL(file);
     }
 }
+// 单独处理 LOGO 的上传
+function handleLogoUpload(event) {
+    const file = event.target.files[0];
+    const formData = new FormData();
+    formData.append('logo', file); // 使用 FormData 上传文件本身
 
+    fetch('/logo_save', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // 上传成功后返回的文件名
+        if (data.filePath) {
+            document.getElementById('logo_preview').src = `/images/${data.filePath}`;
+            console.log("上传的文件路径:", data.filePath);
+        }
+    })
+    .catch(error => console.error('上传错误:', error));
+}
 const handleImageUpload = event => {
     const files = event.target.files;
     const formData = new FormData();
@@ -43,7 +61,7 @@ const handleImageUpload = event => {
         console.log(files[i]); // 打印每个文件
     }
     
-    fetch('/image_save/' + idElement, {
+    fetch('/image_save', {
         method: 'POST',
         body: formData
     })
@@ -64,7 +82,7 @@ const handleImageUpload = event => {
 };
 
 function deleteImage(imageUrl) {
-    fetch(`/delete_image/` + idElement, {
+    fetch(`/delete_image/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -92,53 +110,63 @@ document.querySelector('.image_upload_input').addEventListener('change', handleI
 
 async function save_() {
     
-    var nameElement = document.getElementById("name");
-    var categoryElement = document.getElementById("categoryOptions");
-    var descriptionElement = document.getElementById("description");
-    var numberInStockElement = document.getElementById("number_in_stock");
-    var widthElement = document.getElementById("width");
-    var heightElement = document.getElementById("height");
-    var lengthElement = document.getElementById("length");
-    var weightElement = document.getElementById("weight");
-    var materialElement = document.getElementById("material");
+    var eshopNameElement = document.getElementById("eshop_name");
+    var addressElement = document.getElementById("address");
+    var telElement = document.getElementById("tel");
+    var emailElement = document.getElementById("email");
+    var aboutElement = document.getElementById("about");
+    var howToOrderElement = document.getElementById("how_to_order");
+    var conditionsElement = document.getElementById("conditions");
+    var privacyElement = document.getElementById("privacy");
+    var shippingElement = document.getElementById("shipping");
+    var paymentElement = document.getElementById("payment");
+    var refundElement = document.getElementById("refund");
     var colorElement = document.getElementById("color");
-    var priceElement = document.getElementById("price");
-    var discountElement = document.getElementById("discount");
-    var hideBox = document.getElementById('hideBox');
-    var hide = hideBox.checked ? 1 : 0;
-    var category = categoryElement.options[categoryElement.selectedIndex].text;
-
+    var logoUrlElement = document.getElementById("logo_url");
+    var carouselUrlsElement = document.getElementById("carousel_urls");
+    var companyName = document.getElementById("company_name");
+    var cin = document.getElementById("cin");
     const imagePaths = Array.from(document.querySelectorAll('.image_path')).map(input => input.value);
     //console.log("Hidden inputs found: ", document.querySelectorAll('.image_path').length);
     //console.log("image paths: " + imagePaths);
 
-    await fetch("/product_save/" + idElement, {
+    await fetch("/eshop_save", {
         method: "POST",
         headers: {
-            "content-type" : "application/json"
+            "content-type": "application/json"
         },
         body: JSON.stringify({
-            "name" : nameElement.value, 
-            "category" : category,
-            "description" : descriptionElement.value,
-            "number_in_stock" : numberInStockElement.value,
-            "image_urls": imagePaths,  // 上传的所有图片路径
-            "width" : widthElement.value,
-            "height" : heightElement.value,
-            "length" : lengthElement.value,
-            "weight" : weightElement.value,
-            "material" : materialElement.value,
-            "color" : colorElement.value,
-            "price" : priceElement.value,
-            "hidden": hide,
-            "discount": discountElement.value
+            "eshopName": eshopNameElement.value, 
+            "address": addressElement.value,
+            "tel": telElement.value,
+            "email": emailElement.value,
+            "about": aboutElement.value,
+            "image_urls": imagePaths,
+            "logo_url": logoUrlElement.value,
+            "howToOrder": howToOrderElement.value,
+            "conditions": conditionsElement.value,
+            "privacy": privacyElement.value,
+            "shipping": shippingElement.value,
+            "payment": paymentElement.value,
+            "refund": refundElement.value,
+            "color": colorElement.value,
+            "companyName": companyName.value,
+            "cin": cin.value
         })
+    })
+    .then(response => {
+        if (response.ok) {
+            // 解析响应数据并打印
+            return response.json().then(data => {
+                alert("Edit Shop Info Successful!");
+            });
+        } else {
+            alert("保存失败，请稍后重试。");
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("请求过程中出现错误，请检查网络或稍后重试。");
     });
 
-    window.location.href = "/product_list";
-}
-
-function backToProducts() {
-    var routeData = document.getElementById("routeData")
-    window.location.href = routeData.getAttribute("data-product_list-route");
 }

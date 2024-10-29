@@ -25,8 +25,8 @@ class Product
     #[ORM\Column]
     private ?int $number_in_stock = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $image_url = null;
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $image_urls = [];
 
     #[ORM\Column(length: 255)]
     private ?string $add_time = null;
@@ -123,14 +123,14 @@ class Product
         return $this;
     }
 
-    public function getImageUrl(): ?string
+    public function getImageUrls(): ?array
     {
-        return $this->image_url;
+        return $this->image_urls;
     }
 
-    public function setImageUrl(?string $image_url): static
+    public function setImageUrls(?array $image_urls): static
     {
-        $this->image_url = $image_url;
+        $this->image_urls = $image_urls;
 
         return $this;
     }

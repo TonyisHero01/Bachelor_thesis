@@ -4,7 +4,7 @@ CREATE TABLE Product (
     kategory VARCHAR(255) DEFAULT NULL,
     description VARCHAR(255) DEFAULT NULL,
     number_in_stock INT NOT NULL,
-    image_url VARCHAR(255) DEFAULT NULL,
+    image_urls JSON DEFAULT NULL,
     add_time TIMESTAMP NOT NULL,
     width DOUBLE PRECISION DEFAULT NULL,
     height DOUBLE PRECISION DEFAULT NULL,

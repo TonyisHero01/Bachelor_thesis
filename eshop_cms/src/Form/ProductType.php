@@ -1,5 +1,6 @@
 <?php
 // src/Form/ProductType.php
+
 namespace App\Form;
 
 use App\Entity\Product;
@@ -27,8 +28,12 @@ class ProductType extends AbstractType
             ->add('number_in_stock', IntegerType::class, [
                 'required' => true,
             ])
-            ->add('image_url', FileType::class, [
+            ->add('image_urls', FileType::class, [
+                'label' => 'Upload Images',
+                'multiple' => true,  // 支持多文件上传
+                'mapped' => false,   // 不直接映射到实体
                 'required' => false,
+                'data_class' => null, // 允许传递文件数组
             ])
             ->add('width', IntegerType::class, [
                 'required' => false,
