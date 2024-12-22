@@ -1,0 +1,100 @@
+/* 清除多余的样式定义，确保页面占满整个视窗高度 */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 页面主体内容填充剩余空间 */
+.container {
+    flex: 1;
+    padding: 0 1cm; /* 适当的内边距 */
+}
+
+
+/* 其他样式 */
+.bar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.new_products_grid {
+    display: grid;
+    grid-template-columns: repeat(4, 200px);
+    gap: 20px;
+    justify-content: center;
+}
+
+.new_products_grid img {
+    width: 100%;
+    height: auto;
+}
+
+/* Additional styling for the carousel */
+.swiper-wrapper {
+    display: flex; /* 确保内容在一行显示 */
+}
+
+.swiper-container {
+    width: 100%;
+    max-width: 800px; /* 限制滑块的最大宽度 */
+    height: 40vh;
+    margin: 0 auto; /* 将容器水平居中 */
+    position: relative;
+    overflow: hidden;
+}
+
+.swiper-slide {
+    width: 100%; /* 确保每个 slide 占据容器的全部宽度 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-size: cover; /* 确保背景图片覆盖整个 slide */
+    background-position: center;
+}
+.swiper-slide img {
+    width: 100%; /* 图片宽度适配容器 */
+    height: auto;
+    object-fit: cover;
+}
+
+.swiper-button-next, .swiper-button-prev {
+    color: rgb(31, 186, 248); /* 按钮颜色 */
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10; /* 确保按钮位于图片上方 */
+}
+
+.swiper-button-next {
+    right: 10px; /* 右边按钮位置 */
+}
+
+.swiper-button-prev {
+    left: 10px; /* 左边按钮位置 */
+}
+
+.swiper-pagination {
+    position: absolute;
+    bottom: 10px; /* 将分页点放在图片底部 */
+    width: 100%;
+    text-align: center;
+    color: white; /* 设置点的颜色 */
+    z-index: 10; /* 确保分页点位于图片上方 */
+}
+
+/* 页面的容器样式 */
+.page-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Content 样式 */
+.product-content {
+    padding: 20px;
+}

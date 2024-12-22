@@ -1,0 +1,113 @@
+textarea {
+    width: 100%;
+    font-size: 30px;
+}
+
+input {
+    width: 100%;
+    font-size: 30px;
+    height: 35px;
+}
+
+input[type="checkbox"] {
+    width: 5%;
+}
+
+#search {
+    width: 20%;
+    font-size: 30px;
+    height: 25px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+}
+
+body {
+    padding: 0cm 1cm;
+    font-size: 30px;
+}
+
+.buttons {
+    text-align: center;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#product_list_header {
+    border-bottom: 2px solid #000;
+}
+
+td, th {
+    padding: 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+td.article-name {
+    width: 100%;
+}
+
+td.editButton, .deleteButton {
+    width: 50px;
+    padding-left: 20px;
+    padding-right: 50px;
+}
+
+tr {
+    border: none;
+}
+
+#pageCount {
+    font-size: 20px;
+}
+
+.show-button {
+    color: deepskyblue;
+}
+
+.edit-button {
+    color: deepskyblue;
+}
+
+.delete-button {
+    color: red;
+    padding-left: 1cm;
+}
+
+#editButton {
+    background-color: dodgerblue;
+}
+
+#saveButton {
+    background-color: greenyellow;
+}
+
+#backButton {
+    background-color: red;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.sidebar {
+    width: 350px;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #e0e0e0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.content {
+    margin-left: 370px;
+    padding: 20px;
+}

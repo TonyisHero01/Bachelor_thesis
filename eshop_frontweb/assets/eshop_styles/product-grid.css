@@ -1,0 +1,22 @@
+/* 确保 grid 布局每行 4 个产品 */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 每行 4 列 */
+    gap: 20px; /* 产品之间的间距 */
+    justify-items: start; /* 左对齐 */
+    width: 100%; /* 确保内容宽度 */
+}
+
+/* 产品图片样式 */
+.product-item img {
+    width: 260px; /* 使图片自适应格子宽度 */
+    height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* 产品项的样式 */
+.product-item {
+    text-align: center;
+    overflow: hidden;
+}

@@ -1,0 +1,20 @@
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+homepage:
+    path: 'homepage'
+    controller: App\Controller\EshopHomeController::index
+delete_cimage:
+    path: '/delete_cimage/{imageName}'
+    controller: App\Controller\HomeController::deleteCImage
+    requirements:
+        imageName: '.+'
+    methods: ['POST']
+index_redirect:
+    path: /
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::redirectAction
+    defaults:
+        route: app_eshop_home
+        permanent: true

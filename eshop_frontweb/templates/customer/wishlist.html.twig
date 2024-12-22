@@ -1,0 +1,28 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/wishlist.css') }}">
+{% endblock %}
+
+{% block body %}
+<table class="wishlist-table">
+    {% for product in products %}
+        <tr>
+            <td>
+                <div class="wishlist-container">
+                    <div class="wishlist-grid">
+                        <div class="img-container">
+                            <img src="{{ bms_url }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                        </div>
+                        <div class="description-container">
+                            <div class="product-name">{{ product.name }}</div>
+                            <div class="product-description">{{product.description | raw}}</div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

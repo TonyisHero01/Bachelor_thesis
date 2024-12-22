@@ -1,0 +1,65 @@
+
+.wishlist-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.wishlist-table tr td {
+    padding: 0; /* 去除单元格内边距 */
+}
+
+/* 使 .wishlist-container 居中 */
+.wishlist-container {
+    display: flex;
+    flex-direction: column; /* 确保多个 .wishlist-grid 元素垂直排列 */
+    align-items: center; /* 使所有子项居中 */
+    width: 100%;
+}
+
+/* 使每个 .wishlist-grid 左对齐 */
+.wishlist-grid {
+    display: grid;
+    grid-template-columns: auto 1fr; /* 控制图片和描述的列比例 */
+    gap: 30px;
+    align-items: center;
+    width: 600px; /* 设置统一的宽度 */
+    margin-bottom: 20px; /* 每个 .wishlist-grid 之间的间距 */
+}
+
+.img-container {
+    max-width: 150px;
+}
+
+.img-container img {
+    width: 170px;
+    height: 150px;
+    object-fit: cover;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.description-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.product-name {
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.product-description {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+}
+
+.product-description {
+    display: -webkit-box; /* 适用于 Webkit 内核的浏览器 */
+    -webkit-box-orient: vertical; /* 设置盒子垂直排列 */
+    -webkit-line-clamp: 2; /* 显示的行数 */
+    overflow: hidden;
+    text-overflow: ellipsis; /* 溢出部分显示省略号 */
+    max-height: 3.5em; /* 根据行数设置最大高度，例如 3 行的文字高度 */
+}

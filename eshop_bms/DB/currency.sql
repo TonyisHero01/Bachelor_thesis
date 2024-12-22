@@ -1,0 +1,6 @@
+CREATE TABLE Currency (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(3) NOT NULL,
+    value DOUBLE PRECISION NOT NULL,
+    is_default BOOLEAN NOT NULL DEFAULT false
+);

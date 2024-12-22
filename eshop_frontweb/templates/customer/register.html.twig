@@ -1,0 +1,19 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Customer Registration{% endblock %}
+
+{% block body %}
+    <h1>Customer Registration</h1>
+
+    {{ form_start(registrationForm) }}
+
+    {{ form_row(registrationForm.email, {'label': 'Email'}) }}
+    {{ form_row(registrationForm.password_hash, {'label': 'Password'}) }}
+
+    <div class="buttons">
+        <button type="submit" class="btn">Register</button>
+        <button type="button" class="btn" onclick="history.back()">Cancel</button>
+    </div>
+
+    {{ form_end(registrationForm) }}
+{% endblock %}

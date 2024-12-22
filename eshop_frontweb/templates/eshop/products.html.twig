@@ -1,0 +1,23 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/product-grid.css') }}">
+{% endblock %}
+
+{% block body %}
+    <h1>Category: {{ category }}</h1>
+    <div class="product-grid">
+        {% for product in products %}
+            <div class="product-item">
+                {% if product.getImageUrls() is not empty %}
+                <a href="{{ path('show_eshop_product', {'id': product.id}) }}">
+                    <img src="{{ bms_url }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                </a>
+            {% endif %}
+            </div>
+        {% else %}
+            <p>No products found for this category.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

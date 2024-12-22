@@ -1,0 +1,51 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block body %}
+
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/product-page.css') }}">
+<div id="product_id" product-id="{{product.id}}"></div>
+<div class="product-info-grid">
+    <div class="swiper-container">
+        <div class="swiper-wrapper">
+            {% for imageURL in product.getImageUrls() %}
+            <div class="swiper-slide" style="background-image: url('http://localhost:8000/images/{{ imageURL }}');">
+            </div>
+            {% endfor %}
+        </div>
+        <!-- Add Pagination -->
+        <div class="swiper-pagination"></div>
+        <!-- Add Navigation -->
+        <div class="swiper-button-next"></div>
+        <div class="swiper-button-prev"></div>
+    </div>
+    <div class="product-quick-detail">
+        <div class="product-name">{{product.name}}</div>
+        <div class="product-price">Price: {{product.price}}$</div>
+        <div class="quantity">Quantity:
+            <div class="button-table">
+                <div class="quantity-selector">
+                    <button class="quantity-btn" onclick="decreaseQuantity()">-</button>
+                    <span id="quantity-value">1</span>
+                    <button class="quantity-btn" onclick="increaseQuantity()">+</button>
+                </div>
+                <button class="add-to-cart-button">Add to Cart</button>
+                <button class="add-to-wishlist" onclick="{% if app.user %}toggleWishlist(this) {% else %} toggleWishlistAlert() {% endif %}">
+                    <svg class="wishlist-icon" viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="pickup-info">Vyzvednutí je k dispozici v lokalitě Osobní odběr na prodejně<br>Obvykle připraveno za 24 hodin</div>
+        <div class="delivery-info">Doprava zdarma<br>Standardní doprava zdarma při objednávce nad 1000 Kč</div>
+        <div class="refund-info">Vrácení zdarma</div>
+    </div>
+</div>
+<div class="description">Description</div>
+<div class="description-content">
+{{product.description | raw}}
+</div>
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script src="{{ asset('../assets/eshopHome.js') }}"></script>
+<script src="{{ asset('../assets/eshopProduct.js') }}"></script>
+{% endblock %}
