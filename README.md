@@ -16,7 +16,7 @@ DATABASE_URL="postgresql://app:!ChangeMe!@127.0.0.1:5432/app?serverVersion=16&ch
 ```
 You cannot use other database because of python script.  
 #### Before First Running:
-Please run command in eshop_cms repository:
+Please run command in eshop_bms repository:
 
 ``` 
 $ sudo apt install php8.2-xml
@@ -28,7 +28,7 @@ sudo apt install php8.2-pgsql
 $ composer install
 ```
 In PostgreSQL:
-Create database eshop_cms and assign it to the user:
+Create database eshop_bms and assign it to the user:
 ```
 CREATE DATABASE your_dbname;
 GRANT ALL PRIVILEGES ON DATABASE your_dbname TO your_username;
@@ -47,9 +47,15 @@ Then run the following command to set super administrator
 $ php bin/console app:create-super-admin
 ``` 
 #### Run Symfony server:
-After downloading run command in repository [eshop_cms](/eshop_cms/): 
+After downloading run command in repository [eshop_bms](/eshop_bms/): 
 ``` 
 $ symfony server:start
+```
+
+#### Run front eshop website:
+After starting server run command in repository [eshop_frontweb](/eshop_frontweb/): 
+``` 
+$ symfony server:start --port=8001
 ```
 
 Then visit main page: [http://127.0.0.1:8000/product_list](http://127.0.0.1:8000/product_list)
