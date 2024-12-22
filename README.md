@@ -61,4 +61,4 @@ $ symfony server:start --port=8001
 Then visit main page for employee: [http://127.0.0.1:8000/product_list](http://127.0.0.1:8000/product_list)
 For visiting employee registration page for employee: [http://127.0.0.1:8000/register_employee](http://127.0.0.1:8000/register_employee)
 
-For visiting front eshop website: [http://127.0.0.1:8001/home](http://127.0.0.1:8001/home)
+For visiting front eshop website: [http://127.0.0.1:8001](http://127.0.0.1:8001)
