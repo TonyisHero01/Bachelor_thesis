@@ -7,7 +7,7 @@ parameters:
     MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
     NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
     CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
-    bms_url: '%env(BMS_URL)%'
+    BMS_URL: '%env(BMS_URL)%'
 
 services:
     # default configuration for services in *this* file

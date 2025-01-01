@@ -41,7 +41,8 @@ class EshopProductController extends AbstractController
         return $this->render('eshop_product/index.html.twig', [
             'shopInfo' => $this->shopInfo,
             'show_sidebar' => false,
-            'product' => $product
+            'product' => $product,
+            'BMS_URL' => $this->getParameter('BMS_URL'),
         ]);
     }
     #[Route('/product_add_to_wishlist/{id}', name: 'add_eshop_product_to_wishlist')]

@@ -12,7 +12,7 @@
             <div class="product-item">
                 {% if product.getImageUrls() is not empty %}
                 <a href="{{ path('show_eshop_product', {'id': product.id}) }}">
-                    <img src="{{ bms_url }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                    <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
                 </a>
             {% endif %}
             </div>

@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\ProductRepository;
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Currency;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
 class Product
@@ -57,6 +58,21 @@ class Product
 
     #[ORM\Column]
     private float $discount = 100.0;
+
+    #[ORM\ManyToOne(targetEntity: Currency::class)]
+    #[ORM\JoinColumn(name: 'currency_id', referencedColumnName: 'id', nullable: false)]
+    private ?Currency $currency = null;
+
+    #[ORM\Column(type: 'json', nullable: true, options: ['default' => '{}'])]
+    private ?array $attributes = [];
+
+    #[ORM\Column(type: 'integer', options: ['default' => 1])]
+    private int $version = 1;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: false, options: ['default' => 'UNKNOWN'])]
+    private ?string $sku = 'UNKNOWN';
+
+
 
     public function __toString(): string
     {
@@ -251,6 +267,51 @@ class Product
     {
         $this->discount = $discount;
 
+        return $this;
+    }
+
+    public function getCurrency(): ?Currency
+    {
+        return $this->currency;
+    }
+
+    public function setCurrency(Currency $currency): static
+    {
+        $this->currency = $currency;
+        return $this;
+    }
+
+    public function getAttributes(): ?array
+    {
+        return $this->attributes;
+    }
+
+    public function setAttributes(?array $attributes): static
+    {
+        $this->attributes = $attributes;
+        return $this;
+    }
+
+    public function getVersion(): int
+    {
+        return $this->version;
+    }
+
+    public function setVersion(int $version): static
+    {
+        $this->version = $version;
+        return $this;
+    }
+
+    public function getSku(): ?string
+    {
+        return $this->sku;
+    }
+
+    // Setter 方法
+    public function setSku(string $sku): static
+    {
+        $this->sku = $sku;
         return $this;
     }
 }

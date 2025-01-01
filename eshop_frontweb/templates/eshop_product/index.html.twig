@@ -8,7 +8,7 @@
     <div class="swiper-container">
         <div class="swiper-wrapper">
             {% for imageURL in product.getImageUrls() %}
-            <div class="swiper-slide" style="background-image: url('http://localhost:8000/images/{{ imageURL }}');">
+            <div class="swiper-slide" style="background-image: url('{{BMS_URL}}/images/{{ imageURL }}');">
             </div>
             {% endfor %}
         </div>
@@ -48,4 +48,20 @@
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 <script src="{{ asset('../assets/eshopHome.js') }}"></script>
 <script src="{{ asset('../assets/eshopProduct.js') }}"></script>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{product.name}}",
+    "image": "http://localhost:8000/images/{{product.getImageUrls()[0]}}",
+    "description": "{{product.description}}",
+    "brand": "{{shopInfo.getEshopName()}}",
+    "offers": {
+        "@type": "Offer",
+        "price": "{{product.price}}",
+        "priceCurrency": "{{product.getCurrency().getName}}",
+        "availability": "https://schema.org/InStock"
+    }
+}
+</script>
 {% endblock %}

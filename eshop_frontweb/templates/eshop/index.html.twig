@@ -12,7 +12,7 @@
         <div class="swiper-container">
             <div class="swiper-wrapper">
                 {% for imageURL in shopInfo.carouselPictures %}
-                <div class="swiper-slide" style="background-image: url('{{bms_url}}/images/{{ imageURL }}');">
+                <div class="swiper-slide" style="background-image: url('{{BMS_URL}}/images/{{ imageURL }}');">
                 </div>
                 {% endfor %}
             </div>
@@ -32,7 +32,7 @@
         <h2>New Products</h2>
         <div class="new_products_grid">
         {% for product in new_products %}
-            <a href="{{path('show_eshop_product', {'id': product.id})}}"><img src="{{bms_url}}/images/{{ product.getImageUrls()[0] }}">
+            <a href="{{path('show_eshop_product', {'id': product.id})}}"><img src="{{BMS_URL}}/images/{{ product.getImageUrls()[0] }}">
         {% endfor %}
         </div>
     </div>
