@@ -8,7 +8,7 @@
     <div class="swiper-container">
         <div class="swiper-wrapper">
             {% for imageURL in product.getImageUrls() %}
-            <div class="swiper-slide" style="background-image: url('{{BMS_URL}}/images/{{ imageURL }}');">
+            <div class="swiper-slide" style="background-image: url('{{BMS_URL}}images/{{ imageURL }}');">
             </div>
             {% endfor %}
         </div>
@@ -53,7 +53,7 @@
     "@context": "https://schema.org",
     "@type": "Product",
     "name": "{{product.name}}",
-    "image": "http://localhost:8000/images/{{product.getImageUrls()[0]}}",
+    "image": "{{BMS_URL}}images/{{product.getImageUrls()[0]}}",
     "description": "{{product.description}}",
     "brand": "{{shopInfo.getEshopName()}}",
     "offers": {
