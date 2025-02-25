@@ -31,9 +31,12 @@
         
         <h2>New Products</h2>
         <div class="new_products_grid">
-        {% for product in new_products %}
-            <a href="{{path('show_eshop_product', {'id': product.id})}}"><img src="{{BMS_URL}}/images/{{ product.getImageUrls()[0] }}">
-        {% endfor %}
+            {% for product in new_products %}
+                <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+                    <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                    <div class="product-name">{{ product.name }}</div>
+                </a>
+            {% endfor %}
         </div>
     </div>
 

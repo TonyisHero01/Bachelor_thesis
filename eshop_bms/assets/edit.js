@@ -96,12 +96,13 @@ async function save_() {
     var categoryElement = document.getElementById("categoryOptions");
     var descriptionElement = document.getElementById("description");
     var numberInStockElement = document.getElementById("number_in_stock");
+    var sizeElement = document.getElementById("size");
     var widthElement = document.getElementById("width");
     var heightElement = document.getElementById("height");
     var lengthElement = document.getElementById("length");
     var weightElement = document.getElementById("weight");
     var materialElement = document.getElementById("material");
-    var colorElement = document.getElementById("color");
+    var colorElement = document.getElementById("colorOptions");
     var priceElement = document.getElementById("price");
     var discountElement = document.getElementById("discount");
     var hideBox = document.getElementById('hideBox');
@@ -110,6 +111,8 @@ async function save_() {
     var attributes = {};
     const keys = document.getElementsByName("attributeKey[]");
     const values = document.getElementsByName("attributeValue[]");
+    var taxRate = document.getElementById("tax_rate");
+
     for (let i = 0; i < keys.length; i++) {
         const key = keys[i].value.trim();
         const value = values[i].value.trim();
@@ -129,6 +132,7 @@ async function save_() {
             "description" : descriptionElement.value,
             "number_in_stock" : numberInStockElement.value,
             "image_urls": imagePaths,  // 上传的所有图片路径
+            "size": sizeElement.value,
             "width" : widthElement.value,
             "height" : heightElement.value,
             "length" : lengthElement.value,
@@ -139,7 +143,8 @@ async function save_() {
             "hidden": hide,
             "discount": discountElement.value,
             "edit_time": formatDateTime(),
-            "attributes": attributes
+            "attributes": attributes,
+            "tax_rate": taxRate.value
         })
     });
 

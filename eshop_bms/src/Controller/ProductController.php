@@ -5,6 +5,8 @@ namespace App\Controller;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use App\Entity\Product;
 use App\Entity\Category;
+use App\Entity\Color;
+use App\Entity\Currency;
 use App\Form\ProductType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -30,19 +32,35 @@ class ProductController extends AbstractController
         $this->params = $params;
     }
     private $image_count = 1;
-    #[Route('/bms/product_create', name: 'create_product')]
-    public function createProduct(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
-    {
+    #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
+    public function createProduct(
+        EntityManagerInterface $entityManager,
+        AuthorizationCheckerInterface $authorizationChecker
+    ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee/employee_not_logged.html.twig', []);
         }
+
         $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, TRUE);
-        $name = $input["name"];
-        $number_in_stock = $input["number_in_stock"];
-        $add_time = $input["add_time"];
-        $price = $input["price"];
-        $sku = $input["sku"];
+        $input = json_decode($inputJSON, true);
+
+        $name = $input["name"] ?? "Unnamed Product";
+        $number_in_stock = $input["number_in_stock"] ?? 0;
+        $add_time = $input["add_time"] ?? (new \DateTime())->format('Y-m-d H:i:s');
+        $price = $input["price"] ?? 0.00;
+        $sku = $input["sku"] ?? "UNKNOWN";
+        $currencyId = $input["currency_id"] ?? null;
+
+        // 获取默认货币（如果 currency_id 为空）
+        if ($currencyId === null) {
+            $currency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
+        } else {
+            $currency = $entityManager->getRepository(Currency::class)->find($currencyId);
+        }
+
+        if (!$currency) {
+            return new JsonResponse(['success' => false, 'message' => 'Currency not found!'], 400);
+        }
 
         $product = new Product();
         $product->setName($name);
@@ -50,21 +68,12 @@ class ProductController extends AbstractController
         $product->setAddTime($add_time);
         $product->setPrice($price);
         $product->setSku($sku);
+        $product->setCurrency($currency); // 设置货币
 
         $entityManager->persist($product);
-
         $entityManager->flush();
 
-        $productRepository = $entityManager->getRepository(Product::class);
-        $new_product = $productRepository->findOneByMaxId();
-        $new_product_info = [
-            'id' => $new_product->getId(),
-            'name' => $new_product->getName(),
-            'number_in_stock' => $new_product->getNumberInStock(),
-            'price' => $new_product->getPrice(),
-            'sku' => $new_product->getSku(),
-        ];
-        return new JsonResponse(['id' => $new_product_info['id']]);
+        return new JsonResponse(['success' => true, 'id' => $product->getId()]);
     }
 
     #[Route('/bms/product/{id}', name: 'show_product')]
@@ -148,6 +157,7 @@ class ProductController extends AbstractController
         $productsWithSameSku = $productRepository->findBy(['sku' => $product->getSku()], ['version' => 'DESC']);
 
         $categories = $entityManager->getRepository(Category::class)->findAllCategories();
+        $colors = $entityManager->getRepository(Color::class)->findAll();
 
         return $this->render('product/product_edit.html.twig', [
             'product' => $product,
@@ -156,6 +166,7 @@ class ProductController extends AbstractController
             'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
             'categories' => $categories,
+            'colors' => $colors,
         ]);
     }
     #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'])]
@@ -178,7 +189,7 @@ class ProductController extends AbstractController
                 return new JsonResponse(["status" => "Error", "message" => "Product not found"], 404);
             }
 
-            // 从请求内容中解码 JSON 数据
+            // 解析 JSON 数据
             $data = json_decode($request->getContent(), true);
 
             // 查询数据库，获取当前 SKU 下的最大版本号
@@ -190,47 +201,75 @@ class ProductController extends AbstractController
                 ->getQuery()
                 ->getSingleScalarResult();
 
-            // 新版本号 = 当前最大版本号 + 1
+            // **新版本号 = 当前最大版本号 + 1**
             $newVersion = $maxVersion + 1;
 
-            // 创建新产品实例，基于当前产品（无论版本如何）
+            // **创建新产品实例**
             $newProduct = new Product();
             $newProduct->setName($data['name'] ?? $currentProduct->getName());
             $newProduct->setCategory($data['category'] ?? $currentProduct->getCategory());
             $newProduct->setDescription($data['description'] ?? $currentProduct->getDescription());
-            $newProduct->setNumberInStock(isset($data['number_in_stock']) ? (int)$data['number_in_stock'] : $currentProduct->getNumberInStock());
-            $newProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
-            $newProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
-            $newProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
-            $newProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
+            $newProduct->setNumberInStock($data['number_in_stock'] ?? $currentProduct->getNumberInStock());
+            $newProduct->setSize($data['size'] ?? $currentProduct->getSize());
+            $newProduct->setWidth($data['width'] ?? $currentProduct->getWidth());
+            $newProduct->setHeight($data['height'] ?? $currentProduct->getHeight());
+            $newProduct->setLength($data['length'] ?? $currentProduct->getLength());
+            $newProduct->setWeight($data['weight'] ?? $currentProduct->getWeight());
             $newProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
             $newProduct->setColor($data['color'] ?? $currentProduct->getColor());
-            $newProduct->setPrice(isset($data['price']) ? (float)$data['price'] : $currentProduct->getPrice());
-            $newProduct->setHidden(isset($data['hidden']) ? (bool)$data['hidden'] : $currentProduct->getHidden());
-            $newProduct->setDiscount(isset($data['discount']) ? (float)$data['discount'] : $currentProduct->getDiscount());
-            $newProduct->setSku($currentProduct->getSku()); // 保留相同的 SKU
-            // 设置 attributes 数据
-            if (isset($data['attributes']) && is_array($data['attributes'])) {
-                $newProduct->setAttributes($data['attributes']);
-            } else {
-                $newProduct->setAttributes([]);
-            }
-            // 设置图片：合并现有图片和新图片
+            $newProduct->setPrice($data['price'] ?? $currentProduct->getPrice());
+            $newProduct->setDiscount($data['discount'] ?? $currentProduct->getDiscount());
+            $newProduct->setSku($currentProduct->getSku()); // **保留 SKU**
+
+            // **处理 hidden 逻辑**
+            $hidden = isset($data['hidden']) ? (bool)$data['hidden'] : $currentProduct->getHidden();
+            $newProduct->setHidden($hidden);
+
+            // **设置 attributes**
+            $newProduct->setAttributes($data['attributes'] ?? []);
+
+            // **处理图片**
             $imageUrls = array_filter($data['image_urls'] ?? [], fn($url) => !empty($url));
             $existingImageUrls = $currentProduct->getImageUrls() ?? [];
             $newProduct->setImageUrls(array_merge($existingImageUrls, $imageUrls));
 
-            // 设置版本号为新版本号
+            // **设置版本号**
             $newProduct->setVersion($newVersion);
 
-            // 设置添加时间为前端传递的 edit_time 或当前时间
-            if (isset($data['edit_time']) && !empty($data['edit_time'])) {
-                $newProduct->setAddTime($data['edit_time']);
-            } else {
-                $newProduct->setAddTime((new \DateTime())->format('Y-m-d H:i:s'));
-            }
+            // **设置添加时间**
+            $newProduct->setAddTime($data['edit_time'] ?? (new \DateTime())->format('Y-m-d H:i:s'));
 
-            // 保存新产品
+            // **处理货币**
+            $currencyId = $data["currency_id"] ?? null;
+            if (!$currencyId) {
+                $defaultCurrency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
+                if ($defaultCurrency) {
+                    $currencyId = $defaultCurrency->getId();
+                } else {
+                    return new JsonResponse(['status' => 'error', 'message' => 'No default currency found!'], 400);
+                }
+            }
+            $currency = $entityManager->getRepository(Currency::class)->find($currencyId);
+            if (!$currency) {
+                return new JsonResponse(['status' => 'error', 'message' => 'Currency not found!'], 400);
+            }
+            $newProduct->setCurrency($currency);
+
+            // **处理税率**
+            $logger->info('Received tax_rate: ' . json_encode($data['tax_rate'] ?? 'Not Provided'));
+            $newProduct->setTaxRate($data['tax_rate'] ?? $currentProduct->getTaxRate());
+
+            // **✅ 如果 hidden 变更，则更新所有相同 SKU 的商品**
+            $entityManager->createQueryBuilder()
+                ->update(Product::class, 'p')
+                ->set('p.hidden', ':hidden')
+                ->where('p.sku = :sku')
+                ->setParameter('hidden', $hidden)
+                ->setParameter('sku', $newProduct->getSku())
+                ->getQuery()
+                ->execute();
+
+            // **保存新产品**
             $entityManager->persist($newProduct);
             $entityManager->flush();
 
@@ -242,19 +281,34 @@ class ProductController extends AbstractController
         }
     }
     #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'])]
-    public function deleteProduct($id,  EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
-    {
+    public function deleteProduct(
+        $id,  
+        EntityManagerInterface $entityManager, 
+        AuthorizationCheckerInterface $authorizationChecker
+    ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->render('employee/employee_not_logged.html.twig', []);
         }
+
         $productRepository = $entityManager->getRepository(Product::class);
         $product = $productRepository->find($id);
 
         if ($product) {
-            $productRepository->deleteProduct($product);
-            return new JsonResponse();
+            $sku = $product->getSku();
+
+            // 找到所有具有相同SKU的商品
+            $productsWithSameSku = $productRepository->findBy(['sku' => $sku]);
+
+            // 删除所有这些商品
+            foreach ($productsWithSameSku as $productToDelete) {
+                $entityManager->remove($productToDelete);
+            }
+
+            $entityManager->flush();
+
+            return new JsonResponse(['success' => true]);
         } else {
-            return new JsonResponse();
+            return new JsonResponse(['success' => false, 'message' => 'Product not found'], 404);
         }
     }
     #[Route('/image_save/{id}', name: 'save_image')]
@@ -435,6 +489,25 @@ class ProductController extends AbstractController
         $category->setName($name);
 
         $entityManager->persist($category);
+
+        $entityManager->flush();
+
+        return new JsonResponse([]);
+    }
+    #[Route('/bms/save_color', name: 'save_color')]
+    public function createColor(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    {
+        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            return $this->render('employee/employee_not_logged.html.twig', []);
+        }
+        $inputJSON = file_get_contents('php://input');
+        $input = json_decode($inputJSON, TRUE);
+        $name = $input["name"];
+
+        $color = new Color();
+        $color->setName($name);
+
+        $entityManager->persist($color);
 
         $entityManager->flush();
 

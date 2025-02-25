@@ -1,0 +1,98 @@
+/* 让整个订单确认内容居中 */
+.order-confirmation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* 让表格居中 */
+.order-confirmation table {
+    margin: auto;
+    width: 60%; /* 可根据需求调整宽度 */
+}
+
+/* 让表格中的文本居中 */
+.order-confirmation td {
+    padding: 8px;
+    text-align: center;
+}
+
+/* 让产品名称的单元格边框更细 */
+.item_product_name {
+    border: 2px solid #ddd;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+/* 让订单ID、小计、税收和总价更突出 */
+.order-confirmation p {
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+}
+
+.order-actions {
+    display: flex;
+    justify-content: center;  /* 让按钮居中 */
+    gap: 20px;  /* 按钮之间的间距 */
+    margin-top: 20px;
+}
+
+/* 确保按钮大小一致 */
+.order-actions button {
+    width: 180px;  /* 固定宽度 */
+    height: 50px;  /* 确保高度一致 */
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    text-align: center;
+}
+
+/* 确认订单按钮 */
+#confirmOrderBtn {
+    background-color: #28a745;
+    color: white;
+}
+
+#confirmOrderBtn:hover {
+    background-color: #218838;
+    transform: scale(1.05);
+}
+
+/* 取消订单按钮 */
+#cancelOrderBtn {
+    background-color: #dc3545;
+    color: white;
+}
+
+#cancelOrderBtn:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
+/* Back to Cart 按钮 */
+.order-confirmation a {
+    display: block;
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #007bff;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out, transform 0.2s;
+
+}
+
+.order-confirmation a:hover {
+    background-color: #007bff;
+    color: white;
+    transform: scale(1.05);
+}

@@ -20,18 +20,44 @@ class ProductRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Product::class);
     }
-    public function findLastFourProducts()
+    public function findLatestVersionProducts(): array
     {
-        $results = $this->createQueryBuilder('p')
-            ->where('p.image_urls IS NOT NULL') // 确保 image_urls 字段不为 NULL
-            ->orderBy('p.id', 'DESC') // 根据 ID 倒序排列，确保是最新的产品
+        return $this->createQueryBuilder('p')
+            ->where('p.version = (
+                SELECT MAX(p2.version)
+                FROM App\Entity\Product p2
+                WHERE p2.sku = p.sku
+                AND (p2.size = p.size OR p2.size IS NULL)
+            )')
+            ->orderBy('p.add_time', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+    public function findLastFourProducts(): array
+    {
+        $products = $this->createQueryBuilder('p')
+            ->where('p.image_urls IS NOT NULL')
+            ->andWhere('p.hidden = false') // 直接在查询中排除 hidden = true 的商品
+            ->orderBy('p.add_time', 'DESC') // 按 add_time 降序排序
             ->getQuery()
             ->getResult();
 
-        // 使用 PHP 过滤掉空数组的结果，并限制为 4 个
-        return array_slice(array_filter($results, function ($product) {
-            return !empty($product->getImageUrls());
-        }), 0, 4);
+        // **用 PHP 过滤相同 SKU**
+        $seenSkus = [];
+        $filteredProducts = [];
+        foreach ($products as $product) {
+            if (!in_array($product->getSku(), $seenSkus)) { // 只保留 SKU 不重复的商品
+                $seenSkus[] = $product->getSku();
+                $filteredProducts[] = $product;
+
+                // **一旦找到 4 个不同 SKU 的商品，直接返回**
+                if (count($filteredProducts) >= 4) {
+                    break;
+                }
+            }
+        }
+
+        return $filteredProducts; // 返回最多 4 个不同 SKU 的商品
     }
     public function findByCategoryName(string $categoryName): array
     {

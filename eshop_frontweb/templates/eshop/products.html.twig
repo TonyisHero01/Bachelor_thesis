@@ -11,10 +11,13 @@
         {% for product in products %}
             <div class="product-item">
                 {% if product.getImageUrls() is not empty %}
-                <a href="{{ path('show_eshop_product', {'id': product.id}) }}">
-                    <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-                </a>
-            {% endif %}
+                    <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+                        <div class="product-image-wrapper">
+                            <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                        </div>
+                        <div class="product-name">{{ product.name }}</div>
+                    </a>
+                {% endif %}
             </div>
         {% else %}
             <p>No products found for this category.</p>

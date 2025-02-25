@@ -44,12 +44,32 @@ class EshopHomeController extends AbstractController
             throw $this->createNotFoundException('The category does not exist');
         }
 
-        // 使用自定义查询方法找到产品
+        // 获取该分类的所有商品
         $products = $productRepository->findByCategoryName($category);
+
+        // **先过滤掉 hidden = true 的商品**
+        $filteredProducts = array_filter($products, function ($product) {
+            return !$product->getHidden(); // 只保留 hidden = false 的商品
+        });
+
+        // **按照 ID 倒序排序**
+        usort($filteredProducts, function ($a, $b) {
+            return $b->getId() <=> $a->getId(); // 按 ID 从大到小排序
+        });
+
+        // **去重 SKU 并确保商品有图片**
+        $seenSkus = [];
+        $productsWithImages = [];
+        foreach ($filteredProducts as $product) {
+            if (!empty($product->getImageUrls()) && !in_array($product->getSku(), $seenSkus)) {
+                $seenSkus[] = $product->getSku();
+                $productsWithImages[] = $product;
+            }
+        }
 
         return $this->render('eshop/products.html.twig', [
             'show_sidebar' => true,
-            'products' => $products,
+            'products' => $productsWithImages,
             'category' => $category,
             'shopInfo' => $this->shopInfo,
         ]);

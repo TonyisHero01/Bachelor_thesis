@@ -1,0 +1,26 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Order Success - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-success.css') }}">
+    <div id="order-successful-info-block">
+        <h2>Order Placed Successfully!</h2>
+        <p>Your order has been placed successfully.</p>
+        <p><strong>Order ID:</strong> {{ order.getId() }}</p>
+        <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        <a href="{{ path('customer_orders') }}">View Your Orders</a>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch("/cart/clear_after_success", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .catch(error => console.error("Request error:", error));
+        });
+    </script>
+
+    
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}My Orders - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-list.css') }}">
+
+<div class="customer-orders">
+
+    <h2>My Orders</h2>
+
+    {% if orders is empty %}
+        <p>You have no orders.</p>
+    {% else %}
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Order Date</th>
+                    <th>Total Price</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr class="order-row">
+                        <td>{{ order.getId() }}</td>
+                        <td>{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</td>
+                        <td>
+                            {{ order.getTotalPrice()|number_format(2) }}
+                            {% if order.getOrderItems() is not empty %}
+                                {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}
+                            {% else %}
+                                No currency
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if order.getIsCompleted() %}
+                                <span class="status completed">COMPLETED</span>
+                            {% else %}
+                                <span class="status pending">PENDING</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ path('order_confirmation', {'id': order.getId()}) }}" class="btn">View</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <a href="{{ path('homepage') }}" class="btn">Return to Home</a>
+</div>
+
+{% endblock %}

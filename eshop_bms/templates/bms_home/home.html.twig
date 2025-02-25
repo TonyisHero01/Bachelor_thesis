@@ -109,7 +109,7 @@
 
                 {# 判断是否显示 ROLE_WAREHOUSEMAN #}
                 {% if 'ROLE_WAREHOUSEMAN' in roles %}
-                    <li>{{ 'WAREHOUSEMAN' }}</li>
+                    <li><a href='{{ path('app_warehouse') }}' >{{ 'WAREHOUSEMAN' }}</li>
                 {% endif %}
 
                 {# 判断是否显示 ROLE_WAREHOUSE_MANAGER #}

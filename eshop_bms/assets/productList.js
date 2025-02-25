@@ -14,6 +14,8 @@ var popup = document.getElementById("myPopup");
 var cancelButton = document.getElementById("cancelButton");
 var cancelCategoryAddButton = document.getElementById("cancelCategoryAddButton");
 var categoryPopup = document.getElementById("myCategoryPopup");
+var cancelColorAddButton = document.getElementById("cancelColorAddButton");
+var colorPopup = document.getElementById("myColorPopup");
 function openCreateForm() {
     popup.removeAttribute("style");
     cancelButton.removeAttribute("style");
@@ -22,6 +24,11 @@ function openCreateForm() {
 function openCategoryAddForm() {
     categoryPopup.removeAttribute("style");
     cancelCategoryAddButton.removeAttribute("style");
+}
+
+function openColorAddForm() {
+    colorPopup.removeAttribute("style");
+    cancelColorAddButton.removeAttribute("style");
 }
 
 function cancelCreateForm() {
@@ -37,6 +44,7 @@ var numberInStockElement = document.getElementById("number_in_stock");
 var priceElement = document.getElementById("price");
 
 var categoryNameElement = document.getElementById("categoryName");
+var colorNameElement = document.getElementById("colorName");
 function enableCreateButton () {
     console.log("called func");
     
@@ -53,6 +61,18 @@ function enableCategoryAddButton() {
     
     var submitElement = document.getElementById("addCategoryButton");
     if (categoryNameElement.value != "" && nameElement.value.length <= 32) {
+        submitElement.removeAttribute("disabled");
+    }
+    else {
+        submitElement.setAttribute("disabled", "disabled");
+    }
+}
+
+function enableColorAddButton() {
+    console.log("called func");
+    
+    var submitElement = document.getElementById("addColorButton");
+    if (colorNameElement.value != "" && nameElement.value.length <= 32) {
         submitElement.removeAttribute("disabled");
     }
     else {
@@ -94,6 +114,25 @@ async function createCategory() {
         },
         body: JSON.stringify({
             "name" : categoryNameElement.value,
+        })
+    });
+    //console.log(await response.text());
+    
+    var id = (await response.json())["id"];
+    console.log(id);
+    window.location.href = '/bms/product_list';
+}
+
+async function createColor() {
+    console.log("funguje create");
+    //var productListRoute = document.getElementById('routeData').getAttribute("data-edit-route")
+    var response = await fetch('/bms/save_color',{
+        method: "POST",
+        headers: {
+            'content-type' : 'application/json'
+        },
+        body: JSON.stringify({
+            "name" : colorNameElement.value,
         })
     });
     //console.log(await response.text());

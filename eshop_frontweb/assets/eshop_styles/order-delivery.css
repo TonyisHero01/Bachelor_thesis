@@ -1,0 +1,81 @@
+/* 让整个页面更居中，优化视觉 */
+.delivery-options {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* 标题样式 */
+.delivery-options h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* 让选项的排布更整齐 */
+.delivery-options label {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    margin: 15px 0;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    transition: background-color 0.3s ease-in-out;
+}
+
+/* 当鼠标悬停在选择框时 */
+.delivery-options label:hover {
+    background-color: #e9ecef;
+}
+
+/* 隐藏默认的 radio 按钮 */
+.delivery-options input[type="radio"] {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+}
+
+/* 地址输入框区域 */
+#addressField {
+    display: none;
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+}
+
+/* 输入框样式 */
+#deliveryAddress {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    margin-top: 10px;
+}
+
+/* 确认按钮样式 */
+.delivery-options button {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background-color 0.3s ease-in-out;
+}
+
+/* 按钮悬停时 */
+.delivery-options button:hover {
+    background-color: #218838;
+}

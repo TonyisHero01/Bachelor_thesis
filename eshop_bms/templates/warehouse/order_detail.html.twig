@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+
+<h1>Order Details</h1>
+
+<p><strong>Order ID:</strong> {{ order.getId() }}</p>
+<p><strong>Customer:</strong> {{ order.getCustomer().getEmail() }}</p>
+<p><strong>Total Price:</strong> {{ order.getTotalPrice() }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+<p><strong>Order Date:</strong> {{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</p>
+
+<h2>Order Items</h2>
+<table>
+    <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Subtotal</th>
+    </tr>
+    {% for item in order.getOrderItems() %}
+        <tr>
+            <td>{{ item.getProductName() }}</td>
+            <td>{{ item.getQuantity() }}</td>
+            <td>{{ item.getUnitPrice() }}</td>
+            <td>{{ item.getSubtotalWithTax()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</td>
+        </tr>
+    {% endfor %}
+</table>
+
+<!-- 按钮: 标记为已完成 -->
+{% if not order.getIsCompleted() %}
+    <button id="markAsCompletedBtn">Mark as Completed</button>
+{% endif %}
+
+<a href="{{ path('app_order_tracking') }}">Back to Orders</a>
+
+<script>
+    document.getElementById("markAsCompletedBtn")?.addEventListener("click", function() {
+        if (!confirm("Are you sure you want to mark this order as completed?")) return;
+
+        fetch("{{ path('mark_order_completed', {'id': order.getId()}) }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Order marked as completed!");
+                window.location.href = "{{ path('app_order_tracking') }}";
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    });
+</script>
+
+{% endblock %}

@@ -1,11 +1,11 @@
-
 .wishlist-table {
+    margin-top: 10px;
     width: 100%;
     border-collapse: collapse;
 }
 
 .wishlist-table tr td {
-    padding: 0; /* 去除单元格内边距 */
+    padding: 0;
 }
 
 /* 使 .wishlist-container 居中 */
@@ -16,14 +16,14 @@
     width: 100%;
 }
 
-/* 使每个 .wishlist-grid 左对齐 */
+/* 使每个 .wishlist-grid 左对齐，并在右侧放置按钮 */
 .wishlist-grid {
     display: grid;
-    grid-template-columns: auto 1fr; /* 控制图片和描述的列比例 */
+    grid-template-columns: auto 1fr auto; /* 图片 | 描述 | 按钮 */
     gap: 30px;
     align-items: center;
-    width: 600px; /* 设置统一的宽度 */
-    margin-bottom: 20px; /* 每个 .wishlist-grid 之间的间距 */
+    width: 700px; /* 适当增加宽度 */
+    margin-bottom: 20px; /* 每个产品的间距 */
 }
 
 .img-container {
@@ -44,22 +44,76 @@
     justify-content: center;
 }
 
-.product-name {
+/* 按钮 & 数量选择器 右对齐 */
+.wishlist-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* 右对齐 */
+    gap: 10px;
+}
+
+/* 使按钮和数量选择器在同一行 */
+.actions-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* 选择数量样式 */
+.quantity-selector {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 5px 10px;
+}
+
+.quantity-btn {
+    background-color: #f3f3f3;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+.quantity-btn:hover {
+    background-color: #ddd;
+}
+
+.quantity-value {
+    font-size: 16px;
     font-weight: bold;
-    font-size: 1.2em;
+    min-width: 20px;
+    text-align: center;
 }
 
-.product-description {
-    font-size: 0.9em;
-    color: #666;
-    margin-top: 5px;
+/* 按钮样式 */
+.remove-from-wishlist {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
 }
 
-.product-description {
-    display: -webkit-box; /* 适用于 Webkit 内核的浏览器 */
-    -webkit-box-orient: vertical; /* 设置盒子垂直排列 */
-    -webkit-line-clamp: 2; /* 显示的行数 */
-    overflow: hidden;
-    text-overflow: ellipsis; /* 溢出部分显示省略号 */
-    max-height: 3.5em; /* 根据行数设置最大高度，例如 3 行的文字高度 */
+.remove-from-wishlist:hover {
+    background-color: #c0392b;
+}
+
+.add-to-cart {
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.add-to-cart:hover {
+    background-color: #27ae60;
 }

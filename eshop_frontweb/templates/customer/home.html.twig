@@ -1,1 +1,19 @@
-<a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Customer Page{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/customer_home.css') }}">
+<nav>
+    <a href="{{ app.user ? path('app_logout') : path('customer_login') }}">
+        {{ app.user ? 'Logout' : 'Login' }}
+    </a>
+
+    {% if app.user %}
+        <a href="{{ path('customer_wishlist') }}">Wishlist</a>
+        <a href="{{ path('customer_cart') }}">Cart</a>
+    {% endif %}
+
+    <a href="{{ path('app_eshop_home') }}">Home</a>
+</nav>
+{% endblock %}

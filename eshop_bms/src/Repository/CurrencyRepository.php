@@ -45,4 +45,13 @@ class CurrencyRepository extends ServiceEntityRepository
 //            ->getOneOrNullResult()
 //        ;
 //    }
+    public function findDefaultCurrency(): ?Currency
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.isDefault = :isDefault')
+            ->setParameter('isDefault', true)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

@@ -1,0 +1,9 @@
+.unit-order {
+    margin: 10px 0; /* 上下间距 10px，左右不变 */
+    padding: 8px;   /* 单元格内边距 */
+    border-radius: 5px; /* 让边框更圆滑 */
+}
+table {
+    border-collapse: separate; /* 让表格单元格可以有间距 */
+    border-spacing: 0 10px; /* 只在垂直方向增加间距，防止背景色覆盖间距 */
+}

@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/order.css') }}">
+<h1>Track Order</h1>
+<table>
+    <tr>
+        <th>Customer Email</th>
+        <th>Order ID</th>
+        <th>Price</th>
+        <th>Action</th>
+    </tr>
+    {% for order in orders %}
+        <tr class="unit-order" style="background-color: {% if order.isCompleted() %} #d4edda {% else %} #f8d7da {% endif %};">
+            <td>{{ order.getCustomer().getEmail() }}</td>
+            <td>{{ order.getId() }}</td>
+            <td>{{ order.getTotalPrice() }} {{ currency }}</td>
+            <td>
+                <a href="{{ path('order_detail', { 'id': order.getId() }) }}" class="btn">View Details</a>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

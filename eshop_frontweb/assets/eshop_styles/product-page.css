@@ -137,9 +137,9 @@
     transition: fill 0.3s;
 }
 
-.wishlist-icon.active {
-    fill: #333; /* 点击后实心 */
-    stroke: none;
+.wishlist-icon.wishlist-active {
+    fill: red !important; /* 填充红色 */
+    stroke: none !important; /* 取消描边 */
 }
 .product-name {
     font-size: 50px;

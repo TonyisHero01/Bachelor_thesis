@@ -3,7 +3,7 @@ var searchInputElement = document.getElementById("searchInput");
 async function search_() {
     //TODO: rewrite function
     console.log("clicked search")
-    var response = await fetch('/search',{
+    var response = await fetch('/bms/search',{
         method: "POST",
         headers: {
             'content-type' : 'application/json'

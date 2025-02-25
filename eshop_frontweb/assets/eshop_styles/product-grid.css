@@ -1,22 +1,54 @@
-/* 确保 grid 布局每行 4 个产品 */
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 每行 4 列 */
-    gap: 20px; /* 产品之间的间距 */
-    justify-items: start; /* 左对齐 */
-    width: 100%; /* 确保内容宽度 */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    justify-content: center;
 }
 
-/* 产品图片样式 */
-.product-item img {
-    width: 260px; /* 使图片自适应格子宽度 */
+.product-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease-in-out, box-shadow 0.3s ease;
+    text-align: center;
+    width: auto;
+}
+
+.product-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.product-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.product-image-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
     height: 200px;
-    object-fit: cover;
+    overflow: hidden;
     border-radius: 8px;
 }
 
-/* 产品项的样式 */
-.product-item {
+.product-card img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.product-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 10px;
+    color: #333;
     text-align: center;
-    overflow: hidden;
 }

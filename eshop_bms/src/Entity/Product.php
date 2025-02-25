@@ -33,6 +33,9 @@ class Product
     private ?string $add_time = null;
 
     #[ORM\Column(nullable: true)]
+    private ?string $size = null;
+
+    #[ORM\Column(nullable: true)]
     private ?float $width = null;
 
     #[ORM\Column(nullable: true)]
@@ -72,6 +75,8 @@ class Product
     #[ORM\Column(type: 'string', length: 255, nullable: false, options: ['default' => 'UNKNOWN'])]
     private ?string $sku = 'UNKNOWN';
 
+    #[ORM\Column(type: 'float', options: ['default' => 21])]
+    private float $taxRate = 21.0;
 
 
     public function __toString(): string
@@ -159,6 +164,18 @@ class Product
     public function setAddTime(string $add_time): static
     {
         $this->add_time = $add_time;
+
+        return $this;
+    }
+
+    public function getSize(): ?string
+    {
+        return $this->size;
+    }
+
+    public function setSize(?string $size): static
+    {
+        $this->size = $size;
 
         return $this;
     }
@@ -312,6 +329,18 @@ class Product
     public function setSku(string $sku): static
     {
         $this->sku = $sku;
+        return $this;
+    }
+
+
+    public function getTaxRate(): float
+    {
+        return $this->taxRate;
+    }
+
+    public function setTaxRate(float $taxRate): self
+    {
+        $this->taxRate = $taxRate;
         return $this;
     }
 }

@@ -22,13 +22,16 @@ class ProductRepository extends ServiceEntityRepository
     }
     public function findLatestVersionProducts(): array
     {
+        // 子查询：获取每个 SKU 的最大版本
+        $subQuery = $this->createQueryBuilder('p2')
+            ->select('MAX(p2.version)')
+            ->where('p2.sku = p.sku')
+            ->getDQL();
+
+        // 主查询：获取 SKU 最新版本的完整产品数据
         return $this->createQueryBuilder('p')
-            ->where('p.version = (
-                SELECT MAX(p2.version)
-                FROM App\Entity\Product p2
-                WHERE p2.sku = p.sku
-            )')
-            ->orderBy('p.add_time', 'DESC') // 按 add_time 降序排序
+            ->where("p.version = ($subQuery)")  // 只取最新版本
+            ->orderBy('p.add_time', 'DESC')  // 按时间降序
             ->getQuery()
             ->getResult();
     }

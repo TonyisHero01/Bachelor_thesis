@@ -1,0 +1,63 @@
+/* 搜索标题 */
+.search-title {
+    text-align: center;
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* 没有搜索结果时的提示 */
+.no-results {
+    text-align: center;
+    font-size: 18px;
+    color: #777;
+}
+
+/* 产品网格布局 */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    justify-content: center;
+}
+
+/* 产品卡片 */
+.product-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease-in-out, box-shadow 0.3s ease;
+    text-align: center;
+}
+
+.product-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 产品图片容器 */
+.product-image-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px; /* 固定高度 */
+}
+
+/* 产品图片 */
+.product-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+/* 产品名称 */
+.product-name {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 10px;
+    text-align: center;
+    color: #333;
+}

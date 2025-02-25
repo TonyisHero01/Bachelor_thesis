@@ -15,7 +15,7 @@
     {% if app.user %}
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
-    <h1>Product List</h1>
+    <h1><a href="{{ path('show_All_products') }}">Product List</a></h1>
     
     <form id="search">
         <label for="searchInput"></label>
@@ -57,6 +57,7 @@
         <span id="pageCount">Page Count </span>
         <button class="popup" onclick="openCreateForm()">Create Product</button>
         <button class="categoryPopup" onclick="openCategoryAddForm()">Add Category</button>
+        <button class="colorPopup" onclick="openColorAddForm()">Add Color</button>
     </div>
     
     <div class="popuptext" id="myPopup" style="display: none;">
@@ -80,6 +81,14 @@
             <input type="text" id="categoryName" name="categoryName" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
             <button type="button" id="addCategoryButton" onclick="createCategory()" disabled>Create</button>
             <button id="cancelCategoryAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+        </form>
+    </div>
+    <div class="popuptext" id="myColorPopup" style="display: none;">
+        <form action="#" oninput="enableColorAddButton()">
+            <label for="colorName">Color Name</label>
+            <input type="text" id="colorName" name="colorName" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
+            <button type="button" id="addColorButton" onclick="createColor()" disabled>Create</button>
+            <button id="cancelColorAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
         </form>
     </div>
     <script src="{{ asset('../assets/productList.js') }}"></script>

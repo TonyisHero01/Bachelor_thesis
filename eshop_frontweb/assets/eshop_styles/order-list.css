@@ -1,0 +1,7 @@
+.order-row {
+    border: 2px solid #ddd;
+    padding: 6px;
+    border-radius: 4px;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.2); /* 适中的阴影 */
+    background-color: #fff; /* 确保阴影不会影响内容 */
+}
