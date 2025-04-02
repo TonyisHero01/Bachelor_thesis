@@ -4,7 +4,12 @@ framework:
     #csrf_protection: true
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    session:
+        handler_id: null
+        cookie_lifetime: 7200  # 设置 Session Cookie 过期时间为 2 小时
+        gc_maxlifetime: 7200  # 设置垃圾回收的最大生命周期，确保 Session 存活
+        cookie_secure: auto  # 如果是 HTTPS 网站，确保设置
+        cookie_samesite: lax
 
     #esi: true
     #fragments: true

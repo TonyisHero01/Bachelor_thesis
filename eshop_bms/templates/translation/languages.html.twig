@@ -1,0 +1,47 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translation Languages{% endblock %}
+
+{% block body %}
+<h1>Languages</h1>
+
+<ul>
+  {% for lang in languages %}
+    <li>
+      <a href="{{ localized_path('translator_page_list', { lang: lang }) }}">{{ lang }}</a>
+      <form method="post" action="{{ localized_path('translator_delete_language', { lang: lang }) }}" style="display:inline;" onsubmit="return confirm('Delete language {{ lang }}?')">
+        <button type="submit">🗑️</button>
+      </form>
+    </li>
+  {% endfor %}
+</ul>
+
+<form id="add-language-form" method="post" action="/translation/add-language">
+    <input type="text" name="language" id="language-input" placeholder="e.g. cz">
+    <button type="submit">Add</button>
+</form>
+
+<script>
+document.getElementById('add-language-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const lang = document.getElementById('language-input').value.trim();
+    if (!lang) return;
+
+    fetch('/translation/add-language', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ language: lang })
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload(); // 成功后刷新语言列表页
+        } else {
+            alert("Failed to add language");
+        }
+    });
+});
+</script>
+{% endblock %}

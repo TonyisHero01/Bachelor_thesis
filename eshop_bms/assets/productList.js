@@ -45,6 +45,7 @@ var priceElement = document.getElementById("price");
 
 var categoryNameElement = document.getElementById("categoryName");
 var colorNameElement = document.getElementById("colorName");
+const colorHexElement = document.getElementById('colorHex');
 function enableCreateButton () {
     console.log("called func");
     
@@ -125,6 +126,14 @@ async function createCategory() {
 
 async function createColor() {
     console.log("funguje create");
+    const colorName = colorNameElement.value.trim();
+    const colorHex = colorHexElement.value.trim();
+
+    // 检查输入是否为空
+    if (!colorName || !/^#[A-Fa-f0-9]{6}$/.test(colorHex)) {
+        alert("Invalid color name or hex code!");
+        return;
+    }
     //var productListRoute = document.getElementById('routeData').getAttribute("data-edit-route")
     var response = await fetch('/bms/save_color',{
         method: "POST",
@@ -133,6 +142,7 @@ async function createColor() {
         },
         body: JSON.stringify({
             "name" : colorNameElement.value,
+            "hex": colorHex 
         })
     });
     //console.log(await response.text());
@@ -154,4 +164,136 @@ function formatDateTime() {
 
     // 返回格式为 YYYY-MM-DD HH:MM:SS
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+function openModifyColorForm() {
+    document.getElementById("myModifyColorPopup").style.display = "block";
+
+    // 设置默认颜色
+    let selectElement = document.getElementById("modifyColorSelect");
+    let colorHex = selectElement.options[selectElement.selectedIndex].getAttribute("data-hex");
+    document.getElementById("newColorHex").value = colorHex;
+}
+
+function cancelModifyColorForm() {
+    document.getElementById("myModifyColorPopup").style.display = "none";
+}
+
+function enableModifyColorButton() {
+    let newColorName = document.getElementById("newColorName").value.trim();
+    document.getElementById("modifyColorButton").disabled = newColorName.length === 0;
+}
+
+// 当选择颜色变化时，更新颜色输入框
+document.getElementById("modifyColorSelect").addEventListener("change", function() {
+    let selectedOption = this.options[this.selectedIndex];
+    let colorHex = selectedOption.getAttribute("data-hex");
+    document.getElementById("newColorHex").value = colorHex;
+});
+
+async function modifyColor() {
+    let colorId = document.getElementById("modifyColorSelect").value;
+    let newColorName = document.getElementById("newColorName").value.trim();
+    let newColorHex = document.getElementById("newColorHex").value;
+
+    if (!colorId || !newColorName) {
+        alert("Please select a color and enter a new name.");
+        return;
+    }
+
+    let response = await fetch('/bms/modify_color', {
+        method: "POST",
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            "id": colorId,
+            "new_name": newColorName,
+            "new_hex": newColorHex
+        })
+    });
+
+    let result = await response.json();
+    if (result.status === "success") {
+        alert("Color modified successfully!");
+        window.location.reload();
+    } else {
+        alert("Error modifying color.");
+    }
+}
+
+// 🔹 打开 "Add Size" 窗口
+function openSizeAddForm() {
+    document.getElementById("mySizePopup").style.display = "block";
+}
+
+// 🔹 关闭 "Add Size" 窗口
+function cancelCreateForm() {
+    document.getElementById("mySizePopup").style.display = "none";
+    document.getElementById("myModifySizePopup").style.display = "none";
+}
+
+// 🔹 启用 "Add Size" 按钮
+function enableSizeAddButton() {
+    document.getElementById("addSizeButton").disabled = document.getElementById("sizeName").value.trim() === "";
+}
+
+// 🔹 发送请求创建新 Size
+function createSize() {
+    const sizeName = document.getElementById("sizeName").value.trim();
+    if (!sizeName) return;
+
+    fetch("/bms/create_size", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: sizeName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Size added successfully!");
+            location.reload(); // 重新加载页面
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
+}
+
+// 🔹 打开 "Modify Size" 窗口
+function openModifySizeForm() {
+    document.getElementById("myModifySizePopup").style.display = "block";
+}
+
+// 🔹 关闭 "Modify Size" 窗口
+function cancelModifySizeForm() {
+    document.getElementById("myModifySizePopup").style.display = "none";
+}
+
+// 🔹 启用 "Modify Size" 按钮
+function enableModifySizeButton() {
+    document.getElementById("modifySizeButton").disabled = document.getElementById("newSizeName").value.trim() === "";
+}
+
+// 🔹 发送请求修改 Size
+function modifySize() {
+    const sizeId = document.getElementById("modifySizeSelect").value;
+    const newSizeName = document.getElementById("newSizeName").value.trim();
+    if (!newSizeName) return;
+
+    fetch(`/bms/modify_size/${sizeId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newSizeName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Size modified successfully!");
+            location.reload(); // 重新加载页面
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
 }

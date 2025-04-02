@@ -13,3 +13,5 @@ CREATE TABLE orders (
     discount DECIMAL(10,2) DEFAULT 0.00,
     CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customer(id) ON DELETE CASCADE
 );
+
+ALTER TABLE orders ADD COLUMN delivery_method VARCHAR(20) NOT NULL DEFAULT 'pickup';

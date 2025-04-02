@@ -62,6 +62,9 @@ class ShopInfo
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $cin = null;
 
+    #[ORM\Column(type: "boolean", options: ["default" => false])]
+    private bool $hidePrices = false;
+
     // Getters and Setters
 
     public function getId(): ?int
@@ -242,6 +245,19 @@ class ShopInfo
     public function setCin(?string $cin): static
     {
         $this->cin = $cin;
+        return $this;
+    }
+
+    // Getter
+    public function getHidePrices(): bool
+    {
+        return $this->hidePrices;
+    }
+
+    // Setter
+    public function setHidePrices(bool $hidePrices): static
+    {
+        $this->hidePrices = $hidePrices;
         return $this;
     }
 }

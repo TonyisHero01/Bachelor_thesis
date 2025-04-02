@@ -14,12 +14,16 @@
             </tr>
             {% for item in orderItems %}
                 <tr class="item_product_name"><td>{{ item.getProductName() }} x{{ item.getQuantity() }}</td><td></td></tr>
-                <tr><td>Subtotal:</td><td> {{ item.getSubtotal()|number_format(2) }}</td></tr>
-                <tr><td>Tax:</td><td> {{ item.getTaxAmount()|number_format(2) }}</td></tr>
+                {% if not shopInfo.hidePrices %}
+                    <tr><td>Subtotal:</td><td> {{ item.getSubtotal()|number_format(2) }}</td></tr>
+                    <tr><td>Tax:</td><td> {{ item.getTaxAmount()|number_format(2) }}</td></tr>
+                {% endif %}
             {% endfor %}
         </table>
 
-        <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        {% if not shopInfo.hidePrices %}
+            <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        {% endif %}
 
         <div class="order-actions">
             <button id="cancelOrderBtn">Cancel Order</button>

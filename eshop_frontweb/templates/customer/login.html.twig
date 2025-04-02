@@ -1,29 +1,46 @@
 {% extends 'eshop_base.html.twig' %}
 
-{% block title %}Log in!{% endblock %}
+{% block title %}Sign in - {{ shopInfo.getEshopName() }}{% endblock %}
 
 {% block body %}
-<form method="post">
-    {% if error %}
-        <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-    {% endif %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/login.css') }}">
 
-    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
-    <label for="inputEmail">Email</label>
-    <input type="email" value="{{ last_username }}" name="email" id="inputEmail" class="form-control" autocomplete="email" required autofocus>
-    <label for="inputPassword">Password</label>
-    <input type="password" name="password" id="inputPassword" class="form-control" autocomplete="current-password" required>
+<div class="login-container">
+    <div class="login-box">
+        <h2>Welcome Back!</h2>
+        <p class="subtitle">Sign in to continue shopping</p>
 
-    <input type="hidden" name="_csrf_token"
-           value="{{ csrf_token('authenticate') }}"
-    >
-    
-    <input type="hidden" name="_target_path" value="{{ app.request.headers.get('referer') }}">
+        {% if error %}
+            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+        {% endif %}
 
-    <button class="btn btn-lg btn-primary" type="submit">
-        Sign in
-    </button>
-    <a href="{{path('customer_register')}}">Register</a>
-</form>
+        <form method="post" class="auth-form">
+            <div class="input-group">
+                <label for="inputEmail"><i class="fas fa-envelope"></i> Email</label>
+                <input type="email" value="{{ last_username }}" name="email" id="inputEmail" class="form-control" autocomplete="email" required autofocus>
+            </div>
+
+            <div class="input-group">
+                <label for="inputPassword"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" name="password" id="inputPassword" class="form-control" autocomplete="current-password" required>
+            </div>
+            
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+            <input type="hidden" name="_target_path" value="{{ app.request.headers.get('referer') }}">
+
+            <button class="btn btn-primary btn-auth" type="submit">
+                <i class="fas fa-sign-in-alt"></i> Sign in
+            </button>
+        </form>
+
+        <p class="register-text">New to {{ shopInfo.getEshopName() }}?</p>
+
+        <form action="{{ path('customer_register') }}" method="get" class="auth-form">
+            <button class="btn btn-register btn-auth" type="submit">
+                <i class="fas fa-user-plus"></i> Register
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}
-

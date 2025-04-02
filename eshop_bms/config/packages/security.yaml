@@ -9,38 +9,55 @@ security:
                 property: email
 
     access_control:
-        # 允许所有用户（包括匿名用户）访问 /profile 和 /search
-        #- { path: ^/profile, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/search, roles: ROLE_WAREHOUSE_MANAGER }
+        # ✅ 第一步：放行登录、登出、未登录提示页、静态资源
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+        - { path: ^/logout, roles: PUBLIC_ACCESS }
+        - { path: ^/not-logged, roles: PUBLIC_ACCESS }
+        - { path: ^/assets, roles: PUBLIC_ACCESS }
+        - { path: ^/css, roles: PUBLIC_ACCESS }
+        - { path: ^/js, roles: PUBLIC_ACCESS }
+
+        # ✅ 第二步：所有其他页面，要求具备以下任意角色
+        - {
+            path: ^/,
+            roles: [
+                ROLE_SUPER_ADMIN,
+                ROLE_ADMIN,
+                ROLE_WAREHOUSEMAN,
+                ROLE_WAREHOUSE_MANAGER,
+                ROLE_TRANSLATOR,
+                ROLE_EVENT_MANAGER,
+                ROLE_ACCOUNTING
+            ]
+        }
 
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
-        
+
         main:
             lazy: true
             provider: app_user_provider
             entry_point: form_login
             custom_authenticators:
                 - App\Security\LoginFormAuthenticator
+
             form_login:
                 login_path: app_login
                 check_path: app_login
-                default_target_path: /home  # 登录成功后跳转到 /home
+                default_target_path: /home
                 always_use_default_target_path: true
 
-            # 注销相关设置
             logout:
                 path: app_logout
                 target: app_login
 
             remember_me:
                 secret: '%kernel.secret%'
-                lifetime: 604800 # 一周的有效时间
+                lifetime: 604800
                 path: /
 
-    # Test environment specific security settings
 when@test:
     security:
         password_hashers:

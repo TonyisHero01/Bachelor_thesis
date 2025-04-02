@@ -56,6 +56,26 @@ class ProductRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+    public function findLatestProductsGroupedBySku(?string $sku = null, ?string $name = null): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.id IN (
+                SELECT MAX(p2.id)
+                FROM App\Entity\Product p2
+                GROUP BY p2.sku
+            )')
+            ->orderBy('p.sku', 'ASC');
+
+        if ($sku) {
+            $qb->andWhere('p.sku LIKE :sku')->setParameter('sku', "%$sku%");
+        }
+
+        if ($name) {
+            $qb->andWhere('p.name LIKE :name')->setParameter('name', "%$name%");
+        }
+
+        return $qb->getQuery()->getResult();
+    }
     //    /**
     //     * @return Product[] Returns an array of Product objects
     //     */

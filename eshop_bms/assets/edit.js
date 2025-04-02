@@ -96,7 +96,8 @@ async function save_() {
     var categoryElement = document.getElementById("categoryOptions");
     var descriptionElement = document.getElementById("description");
     var numberInStockElement = document.getElementById("number_in_stock");
-    var sizeElement = document.getElementById("size");
+    var sizeElement = document.getElementById("sizeOptions");
+    var size = sizeElement.options[sizeElement.selectedIndex].value;
     var widthElement = document.getElementById("width");
     var heightElement = document.getElementById("height");
     var lengthElement = document.getElementById("length");
@@ -132,7 +133,7 @@ async function save_() {
             "description" : descriptionElement.value,
             "number_in_stock" : numberInStockElement.value,
             "image_urls": imagePaths,  // 上传的所有图片路径
-            "size": sizeElement.value,
+            "size": size,
             "width" : widthElement.value,
             "height" : heightElement.value,
             "length" : lengthElement.value,

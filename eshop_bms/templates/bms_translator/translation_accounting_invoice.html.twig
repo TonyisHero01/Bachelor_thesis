@@ -1,0 +1,127 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice Page Translation</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1, h2 { font-size: 1.4em; margin-top: 2em; }
+    .field-group { margin-bottom: 1em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.2em; }
+    input[type="text"], textarea { width: 100%; padding: 0.5em; margin-bottom: 0.5em; }
+    button { padding: 0.6em 1.2em; font-size: 1em; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h1>Translate to: {{ lang|upper }}</h1>
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <h2>Invoice Page</h2>
+    <input type="hidden" name="original_path" value="templates/accounting/invoice.html.twig">
+
+    <!-- 每项包含原文 hidden 和翻译 text -->
+    <div class="field-group">
+      <label>INVOICE</label>
+      <input type="hidden" name="original__invoice" value="INVOICE">
+      <input type="text" name="field__invoice" placeholder="INVOICE">
+    </div>
+
+    <div class="field-group">
+      <label>Date</label>
+      <input type="hidden" name="original__date" value="Date">
+      <input type="text" name="field__date" placeholder="Date">
+    </div>
+
+    <div class="field-group">
+      <label>Status</label>
+      <input type="hidden" name="original__status" value="Status">
+      <input type="text" name="field__status" placeholder="Status">
+    </div>
+
+    <div class="field-group">
+      <label>Customer</label>
+      <input type="hidden" name="original__customer" value="Customer">
+      <input type="text" name="field__customer" placeholder="Customer">
+    </div>
+
+    <div class="field-group">
+      <label>Contact</label>
+      <input type="hidden" name="original__contact" value="Contact">
+      <input type="text" name="field__contact" placeholder="Contact">
+    </div>
+
+    <div class="field-group">
+      <label>Delivery</label>
+      <input type="hidden" name="original__delivery" value="Delivery">
+      <input type="text" name="field__delivery" placeholder="Delivery">
+    </div>
+
+    <div class="field-group">
+      <label>Item</label>
+      <input type="hidden" name="original__item" value="Item">
+      <input type="text" name="field__item" placeholder="Item">
+    </div>
+
+    <div class="field-group">
+      <label>Qty</label>
+      <input type="hidden" name="original__qty" value="Qty">
+      <input type="text" name="field__qty" placeholder="Qty">
+    </div>
+
+    <div class="field-group">
+      <label>Unit Price</label>
+      <input type="hidden" name="original__unit_price" value="Unit Price">
+      <input type="text" name="field__unit_price" placeholder="Unit Price">
+    </div>
+
+    <div class="field-group">
+      <label>Subtotal</label>
+      <input type="hidden" name="original__subtotal" value="Subtotal">
+      <input type="text" name="field__subtotal" placeholder="Subtotal">
+    </div>
+
+    <div class="field-group">
+      <label>Subtotal (without tax)</label>
+      <input type="hidden" name="original__subtotal_no_tax" value="Subtotal (without tax)">
+      <input type="text" name="field__subtotal_no_tax" placeholder="Subtotal (without tax)">
+    </div>
+
+    <div class="field-group">
+      <label>Discount</label>
+      <input type="hidden" name="original__discount" value="Discount">
+      <input type="text" name="field__discount" placeholder="Discount">
+    </div>
+
+    <div class="field-group">
+      <label>Tax</label>
+      <input type="hidden" name="original__tax" value="Tax">
+      <input type="text" name="field__tax" placeholder="Tax">
+    </div>
+
+    <div class="field-group">
+      <label>Total (incl. tax)</label>
+      <input type="hidden" name="original__total_with_tax" value="Total (incl. tax)">
+      <input type="text" name="field__total_with_tax" placeholder="Total (incl. tax)">
+    </div>
+
+    <div class="field-group">
+      <label>Thank you for your order!</label>
+      <input type="hidden" name="original__thank_you" value="Thank you for your order!">
+      <input type="text" name="field__thank_you" placeholder="Thank you for your order!">
+    </div>
+
+    <div class="field-group">
+      <label>For support, contact</label>
+      <input type="hidden" name="original__support_contact" value="For support, contact">
+      <input type="text" name="field__support_contact" placeholder="For support, contact">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+</body>
+</html>
+{% endblock %}

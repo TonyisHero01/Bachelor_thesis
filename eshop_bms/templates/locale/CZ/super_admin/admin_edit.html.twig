@@ -1,0 +1,64 @@
+{# templates/admin/admin_edit.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Edit</title>
+    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+</head>
+<body>
+    <h1>Admin Edit</h1>
+    <div id=adminId admin-id-data={{ admin.id }}></div>
+    <div id="routeData" data-admin_list-route="{{ localized_path('show_All_admins') }}"></div>
+    <div id="body">
+    
+    <form action="#"  enctype="multipart/form-data">
+
+        <label for="surname">Příjmení</label>
+        <input type="text" id="surname" name="surname" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ admin.surname }}"><br>
+        <label for="name">Jméno</label>
+        <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ admin.name }}"><br>
+        <label for="username">Uživatelské jméno</label>
+        <input type="text" id="username" name="username" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ admin.username }}"><br>
+        <label for="phoneNumber">Telefonní číslo</label>
+        <input type="number" id="phoneNumber" name="phoneNumber" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ admin.phoneNumber }}"><br>
+        <label for="email">Email</label>
+        <input type="text" id="email" name="email" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ admin.email }}"><br>
+        <fieldset>
+            <legend>Vyberte Zaměstnanecké pozice</legend>
+
+            <label>
+                <input type="checkbox" name="roles[]" value="ROLE_WAREHOUSEMAN" 
+                {% if 'ROLE_WAREHOUSEMAN' in admin.roles %} checked {% endif %}>SKLADNÍK</label><br>
+
+            <label>
+                <input type="checkbox" name="roles[]" value="ROLE_WAREHOUSE_MANAGER" 
+                {% if 'ROLE_WAREHOUSE_MANAGER' in admin.roles %} checked {% endif %}>VEDOUCÍ SKLADU</label><br>
+
+            <label>
+                <input type="checkbox" name="roles[]" value="ROLE_TRANSLATOR" 
+                {% if 'ROLE_TRANSLATOR' in admin.roles %} checked {% endif %}>PŘEKLADATEL</label><br>
+
+            <label>
+                <input type="checkbox" name="roles[]" value="ROLE_EVENT_MANAGER" 
+                {% if 'ROLE_EVENT_MANAGER' in admin.roles %} checked {% endif %}>VEDOUCÍ AKCÍ</label><br>
+
+            <label>
+                <input type="checkbox" name="roles[]" value="ROLE_ACCOUNTING" 
+                {% if 'ROLE_ACCOUNTING' in admin.roles %} checked {% endif %}>ÚČETNIK</label><br>
+            <label>
+                <input type="checkbox" name="roles[]" value="ROLE_ADMIN" 
+                {% if 'ROLE_ADMIN' in admin.roles %} checked {% endif %}>ADMINISTRÁTOR</label>
+        </fieldset>
+        <div class="buttons">
+        <button type="button" id="saveButton" onclick="save_()">Uložit</button>
+        <button type="button" id="backButton" onclick="backToAdmins()">Zpět k administrátorům</button>
+        <script src="{{ asset('../assets/adminEdit.js') }}"></script>
+    </form>
+    </div>
+</body>
+</html>
+{% endblock %}

@@ -1,3 +1,6 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,14 +11,14 @@
 <body>
     <h1>Product Edit</h1>
     <div id=productId product-id-data={{ product.id }}></div>
-    <div id="routeData" data-product_list-route="{{ path('show_All_products') }}"></div>
+    <div id="routeData" data-product_list-route="{{ localized_path('show_All_products') }}"></div>
     <div id="body">
     
     <form action="#"  enctype="multipart/form-data">
         <label for="versionSelect">Choose Version:</label>
         <select id="versionSelect" name="versionSelect" onchange="switchVersion(this.value)">
             {% for productVersion in productsWithSameSku %}
-                <option value="{{ path('edit_product', {'id': productVersion.id}) }}"
+                <option value="{{ localized_path('edit_product', {'id': productVersion.id}) }}"
                     {% if productVersion.id == product.id %}selected{% endif %}>
                     Version {{ productVersion.version }} - {{ productVersion.addTime|date('Y-m-d H:i') }}
                 </option>
@@ -42,7 +45,7 @@
                 {% for imageUrl in product.imageUrls %}
                     <div class="image_upload_section" data-image-url="{{imageUrl}}">
                         <img id="image" src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" width="304" height="228"><br>
-                        <button type="button" class="delete-button" onclick="deleteImage('{{ imageUrl }}')">删除图片</button>
+                        <button type="button" class="delete-button" onclick="deleteImage('{{ imageUrl }}')">Delete Image</button>
                     </div>
                 {% endfor %}
             {% else %}
@@ -53,8 +56,15 @@
             <input class="image_upload_input" type="file" multiple>
             <input type="hidden" class="image_path" value="">
         </div>
-        <label for="size">Size</label><br>
-        <input type="text" id="size" name="size" value="{{ product.size }}"><br>
+        <label for="sizeOptions">Choose Size:</label><br>
+        <select id="sizeOptions" name="sizeOptions">
+            <option value="">None</option> <!-- 默认无尺寸 -->
+            {% for size in sizes %}
+                <option value="{{ size.name }}" {% if size.name == product.size %}selected{% endif %}>
+                    {{ size.name }}
+                </option>
+            {% endfor %}
+        </select><br>
         <label for="width">Width</label><br>
         <input type="number" id="width" name="width" value="{{ product.width }}" step="0.01" min="0"><br>
         <label for="height">Height</label>
@@ -107,3 +117,4 @@
     </div>
 </body>
 </html>
+{% endblock %}

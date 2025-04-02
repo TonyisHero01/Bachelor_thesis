@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Translation - Register Success</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1 { font-size: 24px; margin-bottom: 1em; }
+    .field-group { margin-bottom: 1.2em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.3em; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 0.3em;
+    }
+    button {
+      padding: 0.6em 1.4em;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 1.5em;
+    }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h1>Register Success Page</h1>
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <input type="hidden" name="original_path" value="templates/registration/register_successfull_notification.html.twig">
+
+    
+
+    <div class="field-group">
+      <label>Register Successfull!!!</label>
+      <input type="hidden" name="original__register_success" value="Register Successfull!!!">
+      <input type="text" name="field__register_success" placeholder="Register Successfull!!!">
+    </div>
+
+    <div class="field-group">
+      <label>Done</label>
+      <input type="hidden" name="original__done_button" value="Done">
+      <input type="text" name="field__done_button" placeholder="Done">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+</body>
+</html>
+{% endblock %}

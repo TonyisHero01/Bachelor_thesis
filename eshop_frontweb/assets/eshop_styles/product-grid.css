@@ -52,3 +52,32 @@
     color: #333;
     text-align: center;
 }
+
+.product-price {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.original-price .strikethrough {
+    text-decoration: line-through;
+    color: #888;
+    font-size: 13px;
+}
+
+.discounted-price {
+    color: #e60000;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.discount-tag {
+    display: inline-block;
+    background-color: #ffcc00;
+    color: #000;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+}

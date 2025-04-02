@@ -24,6 +24,9 @@ class OrderItem
     #[ORM\Column(type: "string", length: 255)]
     private string $productName;
 
+    #[ORM\Column(type: "string", length: 255, nullable: false)]
+    private string $sku;
+
     #[ORM\Column(type: "integer")]
     private int $quantity;
 
@@ -102,9 +105,11 @@ class OrderItem
 
     public function setSubtotal(): self
     {
-        // 计算不含税的总价
-        $this->subtotal = ($this->unitPrice / (1 + $this->product->getTaxRate() / 100)) * $this->quantity;
+        if (!isset($this->product)) {
+            throw new \LogicException("OrderItem product must be set before calling setSubtotal().");
+        }
 
+        $this->subtotal = ($this->unitPrice / (1 + $this->product->getTaxRate() / 100)) * $this->quantity;
         return $this;
     }
 
@@ -117,5 +122,16 @@ class OrderItem
         $taxAmount = ($this->unitPrice * $this->quantity) - $this->subtotal;
 
         return round($taxAmount, 2);
+    }
+
+    public function setSku(string $sku): self
+    {
+        $this->sku = $sku;
+        return $this;
+    }
+
+    public function getSku(): string
+    {
+        return $this->sku;
     }
 }

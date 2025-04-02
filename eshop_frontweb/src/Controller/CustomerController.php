@@ -10,6 +10,8 @@ use App\Entity\Product;
 use App\Entity\Cart;
 use App\Entity\Order;
 use App\Entity\OrderItem;
+use App\Entity\ReturnRequest;
+use App\Entity\Category;
 use App\Form\CustomerRegistrationFormType;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -44,12 +46,14 @@ class CustomerController extends AbstractController
 
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
         return $this->render('customer/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
             'shopInfo' => $this->shopInfo,
-            'show_sidebar' => false
+            'show_sidebar' => false,
+            'categories' => $categories
         ]);
     }
 
@@ -57,9 +61,11 @@ class CustomerController extends AbstractController
     #[IsGranted('ROLE_CUSTOMER')]
     public function home(): Response
     {
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         return $this->render('customer/home.html.twig', [
             'shopInfo' => $this->shopInfo,
-            'show_sidebar' => false
+            'show_sidebar' => false,
+            'categories' => $categories
         ]);
     }
 
@@ -84,10 +90,12 @@ class CustomerController extends AbstractController
             return $this->redirectToRoute('customer_home');
         }
 
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         return $this->render('customer/register.html.twig', [
             'registrationForm' => $form->createView(),
             'shopInfo' => $this->shopInfo,
-            'show_sidebar' => false
+            'show_sidebar' => false,
+            'categories' => $categories
         ]);
     }
     #[Route(path: '/logout', name: 'app_logout')]
@@ -99,27 +107,24 @@ class CustomerController extends AbstractController
     #[Route('/customer/wishlist', name: 'customer_wishlist')]
     public function showWishlist(EntityManagerInterface $entityManager): Response
     {
-        // 获取当前用户
         $customer = $this->getUser();
 
-        // 确保用户已登录且为 Customer 类型
         if (!$customer instanceof Customer) {
             return $this->redirectToRoute('customer_login');
         }
 
-        // 获取 wishlist 中的产品 ID
         $wishlistProductIds = $customer->getWishlist();
-
-        // 使用产品 ID 查询产品
         $products = [];
         if (!empty($wishlistProductIds)) {
             $products = $entityManager->getRepository(Product::class)->findBy(['id' => $wishlistProductIds]);
         }
 
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         return $this->render('customer/wishlist.html.twig', [
             'shopInfo' => $this->shopInfo,
             'show_sidebar' => false,
-            'products' => $products // 传递产品给模板
+            'products' => $products,
+            'categories' => $categories
         ]);
     }
 
@@ -193,24 +198,24 @@ class CustomerController extends AbstractController
     #[Route('/cart', name: 'customer_cart')]
     public function showCart(EntityManagerInterface $entityManager): Response
     {
-        // 确保用户已登录
         if (!$this->getUser()) {
             return $this->redirectToRoute('customer_login');
         }
 
-        // 获取当前用户
         $customer = $entityManager->getRepository(Customer::class)->find($this->getUser()->getId());
-
-        // 查询购物车内容，并按 `added_at` 时间升序排列
         $cartItems = $entityManager->getRepository(Cart::class)->findBy(
             ['customer' => $customer],
-            ['addedAt' => 'ASC'] // 这里按照 `added_at` 排序
+            ['addedAt' => 'ASC']
         );
 
+        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+
         return $this->render('eshop_cart/cart.html.twig', [
-            'shopInfo' => $this->shopInfo,
+            'shopInfo' => $shopInfo,
             'show_sidebar' => false,
             'cartItems' => $cartItems,
+            'categories' => $categories
         ]);
     }
 
@@ -286,7 +291,7 @@ class CustomerController extends AbstractController
             'cartCount' => $cartTotalQuantity ?? 0
         ]);
     }
-
+    /*
     #[Route('/cart/checkout', name: 'cart_checkout', methods: ['POST'])]
     public function checkout(EntityManagerInterface $entityManager): JsonResponse
     {
@@ -296,7 +301,6 @@ class CustomerController extends AbstractController
             return new JsonResponse(["success" => false, "message" => "User not logged in"], 403);
         }
 
-        // 获取当前用户的购物车商品
         $cartItems = $entityManager->getRepository(Cart::class)->findBy(['customer' => $user]);
 
         if (empty($cartItems)) {
@@ -314,7 +318,7 @@ class CustomerController extends AbstractController
         $order->setCustomer($user);
         $order->setTotalPrice($totalPrice);
         $order->setOrderCreatedAt(new \DateTime());
-        $order->setIsCompleted(false); // 订单未完成
+        $order->setIsCompleted(false);
         $order->setPaymentStatus("PENDING");
         $order->setDeliveryStatus("PENDING");
 
@@ -323,13 +327,16 @@ class CustomerController extends AbstractController
 
         // 订单项 (OrderItem) 关联购物车里的商品
         foreach ($cartItems as $cartItem) {
+            $product = $cartItem->getProduct();
             $orderItem = new OrderItem();
             $orderItem->setOrder($order);
-            $orderItem->setProduct($cartItem->getProduct());
-            $orderItem->setProductName($cartItem->getProduct()->getName());
+            $orderItem->setProduct($product);  // ✅ 先设置 Product
+            $orderItem->setProductName($product->getName());
+            $orderItem->setSku($product->getSku());  // ✅ 存 SKU
             $orderItem->setQuantity($cartItem->getQuantity());
-            $orderItem->setUnitPrice($cartItem->getProduct()->getPrice());
-            $orderItem->setSubtotal(($cartItem->getProduct()->getPrice() / (1 + $cartItem->getProduct()->getTaxRate() / 100)) * $cartItem->getQuantity());
+            $orderItem->setUnitPrice($product->getPrice());
+
+            $orderItem->setSubtotal();  // ✅ 现在可以安全调用 setSubtotal()
 
             $entityManager->persist($orderItem);
         }
@@ -341,31 +348,54 @@ class CustomerController extends AbstractController
             "order_id" => $order->getId()
         ]);
     }
-
+    */
     #[Route('/order-confirmation/{id}', name: 'order_confirmation', methods: ['GET'])]
     public function orderConfirmation(int $id, EntityManagerInterface $entityManager): Response
     {
-        // 确保用户已登录
         if (!$this->getUser()) {
             return $this->redirectToRoute('customer_login');
         }
 
-        // 查询订单
         $order = $entityManager->getRepository(Order::class)->find($id);
-
-        // 确保订单存在，并且属于当前用户
         if (!$order || $order->getCustomer() !== $this->getUser()) {
             throw $this->createNotFoundException('Order not found.');
         }
 
-        // 获取订单项
         $orderItems = $entityManager->getRepository(OrderItem::class)->findBy(['order' => $order]);
+        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
         return $this->render('eshop_order/order_confirmation.html.twig', [
-            'shopInfo' => $this->shopInfo,
+            'shopInfo' => $shopInfo,
             'show_sidebar' => false,
             'order' => $order,
-            'orderItems' => $orderItems
+            'orderItems' => $orderItems,
+            'categories' => $categories
+        ]);
+    }
+
+    #[Route('/order-confirmation2/{id}', name: 'order_confirmation2', methods: ['GET'])]
+    public function orderConfirmation2(int $id, EntityManagerInterface $entityManager): Response
+    {
+        if (!$this->getUser()) {
+            return $this->redirectToRoute('customer_login');
+        }
+
+        $order = $entityManager->getRepository(Order::class)->find($id);
+        if (!$order || $order->getCustomer() !== $this->getUser()) {
+            throw $this->createNotFoundException('Order not found.');
+        }
+
+        $orderItems = $entityManager->getRepository(OrderItem::class)->findBy(['order' => $order]);
+        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+
+        return $this->render('eshop_order/order_confirmation2.html.twig', [
+            'shopInfo' => $shopInfo,
+            'show_sidebar' => false,
+            'order' => $order,
+            'orderItems' => $orderItems,
+            'categories' => $categories
         ]);
     }
 
@@ -373,22 +403,43 @@ class CustomerController extends AbstractController
     public function customerOrders(EntityManagerInterface $entityManager): Response
     {
         $user = $this->getUser();
-
         if (!$user) {
             return $this->redirectToRoute('login');
         }
 
-        // 获取所有订单（不区分是否完成）
         $orders = $entityManager->getRepository(Order::class)->findBy(
             ['customer' => $user],
             ['orderCreatedAt' => 'DESC']
         );
 
+        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+
         return $this->render('eshop_order/customer_orders.html.twig', [
-            'shopInfo' => $this->shopInfo,
+            'shopInfo' => $shopInfo,
             'show_sidebar' => false,
-            'orders' => $orders
+            'orders' => $orders,
+            'categories' => $categories
         ]);
     }
+    #[Route('/customer/return-requests', name: 'customer_return_requests')]
+    public function returnRequests(EntityManagerInterface $entityManager): Response
+    {
+        $user = $this->getUser();
+        if (!$user) {
+            return $this->redirectToRoute('customer_login');
+        }
 
+        $returnRequests = $entityManager->getRepository(ReturnRequest::class)
+            ->findBy(['userEmail' => $user->getEmail()], ['requestDate' => 'DESC']);
+        
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+
+        return $this->render('customer/return_requests.html.twig', [
+            'returnRequests' => $returnRequests,
+            'shopInfo' => $this->shopInfo,
+            'show_sidebar' => false,
+            'categories' => $categories
+        ]);
+    }
 }

@@ -6,6 +6,7 @@ use App\Entity\ShopInfo;
 use App\Entity\Product;
 use App\Entity\Customer;
 use App\Entity\Cart;
+use App\Entity\Category;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -16,18 +17,22 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 class EshopProductController extends AbstractController
 {
     private $shopInfo;
+    private $entityManager;
 
     public function __construct(EntityManagerInterface $entityManager)
     {
+        $this->entityManager = $entityManager;
         $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
     }
 
     #[Route('/eshop/product', name: 'app_eshop_product')]
     public function index(): Response
     {
+        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         return $this->render('eshop_product/index.html.twig', [
             'shopInfo' => $this->shopInfo,
-            'show_sidebar' => false
+            'show_sidebar' => false,
+            'categories' => $categories
         ]);
     }
 
@@ -35,18 +40,19 @@ class EshopProductController extends AbstractController
     public function show(EntityManagerInterface $entityManager, int $id): Response
     {
         $product = $entityManager->getRepository(Product::class)->findProductById($id);
-        if(!$product)
-        {
-            throw $this->createNotFoundException(
-                'No product found for id '.$id
-            );
+        if(!$product) {
+            throw $this->createNotFoundException('No product found for id ' . $id);
         }
 
+        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+        $categories = $entityManager->getRepository(Category::class)->findAllCategories();
+        
         return $this->render('eshop_product/index.html.twig', [
-            'shopInfo' => $this->shopInfo,
+            'shopInfo' => $shopInfo,
             'show_sidebar' => false,
             'product' => $product,
             'BMS_URL' => $this->getParameter('BMS_URL'),
+            'categories' => $categories
         ]);
     }
     

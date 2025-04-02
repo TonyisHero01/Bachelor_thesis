@@ -7,6 +7,7 @@ use App\Entity\Product;
 use App\Entity\Category;
 use App\Entity\Color;
 use App\Entity\Currency;
+use App\Entity\Size;
 use App\Form\ProductType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,18 +19,27 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Controller\ProductRepository;
 use Exception;
+use Twig\Environment;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\Filesystem\Filesystem;
 function compareProductIds($a, $b) {
     return $a['similarity'] <=> $b['similarity'];
 }
-class ProductController extends AbstractController
+class ProductController extends BaseController
 {
     private $params;
-    public function __construct(ParameterBagInterface $params)
-    {
+    public function __construct(
+        ParameterBagInterface $params,
+        EntityManagerInterface $em,
+        AuthorizationCheckerInterface $auth,
+        LoggerInterface $logger,
+        Environment $twig
+    ) {
+        parent::__construct($twig, $logger); // 👈 关键！必须调用父类构造函数
         $this->params = $params;
+        $this->em = $em;
+        $this->auth = $auth;
     }
     private $image_count = 1;
     #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
@@ -38,7 +48,7 @@ class ProductController extends AbstractController
         AuthorizationCheckerInterface $authorizationChecker
     ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         $inputJSON = file_get_contents('php://input');
@@ -80,7 +90,7 @@ class ProductController extends AbstractController
     public function show(EntityManagerInterface $entityManager, int $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $product = $entityManager->getRepository(Product::class)->findProductById($id);
         if(!$product)
@@ -90,8 +100,8 @@ class ProductController extends AbstractController
             );
         }
 
-        return $this->render('product/product_show.html.twig', [
-            $product
+        return $this->renderLocalized('product/product_show.html.twig', [
+            'product' => $product
         ]);
     }
 
@@ -99,11 +109,11 @@ class ProductController extends AbstractController
     public function showAllProducts(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $user = $this->getUser();
         if ($authorizationChecker->isGranted('ROLE_CUSTOMER', $user)) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         if ($user) {
             // 获取用户的角色，返回一个数组
@@ -125,12 +135,16 @@ class ProductController extends AbstractController
             $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getAddTime() . ' ' . $product->getPrice() . '</div>' . '<br>';
         }
         $logger->info(json_encode($product_list));
-        return $this->render('product/product_list.html.twig', [
+        $colors = $entityManager->getRepository(Color::class)->findAll();
+        $sizes = $entityManager->getRepository(Size::class)->findAll();
+        return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $products,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
-            'form' => $form
+            'form' => $form,
+            'colors' => $colors,
+            'sizes' => $sizes
         ]);
     }
 
@@ -143,7 +157,7 @@ class ProductController extends AbstractController
         LoggerInterface $logger
     ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         $productRepository = $entityManager->getRepository(Product::class);
@@ -158,8 +172,9 @@ class ProductController extends AbstractController
 
         $categories = $entityManager->getRepository(Category::class)->findAllCategories();
         $colors = $entityManager->getRepository(Color::class)->findAll();
+        $sizes = $entityManager->getRepository(Size::class)->findAll();
 
-        return $this->render('product/product_edit.html.twig', [
+        return $this->renderLocalized('product/product_edit.html.twig', [
             'product' => $product,
             'productsWithSameSku' => $productsWithSameSku, // 将所有版本传递给模板
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -167,6 +182,7 @@ class ProductController extends AbstractController
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
             'categories' => $categories,
             'colors' => $colors,
+            'sizes' => $sizes,
         ]);
     }
     #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'])]
@@ -178,7 +194,7 @@ class ProductController extends AbstractController
         AuthorizationCheckerInterface $authorizationChecker
     ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         try {
@@ -287,7 +303,7 @@ class ProductController extends AbstractController
         AuthorizationCheckerInterface $authorizationChecker
     ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         $productRepository = $entityManager->getRepository(Product::class);
@@ -315,7 +331,7 @@ class ProductController extends AbstractController
     public function saveImage($id, Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         $product = $entityManager->getRepository(Product::class)->find($id);
@@ -399,7 +415,7 @@ class ProductController extends AbstractController
         }
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             $logger->info('未登录: ');
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $user = $this->getUser();
         if ($user) {
@@ -437,7 +453,7 @@ class ProductController extends AbstractController
     {
         // 检查用户是否登录
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         // 从会话中获取 product_id 列表
@@ -445,7 +461,7 @@ class ProductController extends AbstractController
 
         // 确保 ids 不为空
         if (empty($ids)) {
-            return $this->render('product/no_results.html.twig', []);
+            return $this->renderLocalized('product/no_results.html.twig', []);
         }
 
         // 使用 product_id 查询产品实体
@@ -467,7 +483,7 @@ class ProductController extends AbstractController
         }
 
         $form = $this->createForm(ProductType::class, new Product());
-        return $this->render('product/product_list.html.twig', [
+        return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $sortedProducts,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
@@ -479,7 +495,7 @@ class ProductController extends AbstractController
     public function createCategory(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $inputJSON = file_get_contents('php://input');
         $input = json_decode($inputJSON, TRUE);
@@ -498,19 +514,87 @@ class ProductController extends AbstractController
     public function createColor(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $inputJSON = file_get_contents('php://input');
         $input = json_decode($inputJSON, TRUE);
         $name = $input["name"];
+        $hex = $input["hex"];
 
         $color = new Color();
         $color->setName($name);
+        $color->setHex($hex);
 
         $entityManager->persist($color);
 
         $entityManager->flush();
 
         return new JsonResponse([]);
+    }
+
+    #[Route('/bms/modify_color', name: 'modify_color', methods: ['POST'])]
+    public function modifyColor(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        
+        $colorId = $data['id'] ?? null;
+        $newName = $data['new_name'] ?? null;
+        $newHex = $data['new_hex'] ?? null;
+
+        if (!$colorId || !$newName || !$newHex) {
+            return new JsonResponse(['status' => 'error', 'message' => 'Invalid data'], 400);
+        }
+
+        $colorRepository = $entityManager->getRepository(Color::class);
+        $color = $colorRepository->find($colorId);
+
+        if (!$color) {
+            return new JsonResponse(['status' => 'error', 'message' => 'Color not found'], 404);
+        }
+
+        $color->setName($newName);
+        $color->setHex($newHex);
+
+        $entityManager->flush();
+
+        return new JsonResponse(['status' => 'success']);
+    }
+    #[Route('/bms/create_size', name: 'size_create', methods: ['POST'])]
+    public function createSize(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $sizeName = $data['name'] ?? '';
+
+        if (empty($sizeName)) {
+            return new JsonResponse(['success' => false, 'message' => 'Size name cannot be empty.'], 400);
+        }
+
+        $size = new Size();
+        $size->setName($sizeName);
+        $entityManager->persist($size);
+        $entityManager->flush();
+
+        return new JsonResponse(['success' => true]);
+    }
+
+    #[Route('/bms/modify_size/{id}', name: 'size_modify', methods: ['POST'])]
+    public function modifySize(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $newSizeName = $data['name'] ?? '';
+
+        if (empty($newSizeName)) {
+            return new JsonResponse(['success' => false, 'message' => 'New size name cannot be empty.'], 400);
+        }
+
+        $size = $entityManager->getRepository(Size::class)->find($id);
+        if (!$size) {
+            return new JsonResponse(['success' => false, 'message' => 'Size not found.'], 404);
+        }
+
+        $size->setName($newSizeName);
+        $entityManager->flush();
+
+        return new JsonResponse(['success' => true]);
     }
 }

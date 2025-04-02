@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BMS Translation - Product Discount Manager</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1 { font-size: 24px; margin-bottom: 1em; }
+    h2 { font-size: 20px; color: #444; margin-top: 2em; }
+    .field-group { margin-bottom: 1.2em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.3em; }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 0.3em;
+    }
+    button { padding: 0.6em 1.4em; font-size: 1em; cursor: pointer; margin-top: 1em; }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h1>Translate Product Discount Manager</h1>
+
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <input type="hidden" name="original_path" value="templates/event_manager/discounts.html.twig">
+    {% set fields = {
+      'page_title': 'Product Discount Manager',
+      'sku': 'SKU',
+      'product_name': 'Product name',
+      'filter': 'Filter',
+      'select_all': 'Select All',
+      'current_discount': 'Current Discount (%)',
+      'no_products': 'No products found',
+      'bulk_discount': 'Bulk Discount (%)',
+      'apply_discount': 'Apply Discount'
+    } %}
+
+    {% for key, label in fields %}
+      <div class="field-group">
+        <label>{{ label }}</label>
+        <input type="text" name="field__{{ key }}" placeholder="{{ label }}">
+        <input type="hidden" name="original__{{ key }}" value="{{ label }}">
+      </div>
+    {% endfor %}
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+
+</body>
+</html>
+{% endblock %}

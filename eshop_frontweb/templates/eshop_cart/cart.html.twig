@@ -5,109 +5,130 @@
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/product-page.css') }}">
 <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/cart.css') }}">
-    <h2>Your Shopping Cart</h2>
 
-    {% if cartItems is empty %}
-        <p>Your cart is empty.</p>
-    {% else %}
-        <table class="cart-table">
-            <thead>
-                <tr>
-                    <th>Product</th>
+<h2>Your Shopping Cart</h2>
+
+{% if cartItems is empty %}
+    <p>Your cart is empty.</p>
+{% else %}
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                {% if not shopInfo.hidePrices %}
                     <th>Price</th>
-                    <th>Quantity</th>
+                {% endif %}
+                <th>Quantity</th>
+                {% if not shopInfo.hidePrices %}
                     <th>Total</th>
-                    <th>Action</th>
+                {% endif %}
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cartItem in cartItems %}
+                <tr>
+                    <td class="cart-item" data-label="Product">
+                    {% if cartItem.getProduct().getImageUrls() is not empty %}
+                        <img class="product-img" src="{{ BMS_URL }}/images/{{ cartItem.getProduct().getImageUrls()|first }}" alt="{{ cartItem.getProduct().getName() }}" class="cart-product-image">
+                    {% endif %}
+                    {{ cartItem.getProduct().getName() }}
+                    </td>
+                    {% if not shopInfo.hidePrices %}
+                        <td data-label="Price">
+                            {% set discount = cartItem.getProduct().getDiscount() %}
+                            {% set price = cartItem.getProduct().getPrice() %}
+                            {% set currency = cartItem.getProduct().getCurrency().getName() %}
+                            {% if discount < 100 %}
+                                <span class="original-price strikethrough">{{ price }} {{ currency }}</span><br>
+                                <span class="discounted-price">{{ (price * discount / 100) | number_format(2, '.', '') }} {{ currency }}</span>
+                            {% else %}
+                                {{ price }} {{ currency }}
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                    <td data-label="Quantity">
+                        <div class="quantity-selector">
+                            <button class="quantity-btn" onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() - 1 }})">-</button>
+                            <span class="quantity-value" id="cart-quantity-{{ cartItem.getId() }}">{{ cartItem.getQuantity() }}</span>
+                            <button class="quantity-btn" onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() + 1 }})">+</button>
+                        </div>
+                    </td>
+                    {% if not shopInfo.hidePrices %}
+                        <td data-label="Total">
+                            {% set discount = cartItem.getProduct().getDiscount() %}
+                            {% set price = cartItem.getProduct().getPrice() %}
+                            {% set discounted = discount < 100 ? (price * discount / 100) : price %}
+                            {{ (cartItem.getQuantity() * discounted) | number_format(2, '.', '') }}
+                        </td>
+                    {% endif %}
+                    <td data-label="Action">
+                        <button class="remove-btn" onclick="removeFromCart({{ cartItem.getId() }})">Remove</button>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                {% for cartItem in cartItems %}
-                    <tr>
-                        <td class="cart-item">
-                        {% if cartItem.getProduct().getImageUrls() is not empty %}
-                            <img class="product-img" src="{{ BMS_URL }}/images/{{ cartItem.getProduct().getImageUrls()|first }}" alt="{{ cartItem.getProduct().getName() }}" class="cart-product-image">
-                        {% endif %}
-                        {{ cartItem.getProduct().getName() }}
-                        </td>
-                        <td>{{ cartItem.getProduct().getPrice() }} {{ cartItem.getProduct().getCurrency().getName() }}</td>
-                        <td>
-                            <div class="quantity-selector">
-                                <button class="quantity-btn" onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() - 1 }})">-</button>
-                                <span class="quantity-value" id="cart-quantity-{{ cartItem.getId() }}">{{ cartItem.getQuantity() }}</span>
-                                <button class="quantity-btn" onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() + 1 }})">+</button>
-                            </div>
-                        </td>
-                        <td>{{ (cartItem.getQuantity() * cartItem.getProduct().getPrice()) | number_format(2) }}</td>
-                        <td>
-                            <button class="remove-btn" onclick="removeFromCart({{ cartItem.getId() }})">Remove</button>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if not shopInfo.hidePrices %}
         <div class="total-row">
-            <p><strong>Total:</strong> {{ cartItems|reduce((carry, item) => carry + item.getQuantity() * item.getProduct().getPrice(), 0) | number_format(2) }}</p>
-        </div>
-        <div class="checkout-container">
-            <button class="checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+            {% set total = 0 %}
+            {% for item in cartItems %}
+                {% set discount = item.getProduct().getDiscount() %}
+                {% set price = item.getProduct().getPrice() %}
+                {% set discounted = discount < 100 ? (price * discount / 100) : price %}
+                {% set total = total + discounted * item.getQuantity() %}
+            {% endfor %}
+            <p><strong>Total:</strong> {{ total | number_format(2, '.', '') }} {{ cartItems[0].getProduct().getCurrency().getName() }}</p>
         </div>
     {% endif %}
+    
+    <div class="checkout-container">
+        <button class="checkout-btn" onclick="goToDeliveryOption()">Proceed to Checkout</button>
+    </div>
+{% endif %}
 
-    <script>
-        function updateCart(cartItemId, newQuantity) {
-            if (newQuantity < 1) return;
+<script>
+    function updateCart(cartItemId, newQuantity) {
+        if (newQuantity < 1) return;
 
-            fetch('/cart/update/' + cartItemId, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quantity: newQuantity })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('cart-quantity-' + cartItemId).textContent = newQuantity;
-                    updateCartCount(data.cartCount);
-                    location.reload(); // 刷新购物车页面
-                } else {
-                    alert('Error updating cart: ' + data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
+        fetch('/cart/update/' + cartItemId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity: newQuantity })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('cart-quantity-' + cartItemId).textContent = newQuantity;
+                updateCartCount(data.cartCount);
+                location.reload(); // 刷新购物车页面
+            } else {
+                alert('Error updating cart: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
 
-        function removeFromCart(cartItemId) {
-            fetch('/cart/remove/' + cartItemId, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateCartCount(data.cartCount);
-                    location.reload(); // 刷新购物车页面
-                } else {
-                    alert('Error removing item: ' + data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
+    function removeFromCart(cartItemId) {
+        fetch('/cart/remove/' + cartItemId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateCartCount(data.cartCount);
+                location.reload(); // 刷新购物车页面
+            } else {
+                alert('Error removing item: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
 
-        function checkout() {
-            fetch('/cart/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert("Order created successfully! Order ID: " + data.order_id);
-                    location.href = "/order-confirmation/" + data.order_id;
-                } else {
-                    alert("Error: " + data.message);
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        }
-    </script>
+    function goToDeliveryOption() {
+        window.location.href = "/order/select_delivery";
+    }
+</script>
 {% endblock %}

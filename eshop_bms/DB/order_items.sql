@@ -8,3 +8,8 @@ CREATE TABLE order_items (
     subtotal DECIMAL(10,2) NOT NULL,
     CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
+
+ALTER TABLE order_items
+ALTER COLUMN quantity TYPE DECIMAL(10,2) USING quantity::DECIMAL(10,2);
+
+ALTER TABLE order_items ADD COLUMN sku VARCHAR(255) NOT NULL;

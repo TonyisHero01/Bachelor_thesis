@@ -1,0 +1,57 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Product Discount Manager{% endblock %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/discount-manager.css') }}">
+{% endblock %}
+
+{% block body %}
+<h1>Product Discount Manager</h1>
+
+<form method="get" class="form-filters">
+    <input type="text" name="sku" placeholder="SKU" value="{{ app.request.get('sku') }}">
+    <input type="text" name="name" placeholder="Product name" value="{{ app.request.get('name') }}">
+    <button type="submit">Filter</button>
+</form>
+
+<form id="discount-form" onsubmit="return false;">
+    <table>
+        <thead>
+            <tr>
+                <th>
+                    <label>
+                        <input type="checkbox" id="select-all">
+                        Select All
+                    </label>
+                </th>
+                <th>SKU</th>
+                <th>Name</th>
+                <th>Current Discount (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for product in products %}
+            <tr>
+                <td><input type="checkbox" name="productIds[]" value="{{ product.id }}"></td>
+                <td>{{ product.sku }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.discount }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="4" class="centered">No products found</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="discount-controls">
+        <label for="new-discount">Bulk Discount (%):</label>
+        <input type="number" id="new-discount" min="0" max="100" step="1" required>
+        <button type="button" id="apply-discount">Apply Discount</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block javascripts %}
+    <script src="{{ asset('../assets/eventManagerDiscount.js') }}"></script>
+{% endblock %}

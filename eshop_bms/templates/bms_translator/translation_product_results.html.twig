@@ -1,0 +1,101 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Translation - Search Results</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1 { font-size: 24px; margin-bottom: 1em; }
+    .field-group { margin-bottom: 1.2em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.3em; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 0.3em;
+    }
+    input[type="hidden"] {
+      display: none;
+    }
+    button {
+      padding: 0.6em 1.4em;
+      font-size: 1em;
+      cursor: pointer;
+      margin-top: 1.5em;
+    }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    
+    <h1>Search Results Page</h1>
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <input type="hidden" name="original_path" value="templates/product/results.html.twig">
+    <div class="field-group">
+      <label>Product List</label>
+      <input type="hidden" name="original__product_list_link" value="Product List">
+      <input type="text" name="field__product_list_link" placeholder="Product List">
+    </div>
+
+    <div class="field-group">
+      <label>Name</label>
+      <input type="hidden" name="original__product_name_column" value="Name">
+      <input type="text" name="field__product_name_column" placeholder="Name">
+    </div>
+
+    <div class="field-group">
+      <label>Quantity</label>
+      <input type="hidden" name="original__quantity_column" value="Quantity">
+      <input type="text" name="field__quantity_column" placeholder="Quantity">
+    </div>
+
+    <div class="field-group">
+      <label>Add Time</label>
+      <input type="hidden" name="original__add_time_column" value="Add Time">
+      <input type="text" name="field__add_time_column" placeholder="Add Time">
+    </div>
+
+    <div class="field-group">
+      <label>Price</label>
+      <input type="hidden" name="original__price_column" value="Price">
+      <input type="text" name="field__price_column" placeholder="Price">
+    </div>
+
+    <div class="field-group">
+      <label>Edit</label>
+      <input type="hidden" name="original__edit_button" value="Edit">
+      <input type="text" name="field__edit_button" placeholder="Edit">
+    </div>
+
+    <div class="field-group">
+      <label>Delete</label>
+      <input type="hidden" name="original__delete_button" value="Delete">
+      <input type="text" name="field__delete_button" placeholder="Delete">
+    </div>
+
+    <div class="field-group">
+      <label>Previous</label>
+      <input type="hidden" name="original__previous_button" value="Previous">
+      <input type="text" name="field__previous_button" placeholder="Previous">
+    </div>
+
+    <div class="field-group">
+      <label>Next</label>
+      <input type="hidden" name="original__next_button" value="Next">
+      <input type="text" name="field__next_button" placeholder="Next">
+    </div>
+
+    <div class="field-group">
+      <label>Page Count</label>
+      <input type="hidden" name="original__page_count" value="Page Count">
+      <input type="text" name="field__page_count" placeholder="Page Count">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+</body>
+</html>
+{% endblock %}

@@ -46,7 +46,7 @@ class CustomerLoginFormAuthenticator extends AbstractLoginFormAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        $targetPath = $request->request->get('_target_path') ?? $this->router->generate('customer_home');
+        $targetPath = $request->request->get('_target_path') ?? $this->urlGenerator->generate('app_eshop_home');
         return new RedirectResponse($targetPath);
     }
 

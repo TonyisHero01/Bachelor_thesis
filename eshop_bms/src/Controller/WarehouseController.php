@@ -4,22 +4,25 @@ namespace App\Controller;
 
 use App\Entity\Order;
 use App\Entity\Currency;
+use App\Entity\ReturnRequest;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 
-class WarehouseController extends AbstractController
+class WarehouseController extends BaseController
 {
     #[Route('/warehouse', name: 'app_warehouse')]
     public function index(AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->Localized('employee/employee_not_logged.html.twig', []);
         }
-        return $this->render('warehouse/index.html.twig', [
+        return $this->renderLocalized('warehouse/index.html.twig', [
             'controller_name' => 'WarehouseController',
         ]);
     }
@@ -28,13 +31,13 @@ class WarehouseController extends AbstractController
     public function redirectToOrderTracking(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $orders = $entityManager->getRepository(Order::class)->findAllOrders();
 
         $currency = $entityManager->getRepository(Currency::class)->findDefaultCurrency();
 
-        return $this->render('warehouse/order_tracking.html.twig',[
+        return $this->renderLocalized('warehouse/order_tracking.html.twig',[
             'orders' => $orders,
             'currency' => $currency
         ]);
@@ -48,7 +51,7 @@ class WarehouseController extends AbstractController
             throw $this->createNotFoundException('Order not found.');
         }
 
-        return $this->render('warehouse/order_detail.html.twig', [
+        return $this->renderLocalized('warehouse/order_detail.html.twig', [
             'order' => $order
         ]);
     }
@@ -64,6 +67,59 @@ class WarehouseController extends AbstractController
         // 标记订单为已完成
         $order->setIsCompleted(true);
         $entityManager->persist($order);
+        $entityManager->flush();
+
+        return new JsonResponse(['success' => true]);
+    }
+    #[Route('/warehouse/return-requests', name: 'app_return_requests')]
+    public function returnRequests(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        LoggerInterface $logger
+    ): Response {
+        $locale = $request->get('_locale') ?? $request->query->get('_locale') ?? $request->getLocale();
+
+        $logger->info("🧭 Requested locale: " . $locale);
+        $logger->info("📄 Will try localized template: templates/locale/{$locale}/warehouse/return_requests.html.twig");
+
+        $returnRequests = $entityManager->getRepository(ReturnRequest::class)->findAll();
+
+        return $this->renderLocalized('warehouse/return_requests.html.twig', [
+            'returnRequests' => $returnRequests,
+        ], $request);
+    }
+    #[Route('/warehouse/return-request/{id}', name: 'return_request_detail')]
+    public function returnRequestDetail(int $id, EntityManagerInterface $entityManager): Response
+    {
+        $returnRequest = $entityManager->getRepository(ReturnRequest::class)->find($id);
+
+        if (!$returnRequest) {
+            throw $this->createNotFoundException('Return request not found.');
+        }
+
+        return $this->renderLocalized('warehouse/return_request_detail.html.twig', [
+            'request' => $returnRequest
+        ]);
+    }
+    #[Route('/warehouse/return-request/{id}/process', name: 'process_return_request', methods: ['POST'])]
+    public function processReturnRequest(int $id, EntityManagerInterface $entityManager, Request $request): JsonResponse
+    {
+        $returnRequest = $entityManager->getRepository(ReturnRequest::class)->find($id);
+
+        if (!$returnRequest) {
+            return new JsonResponse(['success' => false, 'message' => 'Return request not found.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $status = $data['status'] ?? '';
+
+        if (!in_array($status, ['accepted', 'rejected'])) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid status.'], 400);
+        }
+
+        // 添加状态字段到 ReturnRequest
+        $returnRequest->setStatus($status);
+        $entityManager->persist($returnRequest);
         $entityManager->flush();
 
         return new JsonResponse(['success' => true]);

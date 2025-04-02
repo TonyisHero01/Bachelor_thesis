@@ -1,0 +1,218 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Translation Form - Product Edit</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1 { font-size: 24px; margin-bottom: 1em; }
+    .field-group { margin-bottom: 1.2em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.3em; }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 0.3em;
+    }
+    button { padding: 0.6em 1.4em; font-size: 1em; cursor: pointer; margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h2>Product Edit Page</h2>
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <input type="hidden" name="original_path" value="templates/product/product_edit.html.twig">
+
+    <div class="field-group">
+      <label>Product Edit</label>
+      <input type="text" name="field__title" placeholder="Product Edit">
+      <input type="hidden" name="original__title" value="Product Edit">
+    </div>
+
+    <div class="field-group">
+      <label>Choose Version:</label>
+      <input type="text" name="field__choose_version" placeholder="Choose Version:">
+      <input type="hidden" name="original__choose_version" value="Choose Version:">
+    </div>
+
+    <div class="field-group">
+      <label>Name</label>
+      <input type="text" name="field__name" placeholder="Name">
+      <input type="hidden" name="original__name" value="Name">
+    </div>
+
+    <div class="field-group">
+      <label>Added time:</label>
+      <input type="text" name="field__add_time_label" placeholder="Added time:">
+      <input type="hidden" name="original__add_time_label" value="Added time:">
+    </div>
+
+    <div class="field-group">
+      <label>SKU</label>
+      <input type="text" name="field__sku" placeholder="SKU">
+      <input type="hidden" name="original__sku" value="SKU">
+    </div>
+
+    <div class="field-group">
+      <label>Choose Category:</label>
+      <input type="text" name="field__choose_category" placeholder="Choose Category:">
+      <input type="hidden" name="original__choose_category" value="Choose Category:">
+    </div>
+
+    <div class="field-group">
+      <label>Description</label>
+      <input type="text" name="field__description" placeholder="Description">
+      <input type="hidden" name="original__description" value="Description">
+    </div>
+
+    <div class="field-group">
+      <label>Number in stock</label>
+      <input type="text" name="field__number_in_stock" placeholder="Number in stock">
+      <input type="hidden" name="original__number_in_stock" value="Number in stock">
+    </div>
+
+    <div class="field-group">
+      <label>Images</label>
+      <input type="text" name="field__images" placeholder="Images">
+      <input type="hidden" name="original__images" value="Images">
+    </div>
+
+    <div class="field-group">
+      <label>No images uploaded yet</label>
+      <input type="text" name="field__no_images" placeholder="No images uploaded yet">
+      <input type="hidden" name="original__no_images" value="No images uploaded yet">
+    </div>
+
+    <div class="field-group">
+      <label>Delete Image</label>
+      <input type="text" name="field__delete_image" placeholder="Delete Image">
+      <input type="hidden" name="original__delete_image" value="Delete Image">
+    </div>
+
+    <div class="field-group">
+      <label>Choose Size:</label>
+      <input type="text" name="field__choose_size" placeholder="Choose Size:">
+      <input type="hidden" name="original__choose_size" value="Choose Size:">
+    </div>
+
+    <div class="field-group">
+      <label>None</label>
+      <input type="text" name="field__none_size" placeholder="None">
+      <input type="hidden" name="original__none_size" value="None">
+    </div>
+
+    <div class="field-group">
+      <label>Width</label>
+      <input type="text" name="field__width" placeholder="Width">
+      <input type="hidden" name="original__width" value="Width">
+    </div>
+
+    <div class="field-group">
+      <label>Height</label>
+      <input type="text" name="field__height" placeholder="Height">
+      <input type="hidden" name="original__height" value="Height">
+    </div>
+
+    <div class="field-group">
+      <label>Length</label>
+      <input type="text" name="field__length" placeholder="Length">
+      <input type="hidden" name="original__length" value="Length">
+    </div>
+
+    <div class="field-group">
+      <label>Weight</label>
+      <input type="text" name="field__weight" placeholder="Weight">
+      <input type="hidden" name="original__weight" value="Weight">
+    </div>
+
+    <div class="field-group">
+      <label>Material</label>
+      <input type="text" name="field__material" placeholder="Material">
+      <input type="hidden" name="original__material" value="Material">
+    </div>
+
+    <div class="field-group">
+      <label>Choose Color:</label>
+      <input type="text" name="field__choose_color" placeholder="Choose Color:">
+      <input type="hidden" name="original__choose_color" value="Choose Color:">
+    </div>
+
+    <div class="field-group">
+      <label>Extra Attributes:</label>
+      <input type="text" name="field__extra_attributes" placeholder="Extra Attributes:">
+      <input type="hidden" name="original__extra_attributes" value="Extra Attributes:">
+    </div>
+
+    <div class="field-group">
+      <label>Key</label>
+      <input type="text" name="field__attribute_key" placeholder="Key">
+      <input type="hidden" name="original__attribute_key" value="Key">
+    </div>
+
+    <div class="field-group">
+      <label>Value</label>
+      <input type="text" name="field__attribute_value" placeholder="Value">
+      <input type="hidden" name="original__attribute_value" value="Value">
+    </div>
+
+    <div class="field-group">
+      <label>Delete</label>
+      <input type="text" name="field__delete_attribute" placeholder="Delete">
+      <input type="hidden" name="original__delete_attribute" value="Delete">
+    </div>
+
+    <div class="field-group">
+      <label>Add Attribute</label>
+      <input type="text" name="field__add_attribute" placeholder="Add Attribute">
+      <input type="hidden" name="original__add_attribute" value="Add Attribute">
+    </div>
+
+    <div class="field-group">
+      <label>Price</label>
+      <input type="text" name="field__price" placeholder="Price">
+      <input type="hidden" name="original__price" value="Price">
+    </div>
+
+    <div class="field-group">
+      <label>Currency</label>
+      <input type="text" name="field__currency" placeholder="Currency">
+      <input type="hidden" name="original__currency" value="Currency">
+    </div>
+
+    <div class="field-group">
+      <label>Discount</label>
+      <input type="text" name="field__discount" placeholder="Discount">
+      <input type="hidden" name="original__discount" value="Discount">
+    </div>
+
+    <div class="field-group">
+      <label>Tax Rate (%)</label>
+      <input type="text" name="field__tax_rate" placeholder="Tax Rate (%)">
+      <input type="hidden" name="original__tax_rate" value="Tax Rate (%)">
+    </div>
+
+    <div class="field-group">
+      <label>Hide Product</label>
+      <input type="text" name="field__hide_product" placeholder="Hide Product">
+      <input type="hidden" name="original__hide_product" value="Hide Product">
+    </div>
+
+    <div class="field-group">
+      <label>Save</label>
+      <input type="text" name="field__save" placeholder="Save">
+      <input type="hidden" name="original__save" value="Save">
+    </div>
+
+    <div class="field-group">
+      <label>Back to products</label>
+      <input type="text" name="field__back_to_products" placeholder="Back to products">
+      <input type="hidden" name="original__back_to_products" value="Back to products">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+</body>
+</html>
+{% endblock %}

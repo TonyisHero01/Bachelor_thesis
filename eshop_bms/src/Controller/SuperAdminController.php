@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 
-class SuperAdminController extends AbstractController
+class SuperAdminController extends BaseController
 {
     private $params;
     public function __construct(ParameterBagInterface $params)
@@ -22,7 +22,7 @@ class SuperAdminController extends AbstractController
     #[Route('/super/admin', name: 'app_super_admin')]
     public function index(): Response
     {
-        return $this->render('super_admin/index.html.twig', [
+        return $this->renderLocalized('super_admin/index.html.twig', [
             'controller_name' => 'SuperAdminController',
         ]);
     }
@@ -31,7 +31,7 @@ class SuperAdminController extends AbstractController
     public function showAllAdmins(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
         $admins = $entityManager->getRepository(Employee::class)->findAllWithRoleAdmin();
@@ -43,7 +43,7 @@ class SuperAdminController extends AbstractController
             $admin_list .= '<div>' . $admin->getName() . ' ' . $admin->getSurname() . '</div>' . '<br>';
         }
 
-        return $this->render('super_admin/admin_list.html.twig', [
+        return $this->renderLocalized('super_admin/admin_list.html.twig', [
             'employees' => $admins,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
@@ -54,12 +54,12 @@ class SuperAdminController extends AbstractController
     public function edit(EntityManagerInterface $entityManager, $id, Request $request, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $employeeRepository = $entityManager->getRepository(Employee::class);
         $admin = $employeeRepository->find($id);
 
-        return $this->render('super_admin/admin_edit.html.twig', [
+        return $this->renderLocalized('super_admin/admin_edit.html.twig', [
             'admin' => $admin,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
@@ -70,7 +70,7 @@ class SuperAdminController extends AbstractController
     public function saveAdmin(Request $request, EntityManagerInterface $entityManager, $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         try {
             $adminRepository = $entityManager->getRepository(Employee::class);

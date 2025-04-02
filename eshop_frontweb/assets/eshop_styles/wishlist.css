@@ -24,6 +24,10 @@
     align-items: center;
     width: 700px; /* 适当增加宽度 */
     margin-bottom: 20px; /* 每个产品的间距 */
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .img-container {
@@ -116,4 +120,75 @@
 
 .add-to-cart:hover {
     background-color: #27ae60;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+    .wishlist-grid {
+        grid-template-columns: 1fr; /* 改为单列布局 */
+        width: 100%;
+        gap: 15px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+
+    .img-container {
+        max-width: 100%;
+        text-align: center;
+    }
+
+    .img-container img {
+        width: 100%;
+        max-width: 200px;
+        height: auto;
+        margin: 0 auto;
+        border-radius: 6px;
+    }
+
+    .description-container {
+        text-align: center;
+        padding: 10px 0;
+    }
+
+    .wishlist-actions {
+        align-items: center;
+        width: 100%;
+        padding-top: 10px;
+    }
+
+    .actions-row {
+        flex-direction: column;
+        width: 100%;
+        gap: 15px;
+    }
+
+    .quantity-selector {
+        width: 100%;
+        justify-content: center;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+    }
+
+    .remove-from-wishlist,
+    .add-to-cart {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 6px;
+    }
+
+    .product-name {
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #212529;
+    }
+
+    .product-description {
+        font-size: 14px;
+        margin-bottom: 15px;
+        color: #6c757d;
+    }
 }

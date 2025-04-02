@@ -1,0 +1,38 @@
+h1 {
+    margin-bottom: 20px;
+}
+
+.form-filters input {
+    margin-right: 8px;
+    padding: 4px 8px;
+}
+
+.discount-controls {
+    margin-top: 20px;
+}
+
+.discount-controls input {
+    width: 80px;
+    margin: 0 10px;
+}
+
+.discount-controls button {
+    padding: 6px 12px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+}
+
+.centered {
+    text-align: center;
+    font-style: italic;
+}

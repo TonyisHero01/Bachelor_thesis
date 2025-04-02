@@ -1,11 +1,41 @@
 /* Header 样式 */
 .header_container {
-    background-color: #f1f1f1;
+    background-color: #f1f1f1; /* 背景颜色 */
     padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 10%;
+    width: 100%;
+    box-sizing: border-box;
+    position: fixed; /* 固定在页面顶部 */
+    top: 0;
+    left: 0;
+    z-index: 1000; /* 确保 header 始终在最上层 */
+    height: 60px;
+    border-bottom: 1px solid #ddd; /* 添加下边框 */
+}
+
+/* 汉堡菜单按钮基础样式 */
+.menu-toggle {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    z-index: 1001;
+    background: none;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.menu-toggle span {
+    display: block;
+    width: 25px;
+    height: 3px;
+    background-color: #333;
+    margin: 5px 0;
+    transition: 0.3s;
 }
 
 /* 左侧内容，固定宽度 */
@@ -15,7 +45,7 @@
     align-items: flex-start;
     font-size: 14px;
     color: #666;
-    width: 300px; /* 设置固定宽度 */
+    width: 300px;
     margin-left: 10px;
 }
 
@@ -33,7 +63,7 @@
     align-items: center;
     gap: 15px;
     font-size: 14px;
-    width: 300px; /* 设置固定宽度，与左侧一致 */
+    width: 300px;
     margin-right: 10px;
 }
 
@@ -82,38 +112,37 @@
     line-height: 1;
 }
 
+/* 搜索框样式 */
 .field {
-    display: flex;
     position: relative;
-    width: 100%;
-    background-color: #ffffff;
-    border-radius: 5px;
-    padding: 5px;
+    display: flex;
+    align-items: center;
 }
 
 .search__input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 10px;
-    font-size: 14px;
-    outline: none;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
 }
 
 .search__button {
+    position: absolute;
+    right: 0.5rem;
     background: none;
     border: none;
+    padding: 0.5rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 10px;
 }
 
 .icon-search {
     width: 20px;
     height: 20px;
-    fill: #666;
+    color: #666;
 }
 
 /* Footer 样式 */
@@ -150,16 +179,982 @@ a:active {
     margin-right: 10px;
 }
 
-html, body {
-    height: 100%;
-    margin: 0;
+.eshop-sidebar h3 {
+    font-size: 1.4em;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* 过滤部分 */
+.filter-section {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.filter-section h4 {
+    font-size: 1.1em;
+    margin-bottom: 12px;
+    color: #555;
+}
+
+/* 下拉菜单 */
+.filter-section select {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.95em;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background: #fff;
+    transition: 0.3s ease-in-out;
+}
+
+.filter-section select:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0px 0px 5px rgba(0, 123, 255, 0.5);
+}
+
+/* 颜色选项 */
+.color-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.color-option {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: 0.3s;
+    border: 2px solid transparent;
+}
+
+.color-option:hover,
+.color-option.selected {
+    border: 2px solid #000;
+    transform: scale(1.1);
+}
+
+/* 价格范围 */
+.price-values {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* 价格输入框 */
+.price-range {
+    width: 100%;
+    accent-color: #007bff;
+}
+
+/* 过滤按钮通用样式 */
+.filter-button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s ease-in-out;
+}
+
+/* Apply Filters 按钮样式（蓝色渐变） */
+.filter-button.apply {
+    background: linear-gradient(to right, #007bff, #0056b3);
+    color: white;
+}
+
+.filter-button.apply:hover {
+    background: linear-gradient(to right, #0056b3, #004494);
+    transform: scale(1.05);
+}
+
+/* Reset Filters 按钮样式（灰色渐变） */
+.filter-button.reset {
+    background: linear-gradient(to right, #ccc, #999);
+    color: white;
+}
+
+.filter-button.reset:hover {
+    background: linear-gradient(to right, #999, #777);
+    transform: scale(1.05);
+}
+
+/* 页面基础布局 */
+body {
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    padding-top: 70px;
 }
 
 .page-container {
-    flex: 1; /* 让这个容器占满剩余空间 */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 40px; /* 增加顶部边距 */
+}
+
+/* ✅ 通用 Checkbox 样式 */
+.custom-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    color: #333;
+    transition: all 0.3s ease-in-out;
+    position: relative;
+}
+
+.custom-checkbox input {
+    display: none; /* 隐藏原生 Checkbox */
+}
+
+/* ✅ 默认方形 Checkbox */
+.custom-checkbox .checkmark {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    position: relative;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+/* ✅ Hover 效果 */
+.custom-checkbox:hover .checkmark {
+    border-color: #007bff;
+    transform: scale(1.1);
+}
+
+/* ✅ 选中状态 */
+.custom-checkbox input:checked + .checkmark {
+    background: #007bff;
+    border-color: #007bff;
+}
+
+/* ✅ 选中状态的对勾 */
+.custom-checkbox input:checked + .checkmark::after {
+    content: "✔";
+    font-size: 16px;
+    font-weight: bold;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white; /* 默认白色 */
+}
+
+/* ✅ 圆形 Checkbox（颜色选择） */
+.custom-checkbox.circle .checkmark {
+    border-radius: 50%;
+    border: none;
+    width: 26px;
+    height: 26px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2); /* 颜色边界更明显 */
+}
+
+/* ✅ 选中状态下颜色选项 */
+.custom-checkbox.circle input:checked + .checkmark {
+    border: 3px solid black;
+    transform: scale(1.2);
+}
+
+/* ✅ 颜色选项：对勾自动适应背景 */
+.custom-checkbox.circle input:checked + .checkmark::after {
+    mix-blend-mode: difference; /* 对勾自动适应背景色 */
+    color: white; /* 默认白色 */
+}
+
+/* ✅ 颜色太浅时，强制变黑 */
+.custom-checkbox.circle .checkmark.light input:checked + .checkmark::after {
+    color: black !important;
+}
+
+/* ✅ 尺寸选择 */
+.custom-checkbox.large .checkmark {
+    width: 30px;
+    height: 30px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 30px;
+    border-radius: 5px;
+}
+
+/* ✅ 交互动画 */
+.custom-checkbox:hover {
+    transform: scale(1.05);
+}
+
+.user-initial-circle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;   /* 确保宽度固定 */
+    height: 40px;  /* 确保高度固定 */
+    min-width: 40px;
+    min-height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+    border-radius: 50%;  /* 让它保持完美圆形 */
+    background-color: #007bff; /* 头像背景色 */
+    color: #fff; /* 文字颜色 */
+    font-size: 18px;
+    font-weight: bold;
+    text-transform: uppercase;
+    cursor: pointer;
+    overflow: hidden; /* 避免内容溢出 */
+    text-align: center;
+    line-height: normal; /* 避免 line-height 影响形状 */
+}
+
+.main-body {
+    margin-top: 20px;
+}
+
+/* 响应式设计 */
+@media screen and (max-width: 768px) {
+    .header_container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        height: 50px;
+        background-color: #f1f1f1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 50px; /* 移动端缩小 header 高度 */
+        padding: 5px;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    body {
+        padding-top: 50px;
+        margin: 0;
+    }
+
+    .page-container {
+        margin-top: 50px;
+        padding-top: 0;
+    }
+
+    /* 调整筛选按钮位置 */
+    .filter-toggle {
+        top: 50px;
+    }
+
+    /* 调整登录和注册表单顶部边距 */
+    .login-form,
+    .register-form {
+        margin-top: 70px;
+    }
+
+    /* 确保 header 内容正确对齐 */
+    .header_center {
+        padding-left: 40px;
+        margin: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .header_right {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        margin: 0;
+    }
+
+    .header_left {
+        display: none;
+    }
+
+    .header_center {
+        flex: 1;
+        display: flex;
+        justify-content: center;  /* 居中对齐 */
+        align-items: center;
+        text-align: center;
+        padding-left: 0; /* 移除左侧 padding */
+        margin: 0 auto; /* 确保它始终在中间 */
+    }
+
+    .header_center a {
+        display: flex; /* 让 a 变成 flex 容器，确保 h1 可完全显示 */
+        justify-content: center;
+        align-items: center;
+        width: 100%; /* 确保链接占满父容器 */
+        text-decoration: none; /* 移除下划线 */
+    }
+
+    .header_center h1 {
+        font-size: 18px; /* 缩小字体以适配小屏幕 */
+        white-space: nowrap; /* 避免换行 */
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 90%; /* 限制最大宽度，防止超出屏幕 */
+    }
+
+    .header_right {
+        width: auto;
+        justify-content: flex-end;
+        margin: 0;
+        box-sizing: border-box;
+        gap: 10px;
+    }
+
+    /* 移动端搜索框样式 */
+    .field {
+        width: auto;
+        max-width: none;
+        background: none;
+        padding: 0;
+    }
+
+    .search__input {
+        display: none;
+    }
+
+    .search__button {
+        padding: 0;
+        color: #333;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .icon-search {
+        width: 32px !important;
+        height: 32px !important;
+        fill: none !important;
+        stroke: currentColor !important;
+        stroke-width: 1.5 !important;
+    }
+
+    /* 侧边栏响应式 */
+    .main-body {
+        grid-template-columns: 1fr !important;
+    }
+
+    .eshop-sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 80%;
+        height: calc(100% - 60px); /* 减去底部导航栏的高度 */
+        background-color: white;
+        transition: left 0.3s ease;
+        z-index: 1000;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+        padding-bottom: 20px; /* 添加底部内边距 */
+    }
+
+    .eshop-sidebar.active {
+        left: 0;
+    }
+
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: calc(100% - 60px); /* 同样减去底部导航栏的高度 */
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    /* 调整产品内容区域 */
+    .product-content {
+        padding: 10px;
+    }
+
+    /* 调整过滤按钮 */
+    .filter-button {
+        margin: 5px 0;
+    }
+
+    /* 调整颜色选项 */
+    .color-options {
+        justify-content: center;
+    }
+
+    /* 调整尺寸选项 */
+    .size-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+    }
+
+    /* 调整页脚 */
+    .footer {
+        padding: 5px;
+        font-size: 12px;
+    }
+
+    /* 移动端搜索按钮样式 */
+    .header_right .field {
+        display: flex !important;
+        position: static;
+        margin: 0;
+        padding: 0;
+        width: auto;
+    }
+
+    .header_right .search__button {
+        display: flex !important;
+        position: static;
+        transform: none;
+        padding: 0;
+        margin: 0;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #333;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .header_right .search__input {
+        display: none;
+    }
+
+    .header_right .icon-search {
+        width: 32px !important;
+        height: 32px !important;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        fill: none;
+    }
+
+    /* 确保搜索按钮在移动端显示 */
+    .header_right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+}
+
+/* 移动端分类菜单样式 */
+.mobile-categories {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    height: 85vh; /* 直接使用固定的视窗高度比例 */
+    width: 80%;
+    max-width: 300px;
+    background-color: #fff;
+    z-index: 1002;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
 }
 
+.mobile-categories.active {
+    left: 0;
+}
+
+/* 当移动端分类菜单激活时隐藏汉堡菜单按钮 */
+.mobile-categories.active ~ .menu-toggle {
+    display: none;
+}
+
+.mobile-categories-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #f1f1f1;
+    border-bottom: 1px solid #ddd;
+}
+
+.mobile-header-icons {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.mobile-header-icons .header_icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-header-icons .icon {
+    width: 100%;
+    height: 100%;
+    fill: #333;
+}
+
+.mobile-header-icons .icon-wishlist {
+    width: 32px;
+    height: 32px;
+}
+
+.mobile-header-icons .cart-count-bubble {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #ddd;
+    color: #333;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.mobile-header-icons .user-initial-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+}
+
+.mobile-categories-header h3 {
+    display: none;
+}
+
+.close-categories {
+    background: none;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-categories svg {
+    fill: #333;
+    width: 24px;
+    height: 24px;
+}
+
+.mobile-categories-content {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+.categories-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+}
+
+.categories-list li {
+    margin-bottom: 10px;
+}
+
+.categories-list a {
+    display: block;
+    padding: 12px 15px;
+    color: #333;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.categories-list a:hover {
+    background-color: #f5f5f5;
+}
+
+/* 遮罩层样式 */
+.overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 85vh; /* 与菜单高度保持一致 */
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+}
+
+.overlay.active {
+    display: block;
+}
+
+/* 优化搜索框在移动端的显示 */
+@media screen and (max-width: 480px) {
+    .search__input {
+        font-size: 12px;
+        padding: 8px;
+    }
+
+    .icon-search {
+        width: 16px;
+        height: 16px;
+    }
+
+    .header_icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .icon-account, .icon-cart, .icon-wishlist {
+        width: 28px;
+        height: 28px;
+    }
+
+    .user-initial-circle {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+/* 移动端搜索弹窗样式 */
+.mobile-search-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.mobile-search-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-search-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+    justify-content: flex-end;
+}
+
+.mobile-search-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.close-search {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-search svg {
+    width: 24px;
+    height: 24px;
+    fill: #333;
+}
+
+.mobile-search-content {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.mobile-search-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.mobile-search__input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    height: 48px;
+    box-sizing: border-box;
+}
+
+.mobile-search__button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 48px;
+    height: 48px;
+    transition: background-color 0.3s ease;
+}
+
+.mobile-search__button:hover {
+    background-color: #0056b3;
+}
+
+.mobile-search__button .icon-search {
+    width: 24px;
+    height: 24px;
+    stroke: white !important;
+    stroke-width: 2;
+    fill: none !important;
+    color: white !important;
+}
+
+.mobile-search-results {
+    margin-top: 1rem;
+}
+
+.mobile-search-result-item {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.mobile-search-result-item:last-child {
+    border-bottom: none;
+}
+
+.mobile-search-result-item a {
+    display: flex;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.mobile-search-result-item .product-info h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.mobile-search-result-item .product-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.no-results {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+}
+
+.error {
+    color: #dc3545;
+    text-align: center;
+    padding: 2rem;
+}
+
+@media screen and (max-width: 768px) {
+    .mobile-search-overlay {
+        display: none;
+    }
+    
+    .mobile-search-overlay.active {
+        display: block;
+    }
+}
+
+
+/* 移动端筛选侧边栏样式 */
+.filter-toggle {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 15px;
+    z-index: 1001;
+    background: #fff;
+    padding: 8px 15px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    align-items: center;
+    gap: 5px;
+}
+
+.filter-toggle i {
+    font-size: 16px;
+}
+
+.filter-toggle span {
+    font-size: 14px;
+}
+
+.filter-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.filter-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 80%;
+    max-width: 300px;
+    height: 100%;
+    background: #fff;
+    z-index: 1001;
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    transform: translateX(-100%);
+}
+
+.sidebar.active {
+    left: 0;
+    transform: translateX(0);
+}
+
+.filter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+.filter-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.close-filter {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    color: #333;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.filter-section {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+.filter-option label {
+    font-size: 14px;
+    color: #666;
+}
+
+.apply-filter {
+    position: sticky;
+    bottom: 0;
+    padding: 15px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+}
+
+.apply-filter button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.apply-filter .reset {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.apply-filter .apply {
+    background: #007bff;
+    color: #fff;
+}
+
+@media screen and (max-width: 768px) {
+    .filter-toggle {
+        display: flex;
+    }
+}

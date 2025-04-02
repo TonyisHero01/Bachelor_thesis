@@ -1,0 +1,44 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BMS Translation - Not Logged In Page</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1 { font-size: 24px; margin-bottom: 0.5em; }
+    h2 { font-size: 20px; color: #555; margin-top: 2em; }
+    .field-group { margin-bottom: 1.2em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.3em; }
+    input[type="text"] { width: 100%; padding: 0.5em; }
+    button { padding: 0.6em 1.4em; font-size: 1em; cursor: pointer; margin-top: 2em; }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h1>Translate: Not Logged In Page</h1>
+
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <input type="hidden" name="original_path" value="templates/employee/employee_not_logged.html.twig">
+
+    <div class="field-group">
+      <label>You are not logged</label>
+      <input type="text" name="field__not_logged" placeholder="You are not logged">
+      <input type="hidden" name="original__not_logged" value="You are not logged">
+    </div>
+
+    <div class="field-group">
+      <label>Login</label>
+      <input type="text" name="field__login" placeholder="Login">
+      <input type="hidden" name="original__login" value="Login">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+
+</body>
+</html>
+{% endblock %}

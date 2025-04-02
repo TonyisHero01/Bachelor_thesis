@@ -8,9 +8,14 @@
         <h2>Order Placed Successfully!</h2>
         <p>Your order has been placed successfully.</p>
         <p><strong>Order ID:</strong> {{ order.getId() }}</p>
-        <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        
+        {% if not shopInfo.hidePrices %}
+            <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        {% endif %}
+        
         <a href="{{ path('customer_orders') }}">View Your Orders</a>
     </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             fetch("/cart/clear_after_success", {
@@ -21,6 +26,4 @@
             .catch(error => console.error("Request error:", error));
         });
     </script>
-
-    
 {% endblock %}

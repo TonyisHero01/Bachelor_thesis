@@ -1,0 +1,57 @@
+{# templates/admin/employee_list.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Seznam administrátorů</title>
+    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
+    <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
+    <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
+    {% if app.user %}
+        {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+    {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
+    <h1>Seznam administrátorů</h1>
+    <button id="addAdmin" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Přidat správce</button>
+    <!--
+    <form id="search">
+        <label for="searchInput"></label>
+        <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search employee">
+        <button type="button" id="searchButton" onclick="search_()" >Search</button>
+    </form>
+    -->
+    <table>
+        {% set ids = '' %}
+        {% for employee in employees %}
+            {% set ids = ids ~ employee.id ~ ',' %}
+            <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('admin_edit', {'id': employee.id}) }}"> 
+            {#<tr>#}
+            {# <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('save_employee') }}"> #}
+                </div>
+                <td class="employee-name">{{ employee.name }}</td> 
+                <td class="employee-surname">{{ employee.surname }}</td>
+                <td class="editButton"><span class="edit-button" type="button" onclick="edit({{ employee.id }})"><i class="fa-regular fa-pen-to-square" style="color: green;"></i></span></td>
+                <td class="deleteButton"><span class="delete-button" type="button" onclick="delete_({{ employee.id }})"><i class="fas fa-trash" style="color: red;"></i></span></td>
+            </tr>
+        {% endfor %}
+        <div id="ids" data-ids="{{ ids }}" style="display: none;"></div>
+    </table>
+    
+    <div class="buttons">
+        <button id="previousPageButton" type="button" onclick="previousPage()">Předchozí</button>
+        <button id="nextPageButton" type="button" onclick="nextPage()">Další</button>
+        <span id="pageCount">Počet stránek</span>
+    </div>
+    <script src="{{ asset('../assets/search.js') }}"></script>
+    <script src="{{ asset('../assets/showPage.js') }}"></script>
+    <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
+    <script src="{{ asset('../assets/adminEdit.js') }}"></script>
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Order Confirmation - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-confirm.css') }}">
+    <div class="order-confirmation">
+        <h2>Order Confirmation</h2>
+
+        <table>
+            <tr>
+                <td>My Order</td>
+                <td><strong>Order ID:</strong> {{ order.getId() }}</td>
+            </tr>
+            {% for item in orderItems %}
+                <tr class="item_product_name"><td>{{ item.getProductName() }} x{{ item.getQuantity() }}</td><td></td></tr>
+                {% if not shopInfo.hidePrices %}
+                    <tr><td>Subtotal:</td><td> {{ item.getSubtotal()|number_format(2) }}</td></tr>
+                    <tr><td>Tax:</td><td> {{ item.getTaxAmount()|number_format(2) }}</td></tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+
+        {% if not shopInfo.hidePrices %}
+            <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        {% endif %}
+
+        <a href="{{ path('customer_orders') }}">Back to My Orders</a>
+
+        {% if order.getIsCompleted() %}
+            <button id="returnOrderBtn" class="return-btn" onclick="goToReturnForm({{ order.getId() }})">Return Order</button>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById("confirmOrderBtn").addEventListener("click", function() {
+            window.location.href = "{{ path('order_delivery_options', {'id': order.getId()}) }}";
+        });
+
+        document.getElementById("cancelOrderBtn").addEventListener("click", function() {
+            fetch("{{ path('cancel_order', {'id': order.getId()}) }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Order canceled!");
+                    window.location.href = "{{ path('customer_cart') }}";
+                } else {
+                    alert("Error canceling order: " + data.message);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        });
+        function goToReturnForm(orderId) {
+            window.location.href = "/order/" + orderId + "/return-form";
+        }
+    </script>
+{% endblock %}

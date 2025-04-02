@@ -1,0 +1,110 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Select Delivery Option - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-delivery.css') }}">
+
+<div class="delivery-options">
+    <h2>Choose Delivery Method</h2>
+
+    <form id="deliveryForm">
+        <label>
+            <input type="radio" name="deliveryMethod" value="pickup" checked>
+            Pick Up at Store
+        </label>
+
+        <label>
+            <input type="radio" name="deliveryMethod" value="delivery">
+            Home Delivery
+        </label>
+
+        <div id="addressFields" style="display: none;">
+            <h3>Delivery Address</h3>
+            <label>Country: <input type="text" id="country" name="country"></label>
+            <label>City: <input type="text" id="city" name="city"></label>
+            <label>Street: <input type="text" id="street" name="street"></label>
+            <label>House Number: <input type="text" id="houseNumber" name="houseNumber"></label>
+            <label>Postal Code: <input type="text" id="postalCode" name="postalCode"></label>
+        </div>
+
+        <h3>Customer Contact Information</h3>
+        <label>Full Name: <input type="text" id="fullName" name="fullName" required></label>
+        <label>Phone Number: <input type="tel" id="phoneNumber" name="phoneNumber" required></label>
+
+        <h3>Leave a Note</h3>
+        <textarea id="orderNote" name="orderNote" placeholder="Enter any special requests or instructions"></textarea>
+
+        <button type="submit">Confirm</button>
+    </form>
+</div>
+
+<script>
+    document.querySelectorAll('input[name="deliveryMethod"]').forEach((radio) => {
+        radio.addEventListener("change", function() {
+            const addressFields = document.getElementById("addressFields");
+            const inputs = addressFields.querySelectorAll("input");
+
+            if (this.value === "delivery") {
+                addressFields.style.display = "block";
+                inputs.forEach(input => input.setAttribute("required", "true"));
+            } else {
+                addressFields.style.display = "none";
+                inputs.forEach(input => input.removeAttribute("required"));
+            }
+        });
+    });
+
+    document.getElementById("deliveryForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const deliveryMethod = document.querySelector('input[name="deliveryMethod"]:checked').value;
+        const fullName = document.getElementById("fullName").value.trim();
+        const phoneNumber = document.getElementById("phoneNumber").value.trim();
+        const orderNote = document.getElementById("orderNote").value.trim();
+
+        if (!fullName || !phoneNumber) {
+            alert("Please fill in all required contact information.");
+            return;
+        }
+
+        let addressString = `Full Name: ${fullName}; Phone: ${phoneNumber};`;
+
+        if (deliveryMethod === "delivery") {
+            const country = document.getElementById("country").value.trim();
+            const city = document.getElementById("city").value.trim();
+            const street = document.getElementById("street").value.trim();
+            const houseNumber = document.getElementById("houseNumber").value.trim();
+            const postalCode = document.getElementById("postalCode").value.trim();
+
+            if (!country || !city || !street || !houseNumber || !postalCode) {
+                alert("Please complete all delivery address fields.");
+                return;
+            }
+
+            addressString += `; Country: ${country}; City: ${city}; Street: ${street}; House Number: ${houseNumber}; Postal Code: ${postalCode}`;
+        } else {
+            addressString += "; Pickup at Store";
+        }
+
+        fetch("/order/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                deliveryMethod, 
+                address: addressString,
+                notes: orderNote  
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = `/order/success/${data.orderId}`;
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    });
+</script>
+{% endblock %}

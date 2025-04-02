@@ -1,0 +1,31 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <h1>Dokončené objednávky</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Objednávka ID</th>
+                <th>Součet</th>
+                <th>Datum</th>
+                <th>Email</th>
+                <th>Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>{{ order.totalPrice }} CZK</td>
+                    <td>{{ order.orderCreatedAt|date('Y-m-d') }}</td>
+                    <td>{{ order.customer.email }}</td>
+                    <td>
+                        <a href="{{ localized_path('accounting_order_detail', {id: order.id}) }}">Zobrazit</a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6">Nebyly nalezeny žádné dokončené objednávky.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

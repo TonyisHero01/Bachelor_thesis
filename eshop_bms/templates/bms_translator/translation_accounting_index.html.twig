@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BMS Translation - Accounting</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1, h2 { margin-top: 1.5em; }
+    .field-group { margin-bottom: 1em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.2em; }
+    input[type="text"] { width: 100%; padding: 0.5em; margin-bottom: 0.5em; }
+    button { padding: 0.6em 1.2em; font-size: 1em; cursor: pointer; margin-top: 1em; }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h1>Translate to: {{ lang|upper }}</h1>
+    <input type="hidden" name="target_language" value="{{ lang }}">
+    <h2>Accounting Page</h2>
+    <input type="hidden" name="original_path" value="templates/accounting/index.html.twig">
+
+    <div class="field-group">
+      <label>Completed Orders</label>
+      <input type="text" name="field__completed_orders" placeholder="Completed Orders">
+      <input type="hidden" name="original__completed_orders" value="Completed Orders">
+    </div>
+
+    <div class="field-group">
+      <label>Order ID</label>
+      <input type="text" name="field__order_id" placeholder="Order ID">
+      <input type="hidden" name="original__order_id" value="Order ID">
+    </div>
+
+    <div class="field-group">
+      <label>Total</label>
+      <input type="text" name="field__total" placeholder="Total">
+      <input type="hidden" name="original__total" value="Total">
+    </div>
+
+    <div class="field-group">
+      <label>Date</label>
+      <input type="text" name="field__date" placeholder="Date">
+      <input type="hidden" name="original__date" value="Date">
+    </div>
+
+    <div class="field-group">
+      <label>Email</label>
+      <input type="text" name="field__email" placeholder="Email">
+      <input type="hidden" name="original__email" value="Email">
+    </div>
+
+    <div class="field-group">
+      <label>Action</label>
+      <input type="text" name="field__action" placeholder="Action">
+      <input type="hidden" name="original__action" value="Action">
+    </div>
+
+    <div class="field-group">
+      <label>View</label>
+      <input type="text" name="field__view" placeholder="View">
+      <input type="hidden" name="original__view" value="View">
+    </div>
+
+    <div class="field-group">
+      <label>No completed orders found.</label>
+      <input type="text" name="field__no_completed_orders" placeholder="No completed orders found.">
+      <input type="hidden" name="original__no_completed_orders" value="No completed orders found.">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+</body>
+</html>
+{% endblock %}

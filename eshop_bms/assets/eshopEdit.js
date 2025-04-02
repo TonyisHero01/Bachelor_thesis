@@ -119,9 +119,10 @@ async function save_() {
     var refundElement = document.getElementById("refund");
     var colorElement = document.getElementById("color");
     var logoUrlElement = document.getElementById("logo_url");
-    var carouselUrlsElement = document.getElementById("carousel_urls");
     var companyName = document.getElementById("company_name");
     var cin = document.getElementById("cin");
+    var hidePricesElement = document.getElementById("hide_prices"); // ✅ 获取隐藏价格选项
+
     const imagePaths = Array.from(document.querySelectorAll('.image_path')).map(input => input.value);
 
     const currencies = [];
@@ -154,7 +155,8 @@ async function save_() {
         "color": colorElement.value,
         "companyName": companyName.value,
         "cin": cin.value,
-        currencies: currencies // 添加货币数据
+        "hidePrices": hidePricesElement.checked, // ✅ 添加隐藏价格字段
+        "currencies": currencies
     };
 
     // 如果有新 logo 上传，则添加到请求数据中

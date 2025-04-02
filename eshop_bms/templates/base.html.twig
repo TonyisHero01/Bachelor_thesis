@@ -13,6 +13,27 @@
         {% endblock %}
     </head>
     <body>
+        <header>
+            <div class="header-left">
+                <h2>{{ shopName }}</h2>
+            </div>
+            <div class="header-right">
+                {% set route = app.request.attributes.get('_route') %}
+                {% set routeParams = app.request.attributes.get('_route_params')|default({}) %}
+                {% set actionUrl = path(route, routeParams|merge(app.request.query.all)|merge({'_locale': ''})) %}
+
+                <form method="get" action="{{ actionUrl }}">
+                    <select name="_locale" onchange="this.form.submit()">
+                        {% set allLanguages = ['en']|merge(availableLanguages|filter(lang => lang != 'en')) %}
+                        {% for lang in allLanguages %}
+                            <option value="{{ lang }}" {% if app.request.get('_locale') == lang or (not app.request.get('_locale') and lang == 'en') %}selected{% endif %}>
+                                {{ lang|upper }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </header>
         {% block body %}{% endblock %}
     </body>
 </html>

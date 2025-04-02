@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Translation - Order Detail</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    h1, h2 { margin-top: 1.5em; font-size: 22px; }
+    .field-group { margin-bottom: 1em; }
+    label { display: block; font-weight: bold; margin-bottom: 0.2em; }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 0.5em;
+      margin-bottom: 0.5em;
+    }
+    button {
+      margin-top: 2em;
+      padding: 0.6em 1.2em;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <form id="translationForm" method="post" action="/translation/submit">
+    <h1>Order Detail Page</h1>
+    <input type="hidden" name="original_path" value="templates/warehouse/order_detail.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group"><label>Order Details</label><input type="text" name="field__title_order_details" placeholder="Order Details"><input type="hidden" name="original__title_order_details" value="Order Details"></div>
+    <div class="field-group"><label>Order ID</label><input type="text" name="field__label_order_id" placeholder="Order ID"><input type="hidden" name="original__label_order_id" value="Order ID"></div>
+    <div class="field-group"><label>Customer</label><input type="text" name="field__label_customer" placeholder="Customer"><input type="hidden" name="original__label_customer" value="Customer"></div>
+    <div class="field-group"><label>Total Price</label><input type="text" name="field__label_total_price" placeholder="Total Price"><input type="hidden" name="original__label_total_price" value="Total Price"></div>
+    <div class="field-group"><label>Order Date</label><input type="text" name="field__label_order_date" placeholder="Order Date"><input type="hidden" name="original__label_order_date" value="Order Date"></div>
+
+    <div class="field-group"><label>Order Items</label><input type="text" name="field__section_order_items" placeholder="Order Items"><input type="hidden" name="original__section_order_items" value="Order Items"></div>
+    <div class="field-group"><label>Product</label><input type="text" name="field__column_product" placeholder="Product"><input type="hidden" name="original__column_product" value="Product"></div>
+    <div class="field-group"><label>SKU</label><input type="text" name="field__column_sku" placeholder="SKU"><input type="hidden" name="original__column_sku" value="SKU"></div>
+    <div class="field-group"><label>Quantity</label><input type="text" name="field__column_quantity" placeholder="Quantity"><input type="hidden" name="original__column_quantity" value="Quantity"></div>
+    <div class="field-group"><label>Unit Price</label><input type="text" name="field__column_unit_price" placeholder="Unit Price"><input type="hidden" name="original__column_unit_price" value="Unit Price"></div>
+    <div class="field-group"><label>Subtotal</label><input type="text" name="field__column_subtotal" placeholder="Subtotal"><input type="hidden" name="original__column_subtotal" value="Subtotal"></div>
+
+    <div class="field-group"><label>Delivery Method</label><input type="text" name="field__section_delivery_method" placeholder="Delivery Method"><input type="hidden" name="original__section_delivery_method" value="Delivery Method"></div>
+    <div class="field-group"><label>Selected Method</label><input type="text" name="field__label_selected_method" placeholder="Selected Method"><input type="hidden" name="original__label_selected_method" value="Selected Method"></div>
+    <div class="field-group"><label>Pick Up at Store</label><input type="text" name="field__delivery_pickup" placeholder="Pick Up at Store"><input type="hidden" name="original__delivery_pickup" value="Pick Up at Store"></div>
+    <div class="field-group"><label>Home Delivery</label><input type="text" name="field__delivery_home" placeholder="Home Delivery"><input type="hidden" name="original__delivery_home" value="Home Delivery"></div>
+
+    <div class="field-group"><label>Delivery Information</label><input type="text" name="field__section_delivery_info" placeholder="Delivery Information"><input type="hidden" name="original__section_delivery_info" value="Delivery Information"></div>
+    <div class="field-group"><label>No address provided</label><input type="text" name="field__delivery_none" placeholder="No address provided"><input type="hidden" name="original__delivery_none" value="No address provided"></div>
+
+    <div class="field-group"><label>Customer Note</label><input type="text" name="field__section_note" placeholder="Customer Note"><input type="hidden" name="original__section_note" value="Customer Note"></div>
+    <div class="field-group"><label>No additional notes</label><input type="text" name="field__note_none" placeholder="No additional notes"><input type="hidden" name="original__note_none" value="No additional notes"></div>
+
+    <div class="field-group"><label>Mark as Completed</label><input type="text" name="field__button_mark_completed" placeholder="Mark as Completed"><input type="hidden" name="original__button_mark_completed" value="Mark as Completed"></div>
+    <div class="field-group"><label>Are you sure you want to mark this order as completed?</label><input type="text" name="field__confirm_completed" placeholder="Are you sure you want to mark this order as completed?"><input type="hidden" name="original__confirm_completed" value="Are you sure you want to mark this order as completed?"></div>
+    <div class="field-group"><label>Order marked as completed!</label><input type="text" name="field__success_completed" placeholder="Order marked as completed!"><input type="hidden" name="original__success_completed" value="Order marked as completed!"></div>
+    <div class="field-group"><label>Error:</label><input type="text" name="field__error_prefix" placeholder="Error:"><input type="hidden" name="original__error_prefix" value="Error:"></div>
+
+    <div class="field-group"><label>Back to Orders</label><input type="text" name="field__button_back_orders" placeholder="Back to Orders"><input type="hidden" name="original__button_back_orders" value="Back to Orders"></div>
+
+    <button type="submit">Generate Translated File</button>
+  </form>
+</body>
+</html>
+{% endblock %}

@@ -6,16 +6,94 @@
 {% endblock %}
 
 {% block body %}
+    <div class="filter-toggle">
+        <i class="fas fa-filter"></i>
+        <span>筛选</span>
+    </div>
+
+    <div class="filter-overlay"></div>
+    <div class="sidebar">
+        <div class="filter-header">
+            <h2 class="filter-title">筛选</h2>
+            <button class="close-filter">&times;</button>
+        </div>
+
+        <div class="filter-section">
+            <h3>颜色</h3>
+            <div class="filter-options">
+                {% for color in colors %}
+                    <div class="filter-option">
+                        <input type="checkbox" id="color-{{ color.id }}" name="color" value="{{ color.name }}">
+                        <label for="color-{{ color.id }}">{{ color.name }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <h3>尺码</h3>
+            <div class="filter-options">
+                {% for size in sizes %}
+                    <div class="filter-option">
+                        <input type="checkbox" id="size-{{ size.id }}" name="size" value="{{ size.name }}">
+                        <label for="size-{{ size.id }}">{{ size.name }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="apply-filter">
+            <button class="reset">重置</button>
+            <button class="apply">应用</button>
+        </div>
+    </div>
+
     <h1>Category: {{ category }}</h1>
     <div class="product-grid">
         {% for product in products %}
-            <div class="product-item">
+            <div class="product-item" data-id="{{ product.id }}"
+             data-name="{{ product.name }}"
+             data-category="{{ product.category }}"
+             data-description="{{ product.description }}"
+             data-number-in-stock="{{ product.numberInStock }}"
+             data-image-urls="{{ product.imageUrls|json_encode }}"
+             data-add-time="{{ product.addTime|date('Y-m-d\TH:i:s') }}"
+             data-width="{{ product.width }}"
+             data-height="{{ product.height }}"
+             data-length="{{ product.length }}"
+             data-weight="{{ product.weight }}"
+             data-material="{{ product.material }}"
+             data-color="{{ product.color }}"
+             data-price="{{ product.price }}"
+             data-hidden="{{ product.hidden ? 'true' : 'false' }}"
+             data-discount="{{ product.discount }}"
+             data-discounted-price="{{ (product.price * product.discount / 100)|number_format(2, '.', '') }}"
+             data-sku="{{ product.sku }}"
+             data-attributes="{{ product.attributes|json_encode }}"
+             data-currency-id="{{ product.currency.id }}"
+             data-created-at="{{ product.createdAt|date('Y-m-d\TH:i:s') }}"
+             data-updated-at="{{ product.updatedAt|date('Y-m-d\TH:i:s') }}"
+             data-tax-rate="{{ product.taxRate }}"
+             data-size="{{ product.size }}">
                 {% if product.getImageUrls() is not empty %}
                     <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
                         <div class="product-image-wrapper">
                             <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
                         </div>
                         <div class="product-name">{{ product.name }}</div>
+                        <div class="product-price">
+                            {% if product.discount < 100 %}
+                                {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
+                                {% set currency = product.getCurrency().getName %}
+                                <div class="original-price">
+                                    <span class="strikethrough">{{ product.price }} {{ currency }}</span>
+                                </div>
+                                <div class="discounted-price">{{ discountedPrice }} {{ currency }}</div>
+                                <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
+                            {% else %}
+                                <div class="regular-price">{{ product.price }} {{ product.getCurrency().getName }}</div>
+                            {% endif %}
+                        </div>
                     </a>
                 {% endif %}
             </div>
@@ -23,4 +101,77 @@
             <p>No products found for this category.</p>
         {% endfor %}
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterToggle = document.querySelector('.filter-toggle');
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.filter-overlay');
+            const closeFilter = document.querySelector('.close-filter');
+            const resetButton = document.querySelector('.reset');
+            const applyButton = document.querySelector('.apply');
+
+            // 打开过滤器
+            filterToggle.addEventListener('click', function() {
+                sidebar.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+
+            // 关闭过滤器
+            function closeFilters() {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            // 添加关闭事件监听器
+            closeFilter.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeFilters();
+            });
+
+            overlay.addEventListener('click', function(e) {
+                e.preventDefault();
+                closeFilters();
+            });
+
+            // 重置过滤器
+            resetButton.addEventListener('click', function() {
+                const checkboxes = document.querySelectorAll('.filter-option input[type="checkbox"]');
+                checkboxes.forEach(checkbox => checkbox.checked = false);
+            });
+
+            // 应用过滤器
+            applyButton.addEventListener('click', function () {
+                const selectedColors = Array.from(document.querySelectorAll('input[name="color"]:checked')).map(cb => cb.value);
+                const selectedSizes = Array.from(document.querySelectorAll('input[name="size"]:checked')).map(cb => cb.value);
+
+                // ✅ 从页面获取选中的价格范围（你已有的 price slider 显示元素）
+                const minPrice = parseFloat(document.getElementById('price-selected-min').textContent) || 0;
+                const maxPrice = parseFloat(document.getElementById('price-selected-max').textContent) || Infinity;
+
+                const products = document.querySelectorAll('.product-item');
+
+                products.forEach(product => {
+                    const productColor = product.dataset.color;
+                    const productSize = product.dataset.size;
+                    const discountedPrice = parseFloat(product.dataset.discountedPrice);
+
+                    const colorMatch = selectedColors.length === 0 || selectedColors.includes(productColor);
+                    const sizeMatch = selectedSizes.length === 0 || selectedSizes.includes(productSize);
+                    const priceMatch = discountedPrice >= minPrice && discountedPrice <= maxPrice;
+
+                    const shouldShow = colorMatch && sizeMatch && priceMatch;
+
+                    product.style.display = shouldShow ? '' : 'none';
+                });
+
+                closeFilters();
+            });
+        });
+    </script>
 {% endblock %}

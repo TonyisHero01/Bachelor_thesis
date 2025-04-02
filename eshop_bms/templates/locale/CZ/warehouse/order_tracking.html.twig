@@ -1,0 +1,24 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/order.css') }}">
+<h1>Sledovat objednávku</h1>
+<table>
+    <tr>
+        <th>E-mail zákazníka</th>
+        <th>Objednávka ID</th>
+        <th>Cena</th>
+        <th>Akce</th>
+    </tr>
+    {% for order in orders %}
+        <tr class="unit-order" style="background-color: {% if order.isCompleted() %} #d4edda {% else %} #f8d7da {% endif %};">
+            <td>{{ order.getCustomer().getEmail() }}</td>
+            <td>{{ order.getId() }}</td>
+            <td>{{ order.getTotalPrice() }} {{ currency }}</td>
+            <td>
+                <a href="{{ localized_path('order_detail', { 'id': order.getId() }) }}" class="btn">Zobrazit podrobnosti</a>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}

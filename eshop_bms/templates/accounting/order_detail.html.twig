@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Order Detail - #{{ order.id }}{% endblock %}
+
+{% block body %}
+    <h1>{{ 'Order'|trans }} #{{ order.id }} {{ 'Detail'|trans }}</h1>
+
+    <p><strong>Email:</strong> {{ order.customer.email }}</p>
+    <p><strong>Contact:</strong><br>
+        {% for line in order.address|split(';') %}
+            {{ line|trim }}<br>
+        {% endfor %}
+    </p>
+    <p><strong>Created At:</strong> {{ order.orderCreatedAt|date('Y-m-d H:i') }}</p>
+    <p><strong>Total:</strong> {{ order.totalPrice }} {{ order.customer.preferredCurrency ?? 'CZK' }}</p>
+
+    <h3>Order Items:</h3>
+    <ul>
+        {% for item in order.orderItems %}
+            <li>
+                {{ item.productName }} x {{ item.quantity }} = {{ item.unitPrice }} {{ order.customer.preferredCurrency ?? 'CZK' }}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a href="{{ localized_path('accounting_invoice_pdf', {id: order.id}) }}" class="btn btn-primary" target="_blank">
+    {{ translations.download_pdf ?? 'Download PDF' }}
+    </a>
+    <a href="{{ localized_path('accounting_invoice_send', {id: order.id}) }}" class="btn btn-success">
+        {{ translations.send_invoice ?? 'Send Invoice by Email' }}
+    </a>
+
+{% endblock %}

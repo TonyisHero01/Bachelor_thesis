@@ -3,6 +3,14 @@ textarea {
     font-size: 30px;
 }
 
+header {
+    display: flex;
+    justify-content: space-between;
+    padding: 1em;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+  }
+
 input {
     width: 100%;
     font-size: 30px;
@@ -97,6 +105,7 @@ html, body {
 }
 
 .sidebar {
+    margin-top: 200px;
     width: 350px;
     height: 100%;
     position: fixed;
@@ -110,4 +119,10 @@ html, body {
 .content {
     margin-left: 370px;
     padding: 20px;
+}
+
+.category-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }

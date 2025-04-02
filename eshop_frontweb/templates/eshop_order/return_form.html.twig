@@ -1,0 +1,107 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Return Request - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/return-form.css') }}">
+
+<div class="return-container">
+    <h2>Return Request for Order #{{ order.getId() }}</h2>
+
+    <form id="returnForm" class="return-form">
+        <div class="form-card">
+            <h3>Select Items to Return</h3>
+            {% for item in orderItems %}
+                <div class="return-item">
+                    <input type="checkbox" id="item-{{ item.getId() }}" name="selectedItems" value="{{ item.getSku() }}">
+                    <label for="item-{{ item.getId() }}">{{ item.getProductName() }}</label>
+                    <input type="number" class="return-quantity" name="quantity-{{ item.getId() }}" min="1" max="{{ item.getQuantity() }}" value="{{ item.getQuantity() }}">
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="form-card">
+            <h3>Contact Information</h3>
+            <label>Email:</label>
+            <input type="email" id="email" name="email" value="{{ order.getCustomer().getEmail() }}" required>
+
+            <label>Phone:</label>
+            <input type="text" id="phone" name="phone" required>
+
+            <label>Name:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-card">
+            <h3>Return Reason</h3>
+            <label for="returnReason">Select a reason:</label>
+            <select id="returnReason" name="returnReason">
+                <option value="">-- Select a reason --</option>
+                <option value="Defective product" selected>Defective product</option>
+                <option value="Wrong item received">Wrong item received</option>
+                <option value="Item damaged during shipping">Item damaged during shipping</option>
+                <option value="Not as described">Not as described</option>
+                <option value="Changed my mind">Changed my mind</option>
+                <option value="Other">Other (please specify below)</option>
+            </select>
+        </div>
+
+        <div class="form-card">
+            <h3>Additional Message (Optional)</h3>
+            <textarea id="returnMessage" name="returnMessage" placeholder="Provide any extra details..."></textarea>
+        </div>
+
+        <button type="button" class="return-submit-btn" onclick="submitReturnRequest({{ order.getId() }})">
+            <span>🚀 Submit Return Request</span>
+        </button>
+    </form>
+</div>
+
+<script>
+    function submitReturnRequest(orderId) {
+        let selectedItems = [];
+        document.querySelectorAll("input[name='selectedItems']:checked").forEach(item => {
+            let quantityInput = document.querySelector(`input[name='quantity-${item.id.split('-')[1]}']`);
+            let skuWithQuantity = `${item.value} x${quantityInput.value}`;
+            selectedItems.push(skuWithQuantity);
+        });
+
+        if (selectedItems.length === 0) {
+            alert("⚠️ Please select at least one item to return.");
+            return;
+        }
+
+        let reasonSelect = document.getElementById("returnReason");
+        if (reasonSelect.value === "") {
+            alert("⚠️ Please select a return reason.");
+            return;
+        }
+
+        let data = {
+            email: document.getElementById("email").value,
+            phone: document.getElementById("phone").value,
+            name: document.getElementById("name").value,
+            reason: reasonSelect.value,
+            message: document.getElementById("returnMessage").value,
+            items: selectedItems // 这里的 SKU 已经附加了 x数量
+        };
+
+        fetch(`/order/${orderId}/submit-return`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("✅ Return request submitted!");
+                window.location.href = "/customer/orders";
+            } else {
+                alert("❌ Error: " + data.message);
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    }
+</script>
+
+{% endblock %}

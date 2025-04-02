@@ -5,7 +5,10 @@ namespace App\Controller;
 use App\Entity\ShopInfo;
 use App\Entity\Category;
 use App\Entity\Product;
+use App\Entity\Size;
 use App\Repository\ProductRepository;
+use App\Repository\ColorRepository;
+use App\Repository\SizeRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -28,50 +31,49 @@ class EshopHomeController extends AbstractController
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         $new_products = $this->entityManager->getRepository(Product::class)->findLastFourProducts();
+        $popularProducts = $this->entityManager->getRepository(Product::class)->findTopSellingProducts(10);
 
         return $this->render('eshop/index.html.twig', [
             'show_sidebar' => false,
             'shopInfo' => $this->shopInfo,
             'new_products' => $new_products,
+            'popular_products' => $popularProducts,
             'categories' => $categories
         ]);
     }
 
-    #[Route('/category/{category}', name: 'app_eshop_category')]
-    public function showCategory($category, ProductRepository $productRepository): Response
-    {
-        if (!$category) {
-            throw $this->createNotFoundException('The category does not exist');
-        }
+    #[Route('/category/{id}', name: 'app_eshop_category')]
+    public function showCategory(
+        Category $category,
+        ProductRepository $productRepository,
+        ColorRepository $colorRepository,
+        SizeRepository $sizeRepository
+    ): Response {
+        $categoryName = $category->getName(); // 注意这里改成字符串
 
-        // 获取该分类的所有商品
-        $products = $productRepository->findByCategoryName($category);
+        $allProducts = $productRepository->findBy(['category' => $categoryName]);
 
-        // **先过滤掉 hidden = true 的商品**
-        $filteredProducts = array_filter($products, function ($product) {
-            return !$product->getHidden(); // 只保留 hidden = false 的商品
-        });
+        // 过滤 + 排序 + 去重
+        $filtered = array_filter($allProducts, fn($p) => !$p->getHidden() && !empty($p->getImageUrls()));
+        usort($filtered, fn($a, $b) => $b->getId() <=> $a->getId());
 
-        // **按照 ID 倒序排序**
-        usort($filteredProducts, function ($a, $b) {
-            return $b->getId() <=> $a->getId(); // 按 ID 从大到小排序
-        });
-
-        // **去重 SKU 并确保商品有图片**
         $seenSkus = [];
         $productsWithImages = [];
-        foreach ($filteredProducts as $product) {
-            if (!empty($product->getImageUrls()) && !in_array($product->getSku(), $seenSkus)) {
+        foreach ($filtered as $product) {
+            if (!in_array($product->getSku(), $seenSkus)) {
                 $seenSkus[] = $product->getSku();
                 $productsWithImages[] = $product;
             }
         }
 
         return $this->render('eshop/products.html.twig', [
-            'show_sidebar' => true,
+            'category' => $categoryName,
             'products' => $productsWithImages,
-            'category' => $category,
+            'colors' => $colorRepository->findAll(),
+            'sizes' => $sizeRepository->findAll(),
+            'categories' => $this->entityManager->getRepository(Category::class)->findAllCategories(),
             'shopInfo' => $this->shopInfo,
+            'show_sidebar' => true,
         ]);
     }
 }

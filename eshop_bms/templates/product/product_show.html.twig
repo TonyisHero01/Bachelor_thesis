@@ -1,49 +1,68 @@
-{# templates/product_list.html.twig #}
+{% extends 'base.html.twig' %}
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Product Show</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
-</head>
-<body>
-    <div id="routeData" data-edit-route="{{ path('show_product', {'id': product.id}) }}"></div>
-    <div id="body">
-    <form action="#"  enctype="multipart/form-data">
-        <label for="name">Name</label>  <p id="last modified">Added time: </p><p>{{ product.add_time }}</p>
-        <input type="hidden" id="add_time"  value="{{ product.add_time }}">
-        <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ product.name }}"><br>
-        <label for="kategory">Kategory</label><br>
-        <input type="text" id="kategory" name="kategory" value="{{ product.kategory }}"><br>
-        <label for="description">Description</label><br>
-        <textarea id="description" name="description" rows="15" value="{{ product.description }}">{{ product.description }}</textarea><br>
-        <label for="number_in_stock">Number in stock</label><br>
-        <input type="text" id="number_in_stock" name="number_in_stock" value="{{ product.number_in_stock }}"><br>
-        <label for="image_url">Image</label><br>
-        <img border="0" src="{{ product.image_url }}" alt="{{ product.name }}" id="image" width="304" height="228"><br>
+{% block title %}{{ product.name }} - Product Details{% endblock %}
 
-        <input id="image_url" type="file">
-        <input type="hidden" id="image_path">
-        <label for="width">Width</label><br>
-        <input type="text" id="width" name="width" value="{{ product.width }}"><br>
-        <label for="height">Height</label>
-        <input type="text" id="height" name="height" value="{{ product.height }}">
-        <label for="length">Length</label>
-        <input type="text" id="length" name="length" value="{{ product.length }}"><br>
-        <label for="weight">Weight</label>
-        <input type="text" id="weight" name="weight" value="{{ product.weight }}"><br>
-        <label for="material">Material</label>
-        <input type="text" id="material" name="material" value="{{ product.material }}"><br>
-        <label for="color">Color</label>
-        <input type="text" id="color" name="color" value="{{ product.color }}"><br>
-        <label for="price">Price</label>
-        <input type="text" id="price" name="price" value="{{ product.price }}"><br>
-        <div class="buttons">
-        <button type="button" id="saveButton" onclick="save_()">Save</button>
-        <button type="button" id="backButton" onclick="backToProducts()">Back to products</button>
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/product-show.css') }}">
+
+<div class="product-container">
+    <!-- 图片展示 -->
+    <div class="product-images">
+        <div class="image-slider">
+            {% if product.imageUrls is not empty %}
+                {% for imageUrl in product.imageUrls %}
+                    <img src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" class="product-image" width="200" height="200">
+                {% endfor %}
+            {% else %}
+                <img src="{{ asset('images/no-image.png') }}" alt="No Image Available" class="product-image" width="200" height="200">
+            {% endif %}
         </div>
-    </form>
-    <script src="{{ asset('../assets/show.js') }}"></script>
-</body>
-</html>
+    </div>
+
+    <!-- 商品详情 -->
+    <div class="product-details">
+        <h1>{{ product.name }}</h1>
+        
+        <p class="sku"><strong>SKU:</strong> {{ product.sku }}</p>
+        <p class="category"><strong>Category:</strong> {{ product.category ?: 'No category' }}</p>
+        <p class="description"><strong>Description:</strong> {{ product.description ?: 'No description available' }}</p>
+        
+        <p class="size"><strong>Size:</strong> {{ product.size ?: 'N/A' }}</p>
+        <p class="dimensions">
+            <strong>Dimensions:</strong> 
+            {{ product.width ?: 'N/A' }} x {{ product.height ?: 'N/A' }} x {{ product.length ?: 'N/A' }} cm
+        </p>
+        <p class="weight"><strong>Weight:</strong> {{ product.weight ?: 'N/A' }} kg</p>
+        <p class="material"><strong>Material:</strong> {{ product.material ?: 'N/A' }}</p>
+        <p class="color"><strong>Color:</strong> {{ product.color ?: 'N/A' }}</p>
+
+        <p class="stock">
+            <strong>Stock:</strong> 
+            {% if product.numberInStock > 0 %}
+                <span class="in-stock">{{ product.numberInStock }} Available</span>
+            {% else %}
+                <span class="out-of-stock">Out of Stock</span>
+            {% endif %}
+        </p>
+
+        <p class="price">
+            <strong>Price:</strong> 
+            <span class="original-price">{{ product.price|number_format(2) }}</span> 
+            {{ product.currency.getName() }}
+        </p>
+
+        {% if product.discount < 100 %}
+            <p class="discount">
+                <strong>Discount:</strong> {{ product.discount }}%
+            </p>
+            <p class="final-price">
+                <strong>Final Price:</strong> 
+                {{ (product.price * product.discount / 100)|number_format(2) }} {{ product.currency.getName() }}
+            </p>
+        {% endif %}
+
+        <p class="tax-rate"><strong>Tax Rate:</strong> {{ product.taxRate }}%</p>
+    </div>
+</div>
+
+{% endblock %}

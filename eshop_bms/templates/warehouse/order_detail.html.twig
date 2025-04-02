@@ -13,13 +13,23 @@
 <table>
     <tr>
         <th>Product</th>
+        <th>SKU</th>
         <th>Quantity</th>
         <th>Unit Price</th>
         <th>Subtotal</th>
     </tr>
     {% for item in order.getOrderItems() %}
         <tr>
-            <td>{{ item.getProductName() }}</td>
+            <td>
+                <a href="{{ localized_path('show_product', {'id': item.getProduct().getId()}) }}">
+                    {{ item.getProductName() }}
+                </a>
+            </td>
+            <td>
+                <a href="{{ localized_path('show_product', {'id': item.getProduct().getId()}) }}">
+                    {{ item.getProduct().getSku() }}
+                </a>
+            </td>
             <td>{{ item.getQuantity() }}</td>
             <td>{{ item.getUnitPrice() }}</td>
             <td>{{ item.getSubtotalWithTax()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</td>
@@ -27,18 +37,40 @@
     {% endfor %}
 </table>
 
+<!-- 📌 显示配送方式 -->
+<h2>Delivery Method</h2>
+<p><strong>Selected Method:</strong> 
+    {% if order.getDeliveryMethod() == "pickup" %}
+        <span style="color: green;">🏬 Pick Up at Store</span>
+    {% else %}
+        <span style="color: blue;">🚚 Home Delivery</span>
+    {% endif %}
+</p>
+
+<!-- 📌 显示客户填写的配送信息，每个 ; 后换行 -->
+<h2>Delivery Information</h2>
+<p style="white-space: pre-line;">
+    {{ order.getAddress()|default('No address provided')|replace({'; ': "\n"}) }}
+</p>
+
+<!-- 📝 显示客户留言 -->
+<h2>Customer Note</h2>
+<p style="white-space: pre-line;">
+    {{ order.getNotes()|default('No additional notes') }}
+</p>
+
 <!-- 按钮: 标记为已完成 -->
 {% if not order.getIsCompleted() %}
     <button id="markAsCompletedBtn">Mark as Completed</button>
 {% endif %}
 
-<a href="{{ path('app_order_tracking') }}">Back to Orders</a>
+<a href="{{ localized_path('app_order_tracking') }}">Back to Orders</a>
 
 <script>
     document.getElementById("markAsCompletedBtn")?.addEventListener("click", function() {
         if (!confirm("Are you sure you want to mark this order as completed?")) return;
 
-        fetch("{{ path('mark_order_completed', {'id': order.getId()}) }}", {
+        fetch("{{ localized_path('mark_order_completed', {'id': order.getId()}) }}", {
             method: "POST",
             headers: { "Content-Type": "application/json" }
         })
@@ -46,7 +78,7 @@
         .then(data => {
             if (data.success) {
                 alert("Order marked as completed!");
-                window.location.href = "{{ path('app_order_tracking') }}";
+                window.location.href = "{{ localized_path('app_order_tracking') }}";
             } else {
                 alert("Error: " + data.message);
             }

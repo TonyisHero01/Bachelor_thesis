@@ -17,33 +17,37 @@
                 <tr>
                     <th>Order ID</th>
                     <th>Order Date</th>
-                    <th>Total Price</th>
+                    {% if not shopInfo.hidePrices %}
+                        <th>Total Price</th>
+                    {% endif %}
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
-                    <tr class="order-row">
-                        <td>{{ order.getId() }}</td>
-                        <td>{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</td>
-                        <td>
-                            {{ order.getTotalPrice()|number_format(2) }}
-                            {% if order.getOrderItems() is not empty %}
-                                {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}
-                            {% else %}
-                                No currency
-                            {% endif %}
-                        </td>
-                        <td>
+                    <tr>
+                        <td data-label="Order ID">{{ order.getId() }}</td>
+                        <td data-label="Order Date">{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</td>
+                        {% if not shopInfo.hidePrices %}
+                            <td data-label="Total Price">
+                                {{ order.getTotalPrice()|number_format(2) }}
+                                {% if order.getOrderItems() is not empty %}
+                                    {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}
+                                {% else %}
+                                    No currency
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                        <td data-label="Status">
                             {% if order.getIsCompleted() %}
                                 <span class="status completed">COMPLETED</span>
                             {% else %}
                                 <span class="status pending">PENDING</span>
                             {% endif %}
                         </td>
-                        <td>
-                            <a href="{{ path('order_confirmation', {'id': order.getId()}) }}" class="btn">View</a>
+                        <td data-label="Action">
+                            <a href="{{ path('order_confirmation2', {'id': order.getId()}) }}" class="btn">View</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -51,7 +55,9 @@
         </table>
     {% endif %}
 
-    <a href="{{ path('homepage') }}" class="btn">Return to Home</a>
+    <a href="{{ path('homepage') }}" class="btn return-home">
+        <i class="fas fa-home"></i> Return to Home
+    </a>
 </div>
 
 {% endblock %}

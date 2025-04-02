@@ -11,13 +11,13 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
-class RegistrationController extends AbstractController
+class RegistrationController extends BaseController
 {
     #[Route('/register', name: 'app_register')]
     public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         $employee = new Employee();
         $form = $this->createForm(RegistrationFormType::class, $employee);
@@ -37,7 +37,7 @@ class RegistrationController extends AbstractController
             return $this->redirectToRoute('register_succesfull');
         }
 
-        return $this->render('registration/register.html.twig', [
+        return $this->renderLocalized('registration/register.html.twig', [
             'registrationForm' => $form->createView(),
         ]);
     }
@@ -45,8 +45,8 @@ class RegistrationController extends AbstractController
     public function registerSuccessfullNotificate(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->render('employee/employee_not_logged.html.twig', []);
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
-        return $this->render('registration/register_successfull_notification.html.twig', []);
+        return $this->renderLocalized('registration/register_successfull_notification.html.twig', []);
     }
 }

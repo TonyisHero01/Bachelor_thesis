@@ -24,7 +24,7 @@ class Order
     private float $totalPrice;
 
     #[ORM\Column(type: "text")]
-    private ?string $address;
+    private string $address = "";
 
     #[ORM\Column(type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
     private \DateTime $orderCreatedAt;
@@ -52,6 +52,9 @@ class Order
 
     #[ORM\OneToMany(mappedBy: "order", targetEntity: OrderItem::class, cascade: ["persist", "remove"])]
     private Collection $orderItems;
+
+    #[ORM\Column(type: "string", length: 20, options: ["default" => "pickup"])]
+    private string $deliveryMethod = "pickup";  // 🆕 添加的字段，存储配送方式
 
     public function __construct()
     {
@@ -104,7 +107,7 @@ class Order
         return $this->orderCreatedAt;
     }
 
-    public function setOrderCreatedAt(\DateTime $orderCreatedAt): self
+    public function setOrderCreatedAt(?\DateTime $orderCreatedAt): self
     {
         $this->orderCreatedAt = $orderCreatedAt;
         return $this;
@@ -129,6 +132,12 @@ class Order
     public function setIsCompleted(bool $isCompleted): self
     {
         $this->isCompleted = $isCompleted;
+        
+        if ($isCompleted) {
+            $this->paymentStatus = "COMPLETED";
+            $this->deliveryStatus = "COMPLETED";
+        }
+
         return $this;
     }
 
@@ -190,5 +199,25 @@ class Order
     public function getOrderItems(): Collection
     {
         return $this->orderItems;
+    }
+
+    /**
+     * Get Delivery Method (pickup/delivery)
+     */
+    public function getDeliveryMethod(): string
+    {
+        return $this->deliveryMethod;
+    }
+
+    /**
+     * Set Delivery Method
+     */
+    public function setDeliveryMethod(string $deliveryMethod): self
+    {
+        if (!in_array($deliveryMethod, ["pickup", "delivery"])) {
+            throw new \InvalidArgumentException("Invalid delivery method.");
+        }
+        $this->deliveryMethod = $deliveryMethod;
+        return $this;
     }
 }

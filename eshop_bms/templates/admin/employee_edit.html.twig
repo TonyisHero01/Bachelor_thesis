@@ -1,5 +1,7 @@
 {# templates/admin/employee_edit.html.twig #}
+{% extends 'base.html.twig' %}
 
+{% block body %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,7 +12,7 @@
 <body>
     <h1>Employee Edit</h1>
     <div id=employeeId employee-id-data={{ employee.id }}></div>
-    <div id="routeData" data-employee_list-route="{{ path('show_All_employees') }}"></div>
+    <div id="routeData" data-employee_list-route="{{ localized_path('show_All_employees') }}"></div>
     <div id="body">
     
     <form action="#"  enctype="multipart/form-data">
@@ -71,3 +73,4 @@
     </div>
 </body>
 </html>
+{% endblock %}

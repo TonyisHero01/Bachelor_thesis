@@ -20,7 +20,19 @@
     </div>
     <div class="product-quick-detail">
         <div class="product-name">{{product.name}}</div>
-        <div class="product-price">Price: {{product.price}}$</div>
+        {% if not shopInfo.hidePrices %}
+            <div class="product-price-section">
+                {% if product.discount < 100 %}
+                    {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
+                    {% set currency = product.getCurrency().getName %}
+                    <div class="original-price">Original: <span class="strikethrough">{{ product.price }} {{ currency }}</span></div>
+                    <div class="discounted-price">Now: <span class="highlight">{{ discountedPrice }} {{ currency }}</span></div>
+                    <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
+                {% else %}
+                    <div class="regular-price">Price: {{ product.price }} {{ product.getCurrency().getName }}</div>
+                {% endif %}
+            </div>
+        {% endif %}
         <div class="quantity">Quantity:
             <div class="button-table">
                 <div class="quantity-selector">

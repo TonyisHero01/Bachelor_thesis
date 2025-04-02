@@ -53,3 +53,5 @@ INSERT INTO shop_info (
     '',
     ''
 );
+
+ALTER TABLE shop_info ADD COLUMN hide_prices BOOLEAN DEFAULT FALSE;

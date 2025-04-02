@@ -1,44 +1,44 @@
 /* 让整个页面更居中，优化视觉 */
 .delivery-options {
-    max-width: 500px;
-    margin: 50px auto;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1);
-    text-align: center;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* 标题样式 */
 .delivery-options h2 {
-    font-size: 22px;
-    margin-bottom: 20px;
+    text-align: center;
+    margin-bottom: 2rem;
     color: #333;
 }
 
 /* 让选项的排布更整齐 */
+.delivery-options form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
 .delivery-options label {
     display: flex;
     align-items: center;
-    font-size: 16px;
-    margin: 15px 0;
+    gap: 0.5rem;
+    font-size: 1.1rem;
     cursor: pointer;
-    padding: 10px;
-    border-radius: 6px;
-    background-color: #f8f9fa;
-    transition: background-color 0.3s ease-in-out;
-}
-
-/* 当鼠标悬停在选择框时 */
-.delivery-options label:hover {
-    background-color: #e9ecef;
 }
 
 /* 隐藏默认的 radio 按钮 */
 .delivery-options input[type="radio"] {
-    margin-right: 10px;
-    width: 18px;
-    height: 18px;
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.delivery-options h3 {
+    margin: 1.5rem 0 1rem;
+    color: #444;
 }
 
 /* 地址输入框区域 */
@@ -61,21 +61,94 @@
     margin-top: 10px;
 }
 
+.delivery-options input[type="text"],
+.delivery-options input[type="tel"],
+.delivery-options input[type="email"],
+.delivery-options textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+
+.delivery-options textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
 /* 确认按钮样式 */
 .delivery-options button {
-    width: 100%;
-    padding: 12px;
-    font-size: 18px;
-    background-color: #28a745;
+    background: #007bff;
     color: white;
     border: none;
-    border-radius: 8px;
+    padding: 1rem 2rem;
+    border-radius: 4px;
+    font-size: 1.1rem;
     cursor: pointer;
-    margin-top: 20px;
-    transition: background-color 0.3s ease-in-out;
+    transition: background 0.3s;
+    margin-top: 1rem;
 }
 
 /* 按钮悬停时 */
 .delivery-options button:hover {
-    background-color: #218838;
+    background: #0056b3;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+    .delivery-options {
+        margin: 1rem;
+        padding: 1rem;
+    }
+
+    .delivery-options h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .delivery-options form {
+        gap: 1rem;
+    }
+
+    .delivery-options label {
+        font-size: 1rem;
+    }
+
+    .delivery-options h3 {
+        font-size: 1.2rem;
+        margin: 1.2rem 0 0.8rem;
+    }
+
+    .delivery-options input[type="text"],
+    .delivery-options input[type="tel"],
+    .delivery-options input[type="email"],
+    .delivery-options textarea {
+        padding: 0.6rem;
+        font-size: 0.95rem;
+    }
+
+    .delivery-options textarea {
+        min-height: 80px;
+    }
+
+    .delivery-options button {
+        width: 100%;
+        padding: 0.8rem;
+        font-size: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    #addressFields {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 4px;
+        margin: 1rem 0;
+    }
+
+    #addressFields label {
+        display: block;
+        margin-bottom: 0.8rem;
+    }
 }

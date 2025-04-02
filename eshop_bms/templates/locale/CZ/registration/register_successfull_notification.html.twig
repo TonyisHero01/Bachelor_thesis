@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Register Successfull</title>
+        <link rel="stylesheet" href="{{ asset('assets/style/app.css') }}">
+    </head>
+    <body>
+        <h1>Registrace proběhla úspěšně!!!</h1>
+        <button onclick="window.location.href='{{ localized_path('home') }}';">Hotovo</button>
+    </body>
+</html>
+{% endblock %}

@@ -1,5 +1,7 @@
 {# templates/admin/employee_list.html.twig #}
+{% extends 'base.html.twig' %}
 
+{% block body %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -16,7 +18,7 @@
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Admin List</h1>
-    <button id="addAdmin" type="button" onclick="window.location.href='{{ path('app_register') }}';">Add Administrator</button>
+    <button id="addAdmin" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Administrator</button>
     <!--
     <form id="search">
         <label for="searchInput"></label>
@@ -28,9 +30,9 @@
         {% set ids = '' %}
         {% for employee in employees %}
             {% set ids = ids ~ employee.id ~ ',' %}
-            <tr id="{{ employee.id }}" data-edit-route="{{ path('admin_edit', {'id': employee.id}) }}"> 
+            <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('admin_edit', {'id': employee.id}) }}"> 
             {#<tr>#}
-            {# <tr id="{{ employee.id }}" data-edit-route="{{ path('save_employee') }}"> #}
+            {# <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('save_employee') }}"> #}
                 </div>
                 <td class="employee-name">{{ employee.name }}</td> 
                 <td class="employee-surname">{{ employee.surname }}</td>
@@ -52,3 +54,4 @@
     <script src="{{ asset('../assets/adminEdit.js') }}"></script>
 </body>
 </html>
+{% endblock %}

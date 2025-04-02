@@ -92,9 +92,8 @@ function addToCart() {
 
 // 更新购物车数量
 function updateCartCount(count) {
-    const cartCountElement = document.querySelector('[data-cart-count]');
-    if (cartCountElement) {
-        cartCountElement.textContent = count;
-        cartCountElement.setAttribute('data-cart-count', count);
-    }
+    const cartCountElements = document.querySelectorAll('.cart-count-bubble');
+    cartCountElements.forEach(el => {
+        el.textContent = parseInt(count);
+    });
 }

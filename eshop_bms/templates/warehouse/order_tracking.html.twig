@@ -16,7 +16,7 @@
             <td>{{ order.getId() }}</td>
             <td>{{ order.getTotalPrice() }} {{ currency }}</td>
             <td>
-                <a href="{{ path('order_detail', { 'id': order.getId() }) }}" class="btn">View Details</a>
+                <a href="{{ localized_path('order_detail', { 'id': order.getId() }) }}" class="btn">View Details</a>
             </td>
         </tr>
     {% endfor %}

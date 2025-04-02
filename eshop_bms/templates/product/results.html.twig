@@ -2,6 +2,9 @@
 {% block search %}
     {# 不显示搜索表单 #}
 {% endblock %}
+{% extends 'base.html.twig' %}
+
+{% block body %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -13,14 +16,14 @@
     <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
     <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
-    <h1><a href="{{ path('bms_product_list') }}">Product List</a></h1>
+    <h1><a href="{{ localized_path('bms_product_list') }}">Product List</a></h1>
     
     <table>
         {% set productIds = '' %}
         {% for product in products %}
             {% set productIds = productIds ~ product.id ~ ',' %}
-            <tr id="{{ product.id }}" data-edit-route="{{ path('product_edit', {'id': product.id}) }}"> 
-            {# <tr id="{{ product.id }}" data-edit-route="{{ path('save_product') }}"> #}
+            <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}"> 
+            {# <tr id="{{ product.id }}" data-edit-route="{{ localized_path('save_product') }}"> #}
                 </div>
                 <td class="product-name">{{ product.name }}</td> 
                 <td class="number-in-stock">{{ product.numberInStock }}</td> 
@@ -45,3 +48,4 @@
     <script src="{{ asset('../assets/delete.js') }}"></script>
 </body>
 </html>
+{% endblock %}

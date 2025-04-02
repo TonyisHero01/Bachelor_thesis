@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Product;
+use App\Entity\OrderItem;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -19,6 +20,26 @@ class ProductRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Product::class);
+    }
+    public function findTopSellingProducts(int $limit = 10): array
+    {
+        return $this->getEntityManager()->createQuery(
+            'SELECT p
+            FROM App\Entity\Product p
+            WHERE p.sku IN (
+                SELECT oi.sku
+                FROM App\Entity\OrderItem oi
+                GROUP BY oi.sku
+                ORDER BY SUM(oi.quantity) DESC
+            )
+            AND p.version = (
+                SELECT MAX(p2.version)
+                FROM App\Entity\Product p2
+                WHERE p2.sku = p.sku
+            )'
+        )
+        ->setMaxResults($limit)
+        ->getResult();
     }
     public function findLatestVersionProducts(): array
     {
