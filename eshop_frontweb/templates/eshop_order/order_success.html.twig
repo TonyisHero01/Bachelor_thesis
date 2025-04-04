@@ -13,17 +13,8 @@
             <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
         {% endif %}
         
-        <a href="{{ path('customer_orders') }}">View Your Orders</a>
+        <a href="{{ path('customer_orders', {'_locale': locale}) }}">View Your Orders</a>
     </div>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            fetch("/cart/clear_after_success", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" }
-            })
-            .then(response => response.json())
-            .catch(error => console.error("Request error:", error));
-        });
-    </script>
+    <script src="{{ asset('../assets/eshopOrderSuccess.js') }}"></script>
 {% endblock %}

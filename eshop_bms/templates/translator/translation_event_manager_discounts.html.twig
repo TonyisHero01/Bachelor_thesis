@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="original_path" value="event_manager/discounts.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group">
+        <label>Product Discount Manager</label>
+        <input type="hidden" name="original__auto_product_discount_manager_1" value="Product Discount Manager">
+        <input type="text" name="field__auto_product_discount_manager_1" placeholder="Product Discount Manager">
+    </div>
+    <div class="field-group">
+        <label>Filter</label>
+        <input type="hidden" name="original__auto_filter_2" value="Filter">
+        <input type="text" name="field__auto_filter_2" placeholder="Filter">
+    </div>
+    <div class="field-group">
+        <label>Select All</label>
+        <input type="hidden" name="original__auto_select_all_3" value="Select All">
+        <input type="text" name="field__auto_select_all_3" placeholder="Select All">
+    </div>
+    <div class="field-group">
+        <label>SKU</label>
+        <input type="hidden" name="original__auto_sku_4" value="SKU">
+        <input type="text" name="field__auto_sku_4" placeholder="SKU">
+    </div>
+    <div class="field-group">
+        <label>Name</label>
+        <input type="hidden" name="original__auto_name_5" value="Name">
+        <input type="text" name="field__auto_name_5" placeholder="Name">
+    </div>
+    <div class="field-group">
+        <label>Current Discount (%)</label>
+        <input type="hidden" name="original__auto_current_discount__6" value="Current Discount (%)">
+        <input type="text" name="field__auto_current_discount__6" placeholder="Current Discount (%)">
+    </div>
+    <div class="field-group">
+        <label>No products found</label>
+        <input type="hidden" name="original__auto_no_products_found_12" value="No products found">
+        <input type="text" name="field__auto_no_products_found_12" placeholder="No products found">
+    </div>
+    <div class="field-group">
+        <label>Bulk Discount (%):</label>
+        <input type="hidden" name="original__auto_bulk_discount__14" value="Bulk Discount (%):">
+        <input type="text" name="field__auto_bulk_discount__14" placeholder="Bulk Discount (%):">
+    </div>
+    <div class="field-group">
+        <label>Apply Discount</label>
+        <input type="hidden" name="original__auto_apply_discount_15" value="Apply Discount">
+        <input type="text" name="field__auto_apply_discount_15" placeholder="Apply Discount">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

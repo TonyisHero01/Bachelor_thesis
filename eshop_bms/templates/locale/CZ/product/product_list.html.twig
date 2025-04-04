@@ -19,22 +19,23 @@
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>
     <a href="{{ localized_path('show_All_products') }}">Seznam produktů</a>
-    <a href="{{ localized_path('home') }}" class="home-link">🏠 Home</a>
+    <a href="{{ localized_path('home') }}" class="home-link">🏠 Domů</a>
     </h1>
     
     
     <form id="search">
         <label for="searchInput"></label>
+        <input type="hidden" id="current-locale" value="{{ app.request.get('_locale') }}">
         <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search Product">
-        <button type="button" id="searchButton" onclick="search_()" >Vyhledat</button>
+        <button type="button" id="searchButton" onclick="search_()" >Vyhledávání</button>
     </form>
     <script src="{{ asset('../assets/search.js') }}"></script>
     <table>
         <tr id="product_list_header">
-            <td>Název</td>
+            <td>Jméno</td>
             <td>Kategorie</td>
             <td>Množství</td>
-            <td>Čas přidání</td>
+            <td>Přidat čas</td>
             <td>Cena</td>
             <td>Upravit</td>
             <td>Vymazat</td>
@@ -79,88 +80,88 @@
     <div class="popuptext" id="myPopup" style="display: none;">
         <div id="routeData" data-create-route="{{ localized_path('create_product') }}" {# data-edit-route="{{ localized_path('edit_product') }}" #}></div>
         <form action="#" oninput="enableCreateButton()">
-            <label for="name">Název</label>
+            <label for="name">Jméno</label>
             <input type="text" id="name" name="name" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
             <label for="sku">SKU</label>
             <input type="text" id="sku" name="sku" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
-            <label for="number_in_stock">Number in stock</label>
+            <label for="number_in_stock">Číslo skladem</label>
             <input type="text" id="number_in_stock" name="number_in_stock">
-            <label for="price">Price in CZK</label>
+            <label for="price">Cena v Kč</label>
             <input type="text" id="price" name="price">
-            <button type="button" id="createButton" onclick="create()" disabled>Create</button>
-            <button id="cancelButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+            <button type="button" id="createButton" onclick="create()" disabled>Vytvořit</button>
+            <button id="cancelButton" type="button" onclick="cancelCreateForm()" style="display: none;">Zrušit</button>
         </form>
     </div>
     <div class="popuptext" id="myCategoryPopup" style="display: none;">
         <form action="#" oninput="enableCategoryAddButton()">
-            <label for="categoryName">Category Name</label>
+            <label for="categoryName">Název kategorie</label>
             <input type="text" id="categoryName" name="categoryName" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
-            <button type="button" id="addCategoryButton" onclick="createCategory()" disabled>Create</button>
-            <button id="cancelCategoryAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+            <button type="button" id="addCategoryButton" onclick="createCategory()" disabled>Vytvořit</button>
+            <button id="cancelCategoryAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Zrušit</button>
         </form>
     </div>
     
     <div class="popuptext" id="myColorPopup" style="display: none;">
         <form action="#" oninput="enableColorAddButton()">
             <!-- 颜色名称输入框 -->
-            <label for="colorName">Color Name</label>
+            <label for="colorName">Název barvy</label>
             <input type="text" id="colorName" name="colorName" required maxlength="50"><br>
 
             <!-- 颜色代码选择器 -->
-            <label for="colorHex">Color Hex</label>
+            <label for="colorHex">Barva Hex</label>
             <input type="color" id="colorHex" name="colorHex" value="#FFFFFF" required><br>
 
             <!-- 创建按钮 -->
-            <button type="button" id="addColorButton" onclick="createColor()" disabled>Create</button>
-            <button id="cancelColorAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+            <button type="button" id="addColorButton" onclick="createColor()" disabled>Vytvořit</button>
+            <button id="cancelColorAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Zrušit</button>
         </form>
     </div>
     <div class="popuptext" id="myModifyColorPopup" style="display: none;">
         <form action="#" oninput="enableModifyColorButton()">
-            <label for="modifyColorSelect">Select Color</label>
+            <label for="modifyColorSelect">Vybrat Barvu</label>
             <select id="modifyColorSelect" name="modifyColorSelect">
                 {% for color in colors %}
                     <option value="{{ color.id }}" data-hex="{{ color.hex }}">{{ color.name }}</option>
                 {% endfor %}
             </select><br>
 
-            <label for="newColorName">New Name</label>
+            <label for="newColorName">Nové jméno</label>
             <input type="text" id="newColorName" name="newColorName" required maxlength="50"><br>
 
-            <label for="newColorHex">New Color</label>
+            <label for="newColorHex">Nová barva</label>
             <input type="color" id="newColorHex" name="newColorHex" value="#FFFFFF"><br>
 
-            <button type="button" id="modifyColorButton" onclick="modifyColor()" disabled>Modify</button>
-            <button id="cancelModifyColorButton" type="button" onclick="cancelModifyColorForm()">Cancel</button>
+            <button type="button" id="modifyColorButton" onclick="modifyColor()" disabled>Upravit</button>
+            <button id="cancelModifyColorButton" type="button" onclick="cancelModifyColorForm()">Zrušit</button>
             
         </form>
     </div>
 
     <div class="popuptext" id="mySizePopup" style="display: none;">
         <form action="#" oninput="enableSizeAddButton()">
-            <label for="sizeName">Size Name</label>
+            <label for="sizeName">Název velikosti</label>
             <input type="text" id="sizeName" name="sizeName" required maxlength="50"><br>
 
-            <button type="button" id="addSizeButton" onclick="createSize()" disabled>Create</button>
-            <button id="cancelSizeAddButton" type="button" onclick="cancelCreateForm()">Cancel</button>
+            <button type="button" id="addSizeButton" onclick="createSize()" disabled>Vytvořit</button>
+            <button id="cancelSizeAddButton" type="button" onclick="cancelCreateForm()">Zrušit</button>
         </form>
     </div>
 
     <!-- 修改 Size 的弹窗 -->
     <div class="popuptext" id="myModifySizePopup" style="display: none;">
         <form action="#" oninput="enableModifySizeButton()">
-            <label for="modifySizeSelect">Select Size</label>
+            <label for="modifySizeSelect">Vybrat Velikost</label>
             <select id="modifySizeSelect" name="modifySizeSelect">
                 {% for size in sizes %}
                     <option value="{{ size.id }}">{{ size.name }}</option>
                 {% endfor %}
             </select><br>
 
-            <label for="newSizeName">New Size Name</label>
+            <label for="newSizeName">Název nové velikosti</label>
             <input type="text" id="newSizeName" name="newSizeName" required maxlength="50"><br>
 
-            <button type="button" id="modifySizeButton" onclick="modifySize()" disabled>Modify</button>
-            <button id="cancelModifySizeButton" type="button" onclick="cancelModifySizeForm()">Cancel</button>
+            <button type="button" id="modifySizeButton" onclick="modifySize()" disabled>Upravit</button>
+            <button id="cancelModifySizeButton" type="button" onclick="cancelModifySizeForm()">Zrušit</button>
         </form>
     </div>
 

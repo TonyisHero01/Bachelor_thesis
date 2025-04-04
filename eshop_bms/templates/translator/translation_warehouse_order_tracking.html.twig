@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="original_path" value="warehouse/order_tracking.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group">
+        <label>Track Order</label>
+        <input type="hidden" name="original__auto_track_order_1" value="Track Order">
+        <input type="text" name="field__auto_track_order_1" placeholder="Track Order">
+    </div>
+    <div class="field-group">
+        <label>Customer Email</label>
+        <input type="hidden" name="original__auto_customer_email_2" value="Customer Email">
+        <input type="text" name="field__auto_customer_email_2" placeholder="Customer Email">
+    </div>
+    <div class="field-group">
+        <label>Order ID</label>
+        <input type="hidden" name="original__auto_order_id_3" value="Order ID">
+        <input type="text" name="field__auto_order_id_3" placeholder="Order ID">
+    </div>
+    <div class="field-group">
+        <label>Price</label>
+        <input type="hidden" name="original__auto_price_4" value="Price">
+        <input type="text" name="field__auto_price_4" placeholder="Price">
+    </div>
+    <div class="field-group">
+        <label>Action</label>
+        <input type="hidden" name="original__auto_action_5" value="Action">
+        <input type="text" name="field__auto_action_5" placeholder="Action">
+    </div>
+    <div class="field-group">
+        <label>View Details</label>
+        <input type="hidden" name="original__auto_view_details_10" value="View Details">
+        <input type="text" name="field__auto_view_details_10" placeholder="View Details">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

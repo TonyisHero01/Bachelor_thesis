@@ -1,0 +1,37 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Potvrzení objednávky - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-confirm.css') }}">
+    <div class="order-confirmation">
+        <h2>Potvrzení objednávky</h2>
+
+        <table>
+            <tr>
+                <td>Moje objednávka</td>
+                <td><strong>ID objednávky:</strong> {{ order.getId() }}</td>
+            </tr>
+            {% for item in orderItems %}
+                <tr class="item_product_name"><td>{{ item.getProductName() }} x{{ item.getQuantity() }}</td><td></td></tr>
+                {% if not shopInfo.hidePrices %}
+                    <tr><td>Mezisoučet:</td><td> {{ item.getSubtotal()|number_format(2) }}</td></tr>
+                    <tr><td>Daň:</td><td> {{ item.getTaxAmount()|number_format(2) }}</td></tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+
+        {% if not shopInfo.hidePrices %}
+            <p><strong>Celková cena:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        {% endif %}
+
+        <div class="order-actions">
+            <button id="cancelOrderBtn">Zrušit objednávku</button>
+            <button id="confirmOrderBtn">Potvrdit objednávku</button>
+        </div>
+
+        <a href="{{ path('customer_cart', {'_locale': locale}) }}">Zpět do košíku</a>
+    </div>
+
+    <script src="{{ asset('../assets/eshopOrderConfirmation.js') }}"></script>
+{% endblock %}

@@ -13,14 +13,14 @@
             <td>
                 <div class="wishlist-container">
                     <div class="wishlist-grid">
-                        <!-- 图片 -->
+                        <!-- Image -->
                         <div class="img-container">
                             <a href="{{ path('show_eshop_product', {'id': product.id}) }}">
                                 <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
                             </a>
                         </div>
 
-                        <!-- 描述 -->
+                        <!-- Description -->
                         <div class="description-container">
                             <div class="product-name">
                                 <a href="{{ path('show_eshop_product', {'id': product.id}) }}">{{ product.name }}</a>
@@ -28,11 +28,10 @@
                             <div class="product-description">{{ product.description | raw }}</div>
                         </div>
 
-                        <!-- 右侧操作区域 -->
+                        <!-- Actions -->
                         <div class="wishlist-actions">
-                            <button class="remove-from-wishlist" data-product-id="{{ product.id }}">🗑 从愿望单删除</button>
+                            <button class="remove-from-wishlist" data-product-id="{{ product.id }}">🗑 Remove from Wishlist</button>
 
-                            <!-- 数量选择器 & 按钮 -->
                             <div class="actions-row">
                                 <div class="quantity-selector">
                                     <button class="quantity-btn" onclick="updateQuantity('{{ product.id }}', -1)">-</button>
@@ -40,7 +39,7 @@
                                     <button class="quantity-btn" onclick="updateQuantity('{{ product.id }}', 1)">+</button>
                                 </div>
 
-                                <button class="add-to-cart" data-product-id="{{ product.id }}">🛒 添加到购物车</button>
+                                <button class="add-to-cart" data-product-id="{{ product.id }}">🛒 Add to Cart</button>
                             </div>
                         </div>
                     </div>
@@ -50,71 +49,6 @@
     {% endfor %}
 </table>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-    // **移除愿望单商品**
-    document.querySelectorAll(".remove-from-wishlist").forEach(button => {
-        button.addEventListener("click", function () {
-            let productId = this.getAttribute("data-product-id");
-            fetch(`/wishlist/remove/${productId}`, {
-                method: "POST",
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    this.closest("tr").remove();
-                } else {
-                    alert("删除失败");
-                }
-            })
-            .catch(error => console.error("Error:", error));
-        });
-    });
-
-    // **添加到购物车，并更新购物车图标**
-    document.querySelectorAll(".add-to-cart").forEach(button => {
-        button.addEventListener("click", function () {
-            let productId = this.getAttribute("data-product-id");
-            let quantity = parseInt(document.getElementById("wishlist-quantity-" + productId).textContent);
-
-            fetch("/cart/add", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ productId: productId, quantity: quantity })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert("已成功加入购物车！");
-                    updateCartCount(data.cartCount); // ✅ 更新购物车图标数量
-                } else {
-                    alert("添加失败: " + data.message);
-                }
-            })
-            .catch(error => console.error("Error:", error));
-        });
-    });
-});
-
-// **更新数量**
-function updateQuantity(productId, change) {
-    let quantityElement = document.getElementById("wishlist-quantity-" + productId);
-    let currentQuantity = parseInt(quantityElement.textContent);
-    let newQuantity = currentQuantity + change;
-
-    if (newQuantity < 1) return; // **不允许低于 1**
-    
-    quantityElement.textContent = newQuantity;
-}
-
-// **更新购物车图标数量**
-function updateCartCount(count) {
-    let cartCountElement = document.querySelector("[data-cart-count]");
-    if (cartCountElement) {
-        cartCountElement.textContent = count;
-    }
-}
-</script>
+<script src="{{ asset('../assets/eshopWishlist.js') }}"></script>
 
 {% endblock %}

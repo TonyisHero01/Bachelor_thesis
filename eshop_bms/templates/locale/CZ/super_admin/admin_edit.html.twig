@@ -6,11 +6,11 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Admin Edit</title>
+    <title>Editace správce</title>
     <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
 </head>
 <body>
-    <h1>Admin Edit</h1>
+    <h1>Editace správce</h1>
     <div id=adminId admin-id-data={{ admin.id }}></div>
     <div id="routeData" data-admin_list-route="{{ localized_path('show_All_admins') }}"></div>
     <div id="body">
@@ -32,26 +32,26 @@
 
             <label>
                 <input type="checkbox" name="roles[]" value="ROLE_WAREHOUSEMAN" 
-                {% if 'ROLE_WAREHOUSEMAN' in admin.roles %} checked {% endif %}>SKLADNÍK</label><br>
+                {% if 'ROLE_WAREHOUSEMAN' in admin.roles %} checked {% endif %}>Skladník</label><br>
 
             <label>
                 <input type="checkbox" name="roles[]" value="ROLE_WAREHOUSE_MANAGER" 
-                {% if 'ROLE_WAREHOUSE_MANAGER' in admin.roles %} checked {% endif %}>VEDOUCÍ SKLADU</label><br>
+                {% if 'ROLE_WAREHOUSE_MANAGER' in admin.roles %} checked {% endif %}>Vedoucí skladu</label><br>
 
             <label>
                 <input type="checkbox" name="roles[]" value="ROLE_TRANSLATOR" 
-                {% if 'ROLE_TRANSLATOR' in admin.roles %} checked {% endif %}>PŘEKLADATEL</label><br>
+                {% if 'ROLE_TRANSLATOR' in admin.roles %} checked {% endif %}>Překladatel</label><br>
 
             <label>
                 <input type="checkbox" name="roles[]" value="ROLE_EVENT_MANAGER" 
-                {% if 'ROLE_EVENT_MANAGER' in admin.roles %} checked {% endif %}>VEDOUCÍ AKCÍ</label><br>
+                {% if 'ROLE_EVENT_MANAGER' in admin.roles %} checked {% endif %}>Správce událostí</label><br>
 
             <label>
                 <input type="checkbox" name="roles[]" value="ROLE_ACCOUNTING" 
-                {% if 'ROLE_ACCOUNTING' in admin.roles %} checked {% endif %}>ÚČETNIK</label><br>
+                {% if 'ROLE_ACCOUNTING' in admin.roles %} checked {% endif %}>Účetnik</label><br>
             <label>
                 <input type="checkbox" name="roles[]" value="ROLE_ADMIN" 
-                {% if 'ROLE_ADMIN' in admin.roles %} checked {% endif %}>ADMINISTRÁTOR</label>
+                {% if 'ROLE_ADMIN' in admin.roles %} checked {% endif %}>Administrátor</label>
         </fieldset>
         <div class="buttons">
         <button type="button" id="saveButton" onclick="save_()">Uložit</button>

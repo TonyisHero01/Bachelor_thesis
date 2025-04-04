@@ -5,7 +5,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Product List</title>
+    <title>Seznam produktů</title>
     <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
 </head>
 <body>
@@ -24,7 +24,7 @@
                 </option>
             {% endfor %}
         </select>
-        <label for="name">Název</label>
+        <label for="name">Jméno</label>
         <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ product.name }}"><br>
         <p id="last modified">Přidán čas:</p>
         <p id="add_time">{{ product.addTime }}</p>

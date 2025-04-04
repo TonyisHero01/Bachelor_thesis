@@ -1,0 +1,91 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Your Cart - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/product-page.css') }}">
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/cart.css') }}">
+
+<h2>Váš nákupní košík</h2>
+
+{% if cartItems is empty %}
+    <p>Váš košík je prázdný.</p>
+{% else %}
+    <table class="cart-table">
+        <thead>
+            <tr>
+                <th>Produkt</th>
+                {% if not shopInfo.hidePrices %}
+                    <th>Cena</th>
+                {% endif %}
+                <th>Množství</th>
+                {% if not shopInfo.hidePrices %}
+                    <th>Součet</th>
+                {% endif %}
+                <th>Akce</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cartItem in cartItems %}
+                <tr>
+                    <td class="cart-item" data-label="Produkt">
+                    {% if cartItem.getProduct().getImageUrls() is not empty %}
+                        <img class="product-img" src="{{ BMS_URL }}/images/{{ cartItem.getProduct().getImageUrls()|first }}" alt="{{ cartItem.getProduct().getName() }}" class="cart-product-image">
+                    {% endif %}
+                    {{ cartItem.getProduct().getName() }}
+                    </td>
+                    {% if not shopInfo.hidePrices %}
+                        <td data-label="Cena">
+                            {% set discount = cartItem.getProduct().getDiscount() %}
+                            {% set price = cartItem.getProduct().getPrice() %}
+                            {% set currency = cartItem.getProduct().getCurrency().getName() %}
+                            {% if discount < 100 %}
+                                <span class="original-price strikethrough">{{ price }} {{ currency }}</span><br>
+                                <span class="discounted-price">{{ (price * discount / 100) | number_format(2, '.', '') }} {{ currency }}</span>
+                            {% else %}
+                                {{ price }} {{ currency }}
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                    <td data-label="Množství">
+                        <div class="quantity-selector">
+                            <button class="quantity-btn" onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() - 1 }})">-</button>
+                            <span class="quantity-value" id="cart-quantity-{{ cartItem.getId() }}">{{ cartItem.getQuantity() }}</span>
+                            <button class="quantity-btn" onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() + 1 }})">+</button>
+                        </div>
+                    </td>
+                    {% if not shopInfo.hidePrices %}
+                        <td data-label="Součet">
+                            {% set discount = cartItem.getProduct().getDiscount() %}
+                            {% set price = cartItem.getProduct().getPrice() %}
+                            {% set discounted = discount < 100 ? (price * discount / 100) : price %}
+                            {{ (cartItem.getQuantity() * discounted) | number_format(2, '.', '') }}
+                        </td>
+                    {% endif %}
+                    <td data-label="Akce">
+                        <button class="remove-btn" onclick="removeFromCart({{ cartItem.getId() }})">Odstranit</button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% if not shopInfo.hidePrices %}
+        <div class="total-row">
+            {% set total = 0 %}
+            {% for item in cartItems %}
+                {% set discount = item.getProduct().getDiscount() %}
+                {% set price = item.getProduct().getPrice() %}
+                {% set discounted = discount < 100 ? (price * discount / 100) : price %}
+                {% set total = total + discounted * item.getQuantity() %}
+            {% endfor %}
+            <p><strong>Součet:</strong> {{ total | number_format(2, '.', '') }} {{ cartItems[0].getProduct().getCurrency().getName() }}</p>
+        </div>
+    {% endif %}
+    
+    <div class="checkout-container">
+        <button class="checkout-btn" onclick="goToDeliveryOption()">Pokračujte k pokladně</button>
+    </div>
+{% endif %}
+<script src="{{ asset('../assets/eshopCart.js') }}"></script>
+{% endblock %}

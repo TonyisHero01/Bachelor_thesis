@@ -404,77 +404,128 @@ class ProductController extends BaseController
      * @Route("/search", name="search")
      * @IsGranted("ROLE_WAREHOUSE_MANAGER")
      */
-    #[Route('/bms/search', name: 'search', methods: ['POST'])]
-    public function search(EntityManagerInterface $entityManager, SessionInterface $session, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
-    {
-        $logger->info('当前用户身份验证状态: ' . ($this->isGranted('IS_AUTHENTICATED_FULLY') ? '已认证' : '未认证'));
-        $logger->info('当前用户角色: ' . json_encode($this->getUser()->getRoles()));
-        
-        if (!$this->isGranted('ROLE_WAREHOUSE_MANAGER')) {
+    #[Route('/bms/search', name: 'bms_search', methods: ['POST'])]
+    public function search(
+        EntityManagerInterface $entityManager,
+        SessionInterface $session,
+        AuthorizationCheckerInterface $authChecker,
+        LoggerInterface $logger,
+        Request $request
+    ): Response {
+        $logger->info('\u5f53\u524d\u7528\u6237\u8eab\u4efd\u9a8c\u8bc1\u72b6\u6001: ' . ($this->isGranted('IS_AUTHENTICATED_FULLY') ? '已认证' : '未认证'));
+        $logger->info('当前用户角色: ' . json_encode($this->getUser()?->getRoles()));
+
+        if (!$authChecker->isGranted('ROLE_WAREHOUSE_MANAGER')) {
             throw new AccessDeniedException('您没有权限执行此操作。');
         }
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            $logger->info('未登录: ');
+
+        if (!$authChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
+            $logger->info('未登录');
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
-        $user = $this->getUser();
-        if ($user) {
-            $logger->info('用户身份认证: ' . json_encode([
-                'email' => $user->getEmail(),
-                'roles' => $user->getRoles(),
-            ]));
-        } else {
-            $logger->info('用户未找到。');
-        }
+
         $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, TRUE);
-        $query = $input["query"];
-        $command = 'python3 ../python_scripts/tf-idf.py "' . $query . '"';
+        $input = json_decode($inputJSON, true);
+        $query = $input['query'] ?? '';
+
+        if (empty($query)) {
+            return new JsonResponse(['error' => 'Empty search query'], 400);
+        }
+
+        $escapedQuery = escapeshellarg($query);
+        $projectRoot = $this->getParameter('kernel.project_dir');
+        $pythonPath = $projectRoot . '/python_scripts/venv/bin/python';
+        $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
+        $command = "$pythonPath $scriptPath $escapedQuery 2>&1";
+
+        $logger->info("Executing search command: $command");
         $output = shell_exec($command);
-        #$command = escapeshellcmd('python3 ../python_scripts/tf-idf.py "' . $query . '"');
-        #$output = shell_exec($command);
 
         if ($output === null) {
-            $logger->error('命令执行失败: ' . $command);
-            return new JsonResponse(['error' => '命令执行失败'], 500);
+            $logger->error("Python script execution failed with no output");
+            return new JsonResponse(['error' => 'Search command failed'], 500);
         }
 
-        preg_match_all('/"product_id":\s*(\d+)/', $output, $matches);
+        $searchResults = json_decode($output, true);
+        if (!is_array($searchResults)) {
+            $logger->error("Python script output: $output");
+            return new JsonResponse(['error' => 'Search system error'], 500);
+        }
 
-        // 获取所有提取到的 product_id
-        $results = $matches[1];
-        $session->set('search_results', $results);
-        $logger->info('Query：'.$query);
-        $logger->info('Python搜索结果：'.json_encode($results));
-        return new JsonResponse(["results" => $results]);
+        $skuToSimilarity = [];
+        foreach ($searchResults as $result) {
+            $skuToSimilarity[$result['product_sku']] = $result['similarity'];
+        }
+
+        $productSkus = array_keys($skuToSimilarity);
+
+        if (empty($productSkus)) {
+            return new JsonResponse(['results' => []]);
+        }
+
+        $queryBuilder = $entityManager->createQueryBuilder();
+        $queryBuilder
+            ->select('p.id, p.sku')
+            ->from(Product::class, 'p')
+            ->where($queryBuilder->expr()->in('p.sku', ':skus'))
+            ->setParameter('skus', $productSkus)
+            ->orderBy('p.id', 'DESC');
+
+        $products = $queryBuilder->getQuery()->getResult();
+
+        $skuToLatestId = [];
+        foreach ($products as $product) {
+            if (!isset($skuToLatestId[$product['sku']])) {
+                $skuToLatestId[$product['sku']] = $product['id'];
+            }
+        }
+
+        $sortedResults = [];
+        foreach ($productSkus as $sku) {
+            if (isset($skuToLatestId[$sku])) {
+                $sortedResults[] = [
+                    'id' => $skuToLatestId[$sku],
+                    'similarity' => $skuToSimilarity[$sku],
+                ];
+            }
+        }
+
+        $session->set('search_results', $sortedResults);
+        $logger->info("Python搜索结果: " . json_encode($sortedResults));
+
+        return new JsonResponse(['results' => $sortedResults]);
     }
     #[Route('/bms/results', name: 'results')]
-    public function results(SessionInterface $session, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
-    {
+    public function results(
+        SessionInterface $session,
+        EntityManagerInterface $entityManager,
+        AuthorizationCheckerInterface $authorizationChecker
+    ): Response {
         // 检查用户是否登录
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
-        // 从会话中获取 product_id 列表
-        $ids = $session->get('search_results', []);
+        // 从会话中获取搜索结果（带 similarity 的结构）
+        $searchResults = $session->get('search_results', []);
 
-        // 确保 ids 不为空
-        if (empty($ids)) {
+        if (empty($searchResults)) {
             return $this->renderLocalized('product/no_results.html.twig', []);
         }
 
-        // 使用 product_id 查询产品实体
+        // 提取 id 列表
+        $ids = array_column($searchResults, 'id');
+
+        // 查询产品
         $productRepository = $entityManager->getRepository(Product::class);
         $products = $productRepository->findBy(['id' => $ids]);
 
-        // 根据 ids 的顺序对 products 进行排序
+        // 根据 id 顺序排序
         $productsById = [];
         foreach ($products as $product) {
             $productsById[$product->getId()] = $product;
         }
 
-        // 按照 ids 的顺序重新排序
         $sortedProducts = [];
         foreach ($ids as $id) {
             if (isset($productsById[$id])) {
@@ -483,11 +534,16 @@ class ProductController extends BaseController
         }
 
         $form = $this->createForm(ProductType::class, new Product());
-        return $this->renderLocalized('product/product_list.html.twig', [
+        $colors = $entityManager->getRepository(Color::class)->findAll();
+        $sizes = $entityManager->getRepository(Size::class)->findAll();
+
+        return $this->renderLocalized('product/results.html.twig', [
             'products' => $sortedProducts,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
+            'colors' => $colors,
+            'sizes' => $sizes,
             'form' => $form
         ]);
     }

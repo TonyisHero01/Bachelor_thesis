@@ -1,0 +1,30 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Výsledky vyhledávání - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/search-results.css') }}">
+
+    <h1 class="search-title">Výsledky vyhledávání</h1>
+
+    {% if products is empty %}
+        <p class="no-results">Nebyly nalezeny žádné produkty.</p>
+    {% else %}
+        <div class="product-grid">
+            {% for product in products %}
+                <div class="product-item">
+                    <a href="{{ path('show_eshop_product', {'id': product.id, '_locale': locale}) }}">
+                        <div class="product-image-container">
+                            {% if product.getImageUrls() is not empty and product.getImageUrls()[0] is defined %}
+                                <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}" class="product-image">
+                            {% else %}
+                                <img src="{{ BMS_URL }}/images/default-product.jpg" alt="No Image Available" class="product-image">
+                            {% endif %}
+                        </div>
+                        <p class="product-name">{{ product.name }}</p>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

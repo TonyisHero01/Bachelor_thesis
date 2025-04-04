@@ -11,7 +11,7 @@
 </head>
 <body>
   <div class="content">
-    Ahoj {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+    Hi {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     <br>
     <a href="/{{ app.user ? 'logout' : 'login' }}">
         {{ app.user ? (translations.logout ?? 'Logout') : (translations.login ?? 'Login') }}
@@ -95,8 +95,8 @@
         {% for currency in currencies %}
           <div class="currency-pair" data-currency-id="{{ currency.id }}">
             <input type="text" name="currencyCode[]" placeholder="{{ translations.currency_code ?? 'Currency Code (e.g., USD)' }}" value="{{ currency.name }}" required>
-            <input type="number" name="currencyHodnota[]" placeholder="{{ translations.value ?? 'Value' }}" value="{{ currency.value }}" step="0.01" required>
-            <input type="radio" name="isVýchozíCurrency" value="{{ currency.id }}" {% if currency.isVýchozí %}checked{% endif %}> {{ translations.default ?? 'Default' }}
+            <input type="number" name="currencyValue[]" placeholder="{{ translations.value ?? 'Value' }}" value="{{ currency.value }}" step="0.01" required>
+            <input type="radio" name="isDefaultCurrency" value="{{ currency.id }}" {% if currency.isDefault %}checked{% endif %}> {{ translations.default ?? 'Default' }}
             <button type="button" class="delete-currency" onclick="deleteCurrency(this)">Delete</button>
           </div>
         {% endfor %}

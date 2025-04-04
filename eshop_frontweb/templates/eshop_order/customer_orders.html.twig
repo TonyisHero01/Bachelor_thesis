@@ -47,7 +47,7 @@
                             {% endif %}
                         </td>
                         <td data-label="Action">
-                            <a href="{{ path('order_confirmation2', {'id': order.getId()}) }}" class="btn">View</a>
+                            <a href="{{ path('order_confirmation2', {'id': order.getId(), '_locale': locale}) }}" class="btn">View</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -55,7 +55,7 @@
         </table>
     {% endif %}
 
-    <a href="{{ path('homepage') }}" class="btn return-home">
+    <a href="{{ path('homepage', {'_locale': locale}) }}" class="btn return-home">
         <i class="fas fa-home"></i> Return to Home
     </a>
 </div>

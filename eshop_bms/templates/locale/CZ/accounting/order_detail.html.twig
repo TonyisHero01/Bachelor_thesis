@@ -5,16 +5,16 @@
 {% block body %}
     <h1>{{ 'Order'|trans }} #{{ order.id }} {{ 'Detail'|trans }}</h1>
 
-    <p><strong>Email</strong> {{ order.customer.email }}</p>
-    <p><strong>Kontakt</strong><br>
+    <p><strong>Email:</strong> {{ order.customer.email }}</p>
+    <p><strong>Kontakt:</strong><br>
         {% for line in order.address|split(';') %}
             {{ line|trim }}<br>
         {% endfor %}
     </p>
-    <p><strong>Vytvořeno v</strong> {{ order.orderCreatedAt|date('Y-m-d H:i') }}</p>
-    <p><strong>Součet</strong> {{ order.totalPrice }} {{ order.customer.preferredCurrency ?? 'CZK' }}</p>
+    <p><strong>Vytvořeno na:</strong> {{ order.orderCreatedAt|date('Y-m-d H:i') }}</p>
+    <p><strong>Celkem:</strong> {{ order.totalPrice }} {{ order.customer.preferredCurrency ?? 'CZK' }}</p>
 
-    <h3>Objednávka položek</h3>
+    <h3>Položky objednávky:</h3>
     <ul>
         {% for item in order.orderItems %}
             <li>
@@ -23,7 +23,11 @@
         {% endfor %}
     </ul>
 
-    <a href="{{ localized_path('accounting_invoice_pdf', {id: order.id}) }}" class="btn btn-primary" target="_blank">Stáhnout PDF</a>
-        <a href="{{ localized_path('accounting_invoice_send', {id: order.id}) }}" class="btn btn-success">Odeslat fakturu emailem</a>
+    <a href="{{ localized_path('accounting_invoice_pdf', {id: order.id}) }}" class="btn btn-primary" target="_blank">
+    {{ translations.download_pdf ?? 'Download PDF' }}
+    </a>
+    <a href="{{ localized_path('accounting_invoice_send', {id: order.id}) }}" class="btn btn-success">
+        {{ translations.send_invoice ?? 'Send Invoice by Email' }}
+    </a>
 
 {% endblock %}

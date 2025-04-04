@@ -1,0 +1,42 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Moje žádosti o vrácení{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/customer_home.css') }}">
+
+<div class="customer-container">
+    <h2>Moje žádosti o vrácení</h2>
+
+    {% if returnRequests is empty %}
+        <p>Nemáte žádné žádosti o vrácení.</p>
+    {% else %}
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID žádosti</th>
+                    <th>ID objednávky</th>
+                    <th>Důvod návratu</th>
+                    <th>Produkty (SKU)</th>
+                    <th>Status</th>
+                    <th>Datum požadavku</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in returnRequests %}
+                    <tr class="status-{{ request.getStatus() }}">
+                        <td>{{ request.getId() }}</td>
+                        <td>{{ request.getOrder().getId() }}</td>
+                        <td>{{ request.getReturnReason() ?: 'N/A' }}</td>
+                        <td>{{ request.getProductSkus() }}</td>
+                        <td>{{ request.getStatus()|capitalize }}</td>
+                        <td>{{ request.getRequestDate().format('Y-m-d H:i') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+
+{% endblock %}

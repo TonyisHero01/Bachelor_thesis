@@ -1,5 +1,8 @@
 twig:
     file_name_pattern: '*.twig'
+    paths:
+        '%kernel.project_dir%/templates': ~
+        '/Users/wangyidong/Programming/Bachelor_thesis/Bachelor_thesis-Symfony_Version/eshop_frontweb/templates': frontweb
 
 when@test:
     twig:

@@ -18,7 +18,7 @@
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Seznam administrátorů</h1>
-    <button id="addAdmin" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Přidat správce</button>
+    <button id="addAdmin" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Přidat administrátora</button>
     <!--
     <form id="search">
         <label for="searchInput"></label>

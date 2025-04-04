@@ -5,13 +5,13 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Home</title>
+  <title>Domovská stránka</title>
   <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
   <div class="content">
-    Ahoj {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+    Hi {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     <br>
     <a href="/{{ app.user ? 'logout' : 'login' }}">
         {{ app.user ? (translations.logout ?? 'Logout') : (translations.login ?? 'Login') }}
@@ -83,7 +83,7 @@
           {% endfor %}
         {% else %}
           <div class="image_upload_section">
-            <p>No images uploaded yet</p>
+            <p>Dosud nebyly nahrány žádné obrázky</p>
           </div>
         {% endif %}
         <input class="image_upload_input" type="file" multiple>
@@ -97,7 +97,7 @@
             <input type="text" name="currencyCode[]" placeholder="{{ translations.currency_code ?? 'Currency Code (e.g., USD)' }}" value="{{ currency.name }}" required>
             <input type="number" name="currencyHodnota[]" placeholder="{{ translations.value ?? 'Value' }}" value="{{ currency.value }}" step="0.01" required>
             <input type="radio" name="isVýchozíCurrency" value="{{ currency.id }}" {% if currency.isVýchozí %}checked{% endif %}> {{ translations.default ?? 'Default' }}
-            <button type="button" class="delete-currency" onclick="deleteCurrency(this)">Delete</button>
+            <button type="button" class="delete-currency" onclick="deleteCurrency(this)">Vymazat</button>
           </div>
         {% endfor %}
       </div>
@@ -112,7 +112,7 @@
   </div>
 
   <div class="sidebar">
-    <h3>Your Roles</h3>
+    <h3>Vaše role</h3>
     <ul>
       {% if 'ROLE_SUPER_ADMIN' in roles %}
         <li><a href='{{ localized_path('show_All_admins') }}'>{{ translations.role_super_admin ?? 'SUPER ADMIN' }}</a></li>

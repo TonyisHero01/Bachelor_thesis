@@ -7,37 +7,42 @@ use App\Entity\Product;
 use App\Entity\Customer;
 use App\Entity\Cart;
 use App\Entity\Category;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Controller\BaseController;
+use Twig\Environment;
+use Psr\Log\LoggerInterface;
 
-class EshopProductController extends AbstractController
+class EshopProductController extends BaseController
 {
     private $shopInfo;
     private $entityManager;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
     {
+        parent::__construct($twig, $logger);
         $this->entityManager = $entityManager;
         $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
     }
 
     #[Route('/eshop/product', name: 'app_eshop_product')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->render('eshop_product/index.html.twig', [
+        return $this->renderLocalized('eshop_product/index.html.twig', [
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'categories' => $categories
-        ]);
+        ], $request);
     }
 
     #[Route('/product/{id}', name: 'show_eshop_product')]
-    public function show(EntityManagerInterface $entityManager, int $id): Response
+    public function show(Request $request, EntityManagerInterface $entityManager, int $id): Response
     {
         $product = $entityManager->getRepository(Product::class)->findProductById($id);
         if(!$product) {
@@ -46,16 +51,18 @@ class EshopProductController extends AbstractController
 
         $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
         $categories = $entityManager->getRepository(Category::class)->findAllCategories();
-        
-        return $this->render('eshop_product/index.html.twig', [
+
+        return $this->renderLocalized('eshop_product/index.html.twig', [
             'shopInfo' => $shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'product' => $product,
             'BMS_URL' => $this->getParameter('BMS_URL'),
             'categories' => $categories
-        ]);
+        ], $request);
     }
-    
+
     #[Route('/cart/add', name: 'add_to_cart', methods: ['POST'])]
     public function addToCart(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -78,7 +85,6 @@ class EshopProductController extends AbstractController
             return new JsonResponse(['success' => false, 'message' => 'Invalid product or user'], 400);
         }
 
-        // 检查购物车是否已有该商品
         $cartItem = $entityManager->getRepository(Cart::class)->findOneBy([
             'customer' => $customer,
             'product' => $product
@@ -97,7 +103,6 @@ class EshopProductController extends AbstractController
 
         $entityManager->flush();
 
-        // 计算购物车总数
         $cartTotalQuantity = $entityManager->createQueryBuilder()
             ->select('SUM(c.quantity)')
             ->from(Cart::class, 'c')

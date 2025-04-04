@@ -25,6 +25,7 @@
     
     <form id="search">
         <label for="searchInput"></label>
+        <input type="hidden" id="current-locale" value="{{ app.request.get('_locale') }}">
         <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search Product">
         <button type="button" id="searchButton" onclick="search_()" >Search</button>
     </form>

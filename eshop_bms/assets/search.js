@@ -22,5 +22,7 @@ async function search_() {
     results.forEach((result, index) => {
         console.log(`Result ${index + 1}:`, result);
     });
-    window.location.href = 'results/';
+    const locale = document.getElementById("current-locale").value;
+    console.log("Redirecting to: ", `/bms/results?_locale=${locale}`);
+    window.location.href = `/bms/results?_locale=${locale}`;
 }

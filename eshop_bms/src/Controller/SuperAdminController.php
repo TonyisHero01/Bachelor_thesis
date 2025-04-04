@@ -11,12 +11,19 @@ use App\Entity\Employee;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Twig\Environment;
+use Psr\Log\LoggerInterface;
 
 class SuperAdminController extends BaseController
 {
     private $params;
-    public function __construct(ParameterBagInterface $params)
-    {
+
+    public function __construct(
+        ParameterBagInterface $params,
+        Environment $twig,
+        LoggerInterface $logger
+    ) {
+        parent::__construct($twig, $logger);
         $this->params = $params;
     }
     #[Route('/super/admin', name: 'app_super_admin')]

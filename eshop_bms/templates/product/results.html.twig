@@ -1,4 +1,3 @@
-{# templates/results.html.twig #}
 {% block search %}
     {# 不显示搜索表单 #}
 {% endblock %}
@@ -13,27 +12,29 @@
     <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
 </head>
 <body>
-    <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
+    {# 当前语言 hidden input，供 JS 读取 _locale #}
+    <input type="hidden" id="current-locale" value="{{ app.request.get('_locale') }}">
+
+    <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}></div>
     <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
-    <h1><a href="{{ localized_path('bms_product_list') }}">Product List</a></h1>
-    
+
+    <h1><a href="{{ localized_path('show_All_products') }}">Product List</a></h1>
+
     <table>
         {% set productIds = '' %}
         {% for product in products %}
             {% set productIds = productIds ~ product.id ~ ',' %}
-            <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}"> 
-            {# <tr id="{{ product.id }}" data-edit-route="{{ localized_path('save_product') }}"> #}
-                </div>
+            <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}">
                 <td class="product-name">{{ product.name }}</td> 
                 <td class="number-in-stock">{{ product.numberInStock }}</td> 
-                <td class="add-time">{{ product.addTime }}</td> 
+                <td class="add-time">{{ product.addTime|date('Y-m-d H:i') }}</td> 
                 <td class="price">{{ product.price }}</td> 
                 <td class="button"><span class="edit-button" type="button" onclick="edit({{ product.id }})">Edit</span></td>
                 <td class="button"><span class="delete-button" type="button" onclick="delete_({{ product.id }})">Delete</span></td>
             </tr>
         {% endfor %}
-        <div id="productIds" data-ids="{{ productIds }}" style="display: none;"></div>
+        <div id="ids" data-ids="{{ productIds|trim(',') }}" style="display: none;"></div>
     </table>
     
     <div class="buttons">
@@ -41,8 +42,7 @@
         <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
         <span id="pageCount">Page Count </span>
     </div>
-        
-    </div>
+
     <script src="{{ asset('../assets/productList.js') }}"></script>
     <script src="{{ asset('../assets/showPage.js') }}"></script>
     <script src="{{ asset('../assets/delete.js') }}"></script>

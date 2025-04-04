@@ -12,17 +12,21 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Controller\BaseController; // ✅ 改为继承 BaseController
+use Twig\Environment;
+use Psr\Log\LoggerInterface;
 
-class ReturnController extends AbstractController
+class ReturnController extends BaseController
 {
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
     {
+        parent::__construct($twig, $logger);
         $this->entityManager = $entityManager;
         $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
     }
+
     #[Route('/order/{id}/return-form', name: 'return_form')]
-    public function returnForm(int $id, OrderRepository $orderRepository, OrderItemRepository $orderItemRepository): \Symfony\Component\HttpFoundation\Response
+    public function returnForm(int $id, OrderRepository $orderRepository, OrderItemRepository $orderItemRepository, Request $request): \Symfony\Component\HttpFoundation\Response
     {
         $order = $orderRepository->find($id);
         if (!$order || !$order->getIsCompleted()) {
@@ -30,14 +34,16 @@ class ReturnController extends AbstractController
         }
 
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->render('/eshop_order/return_form.html.twig', [
+        return $this->renderLocalized('eshop_order/return_form.html.twig', [
             'show_sidebar' => false,
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'order' => $order,
             'orderItems' => $orderItemRepository->findBy(['order' => $order]),
             'user' => $this->getUser(),
             'categories' => $categories
-        ]);
+        ], $request);
     }
 
     #[Route('/order/{id}/submit-return', name: 'submit_return', methods: ['POST'])]
@@ -54,13 +60,11 @@ class ReturnController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
 
-        // 🛑 确保 `items` 存在且是数组
         if (!isset($data['items']) || !is_array($data['items']) || empty($data['items'])) {
             return new JsonResponse(["success" => false, "message" => "No items selected for return"], 400);
         }
 
         try {
-            // ✅ `items` 已经是字符串形式，例如 `"SKU1234 x2, SKU5678 x1"`
             $formattedSkus = implode(', ', $data['items']);
 
             $returnRequest = new ReturnRequest();
@@ -68,7 +72,7 @@ class ReturnController extends AbstractController
             $returnRequest->setUserPhone($data['phone'] ?? '');
             $returnRequest->setUserName($data['name'] ?? '');
             $returnRequest->setOrder($order);
-            $returnRequest->setProductSkus($formattedSkus);  // ✅ 直接存储逗号分隔的字符串
+            $returnRequest->setProductSkus($formattedSkus);
             $returnRequest->setReturnReason($data['reason'] ?? null);
             $returnRequest->setUserMessage($data['message'] ?? null);
 

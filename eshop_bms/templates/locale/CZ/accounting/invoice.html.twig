@@ -78,17 +78,17 @@
     </header>
 
     <div class="meta">
-        <p><strong>Date:</strong> {{ order.orderCreatedAt|date('Y-m-d') }}</p>
-        <p><strong>Status:</strong> {{ order.paymentStatus }}</p>
+        <p><strong>Datum</strong> {{ order.orderCreatedAt|date('Y-m-d') }}</p>
+        <p><strong>Status</strong> {{ order.paymentStatus }}</p>
     </div>
 
     <div class="customer-info">
-        <p><strong>Customer:</strong> {{ order.customer.email }}</p>
-        <p><strong>Contact:</strong></p>
+        <p><strong>Zákazník:</strong> {{ order.customer.email }}</p>
+        <p><strong>Kontakt:</strong></p>
         {% for line in order.address|split(';') %}
             <p>{{ line|trim }}</p>
         {% endfor %}
-        <p><strong>Delivery:</strong> {{ order.deliveryMethod|capitalize }}</p>
+        <p><strong>Dodání:</strong> {{ order.deliveryMethod|capitalize }}</p>
     </div>
 
     <table>

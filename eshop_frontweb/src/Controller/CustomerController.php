@@ -24,18 +24,22 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Psr\Log\LoggerInterface;
+use Twig\Environment;
 
-class CustomerController extends AbstractController
+class CustomerController extends BaseController
 {
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
     {
+        parent::__construct($twig, $logger);
         $this->entityManager = $entityManager;
         $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
     }
+
     #[Route('/customer/login', name: 'customer_login')]
     public function login(AuthenticationUtils $authenticationUtils, Request $request, SessionInterface $session): Response
     {
-        if ($this->getUser() instanceof App\Entity\Customer) {
+        if ($this->getUser() instanceof Customer) {
             return $this->redirectToRoute('customer_home');
         }
 
@@ -48,25 +52,29 @@ class CustomerController extends AbstractController
         $lastUsername = $authenticationUtils->getLastUsername();
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->render('customer/login.html.twig', [
+        return $this->renderLocalized('customer/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'categories' => $categories
-        ]);
+        ], $request);
     }
 
     #[Route('/customer/home', name: 'customer_home')]
     #[IsGranted('ROLE_CUSTOMER')]
-    public function home(): Response
+    public function home(Request $request): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->render('customer/home.html.twig', [
+        return $this->renderLocalized('customer/home.html.twig', [
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'categories' => $categories
-        ]);
+        ], $request);
     }
 
     #[Route('/customer/register', name: 'customer_register')]
@@ -91,21 +99,24 @@ class CustomerController extends AbstractController
         }
 
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->render('customer/register.html.twig', [
+        return $this->renderLocalized('customer/register.html.twig', [
             'registrationForm' => $form->createView(),
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'categories' => $categories
-        ]);
+        ], $request);
     }
+
     #[Route(path: '/logout', name: 'app_logout')]
     public function logout(): void
     {
         throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
     }
-    
+
     #[Route('/customer/wishlist', name: 'customer_wishlist')]
-    public function showWishlist(EntityManagerInterface $entityManager): Response
+    public function showWishlist(Request $request, EntityManagerInterface $entityManager): Response
     {
         $customer = $this->getUser();
 
@@ -120,8 +131,10 @@ class CustomerController extends AbstractController
         }
 
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->render('customer/wishlist.html.twig', [
+        return $this->renderLocalized('customer/wishlist.html.twig', [
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'products' => $products,
             'categories' => $categories
@@ -178,7 +191,7 @@ class CustomerController extends AbstractController
     #[Route('/wishlist/remove/{id}', name: 'remove_from_wishlist', methods: ['POST'])]
     public function removeFromWishlist(int $id, EntityManagerInterface $entityManager): JsonResponse
     {
-        $user = $this->getUser(); // ✅ 直接获取用户
+        $user = $this->getUser();
         if (!$user) {
             return new JsonResponse(['success' => false, 'message' => '用户未登录'], 403);
         }
@@ -189,14 +202,14 @@ class CustomerController extends AbstractController
         }
 
         $wishlist = array_diff($wishlist, [$id]);
-        $user->setWishlist(array_values($wishlist)); // 重新索引数组
+        $user->setWishlist(array_values($wishlist));
         $entityManager->flush();
 
         return new JsonResponse(['success' => true]);
     }
 
     #[Route('/cart', name: 'customer_cart')]
-    public function showCart(EntityManagerInterface $entityManager): Response
+    public function showCart(EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$this->getUser()) {
             return $this->redirectToRoute('customer_login');
@@ -211,12 +224,14 @@ class CustomerController extends AbstractController
         $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->render('eshop_cart/cart.html.twig', [
+        return $this->renderLocalized('eshop_cart/cart.html.twig', [
             'shopInfo' => $shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'cartItems' => $cartItems,
             'categories' => $categories
-        ]);
+        ], $request);
     }
 
     #[Route('/cart/update/{id}', name: 'update_cart', methods: ['POST'])]
@@ -291,66 +306,9 @@ class CustomerController extends AbstractController
             'cartCount' => $cartTotalQuantity ?? 0
         ]);
     }
-    /*
-    #[Route('/cart/checkout', name: 'cart_checkout', methods: ['POST'])]
-    public function checkout(EntityManagerInterface $entityManager): JsonResponse
-    {
-        $user = $this->getUser();
 
-        if (!$user) {
-            return new JsonResponse(["success" => false, "message" => "User not logged in"], 403);
-        }
-
-        $cartItems = $entityManager->getRepository(Cart::class)->findBy(['customer' => $user]);
-
-        if (empty($cartItems)) {
-            return new JsonResponse(["success" => false, "message" => "Your cart is empty"], 400);
-        }
-
-        // 计算总价格
-        $totalPrice = 0;
-        foreach ($cartItems as $cartItem) {
-            $totalPrice += $cartItem->getQuantity() * $cartItem->getProduct()->getPrice();
-        }
-
-        // 创建订单
-        $order = new Order();
-        $order->setCustomer($user);
-        $order->setTotalPrice($totalPrice);
-        $order->setOrderCreatedAt(new \DateTime());
-        $order->setIsCompleted(false);
-        $order->setPaymentStatus("PENDING");
-        $order->setDeliveryStatus("PENDING");
-
-        $entityManager->persist($order);
-        $entityManager->flush();
-
-        // 订单项 (OrderItem) 关联购物车里的商品
-        foreach ($cartItems as $cartItem) {
-            $product = $cartItem->getProduct();
-            $orderItem = new OrderItem();
-            $orderItem->setOrder($order);
-            $orderItem->setProduct($product);  // ✅ 先设置 Product
-            $orderItem->setProductName($product->getName());
-            $orderItem->setSku($product->getSku());  // ✅ 存 SKU
-            $orderItem->setQuantity($cartItem->getQuantity());
-            $orderItem->setUnitPrice($product->getPrice());
-
-            $orderItem->setSubtotal();  // ✅ 现在可以安全调用 setSubtotal()
-
-            $entityManager->persist($orderItem);
-        }
-
-        $entityManager->flush();
-
-        return new JsonResponse([
-            "success" => true,
-            "order_id" => $order->getId()
-        ]);
-    }
-    */
     #[Route('/order-confirmation/{id}', name: 'order_confirmation', methods: ['GET'])]
-    public function orderConfirmation(int $id, EntityManagerInterface $entityManager): Response
+    public function orderConfirmation(int $id, EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$this->getUser()) {
             return $this->redirectToRoute('customer_login');
@@ -365,17 +323,19 @@ class CustomerController extends AbstractController
         $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->render('eshop_order/order_confirmation.html.twig', [
+        return $this->renderLocalized('eshop_order/order_confirmation.html.twig', [
             'shopInfo' => $shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'order' => $order,
             'orderItems' => $orderItems,
             'categories' => $categories
-        ]);
+        ], $request);
     }
 
     #[Route('/order-confirmation2/{id}', name: 'order_confirmation2', methods: ['GET'])]
-    public function orderConfirmation2(int $id, EntityManagerInterface $entityManager): Response
+    public function orderConfirmation2(int $id, EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$this->getUser()) {
             return $this->redirectToRoute('customer_login');
@@ -390,9 +350,11 @@ class CustomerController extends AbstractController
         $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->render('eshop_order/order_confirmation2.html.twig', [
+        return $this->renderLocalized('eshop_order/order_confirmation2.html.twig', [
             'shopInfo' => $shopInfo,
+            'locale' => $request->getLocale(),
             'show_sidebar' => false,
+            'languages' => $this->getAvailableLanguages(),
             'order' => $order,
             'orderItems' => $orderItems,
             'categories' => $categories
@@ -400,7 +362,7 @@ class CustomerController extends AbstractController
     }
 
     #[Route('/customer/orders', name: 'customer_orders')]
-    public function customerOrders(EntityManagerInterface $entityManager): Response
+    public function customerOrders(EntityManagerInterface $entityManager, Request $request): Response
     {
         $user = $this->getUser();
         if (!$user) {
@@ -415,15 +377,18 @@ class CustomerController extends AbstractController
         $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->render('eshop_order/customer_orders.html.twig', [
+        return $this->renderLocalized('eshop_order/customer_orders.html.twig', [
             'shopInfo' => $shopInfo,
+            'locale' => $request->getLocale(),
             'show_sidebar' => false,
+            'languages' => $this->getAvailableLanguages(),
             'orders' => $orders,
             'categories' => $categories
         ]);
     }
+
     #[Route('/customer/return-requests', name: 'customer_return_requests')]
-    public function returnRequests(EntityManagerInterface $entityManager): Response
+    public function returnRequests(EntityManagerInterface $entityManager, Request $request): Response
     {
         $user = $this->getUser();
         if (!$user) {
@@ -432,14 +397,16 @@ class CustomerController extends AbstractController
 
         $returnRequests = $entityManager->getRepository(ReturnRequest::class)
             ->findBy(['userEmail' => $user->getEmail()], ['requestDate' => 'DESC']);
-        
+
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->render('customer/return_requests.html.twig', [
+        return $this->renderLocalized('customer/return_requests.html.twig', [
             'returnRequests' => $returnRequests,
             'shopInfo' => $this->shopInfo,
+            'locale' => $request->getLocale(),
+            'languages' => $this->getAvailableLanguages(),
             'show_sidebar' => false,
             'categories' => $categories
-        ]);
+        ], $request);
     }
 }

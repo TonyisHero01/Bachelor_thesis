@@ -5,38 +5,36 @@
 {% block body %}
 <h1>Choose a Page to Translate</h1>
 <ul>
-    <li><h3>Accouting Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_accounting_index.html.twig', lang: lang }) }}">Main Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_accounting_invoice.html.twig', lang: lang }) }}">Invoice Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_accounting_order_detail.html.twig', lang: lang }) }}">Order Detail Page</a></li>
-    <li><h3>Admin Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_admin_employee_edit.html.twig', lang: lang }) }}">Employee Edit</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_admin_employee_list.html.twig', lang: lang }) }}">Employee List</a></li>
-    <li><h3>BMS Home Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_bms_home.html.twig', lang: lang }) }}">BMS Home</a></li>
-    <li><h3>Employee Login Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_employee_not_logged.html.twig', lang: lang }) }}">Employee Not Logged Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_security_login.html.twig', lang: lang }) }}">Security Login Page</a></li>
-    <li><h3>Event Manager Discount Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_event_manager_discounts.html.twig', lang: lang }) }}">Discount Page</a></li>
-    <li><h3>Product Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_product_no_results.html.twig', lang: lang }) }}">Product No Results Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_product_product_edit.html.twig', lang: lang }) }}">Product Edit Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_product_product_list.html.twig', lang: lang }) }}">Product List Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_product_results.html.twig', lang: lang }) }}">Product Results Page</a></li>
-    <li><h3>Registration Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_registration_register_successfull.html.twig', lang: lang }) }}">Register Successfull Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_registration_register.html.twig', lang: lang }) }}">Register Page</a></li>
-    <li><h3>Super Admin Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_super_admin_admin_edit.html.twig', lang: lang }) }}">Admin Edit Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_super_admin_admin_list.html.twig', lang: lang }) }}">Admin List Page</a></li>
-    <li><h3>Warehouse Pages</h3></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_warehouse_index.html.twig', lang: lang }) }}">Order Main Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_warehouse_order_detail.html.twig', lang: lang }) }}">Order Detail Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_warehouse_order_tracking.html.twig', lang: lang }) }}">Order Tracking Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_warehouse_return_request_detail.html.twig', lang: lang }) }}">Return Request Detail Page</a></li>
-    <li><a href="{{ localized_path('translator_form', { path: 'translation_warehouse_return_requests.html.twig', lang: lang }) }}">Return Requests Page</a></li>
+    <h3>BMS Pages</h3>
+    {% for key, filename in bmsPages %}
+        <li>
+            <a href="{{ localized_path('translator_form', { path: filename, lang: lang }) }}">{{ key|replace({'_': ' '})|title }}</a>
+        </li>
+    {% endfor %}
 
-    {# 你可以继续添加更多页面 #}
+    <h3>Frontweb Pages</h3>
+    {% for key, filename in frontwebPages %}
+        <li>
+            <a href="{{ localized_path('frontweb_translator_form', { path: filename, lang: lang }) }}">{{ key|replace({'_': ' '})|title }}</a>
+        </li>
+    {% endfor %}
 </ul>
+
+<a href="{{ path('generate_all_translation_forms') }}" class="auto-btn">⚡ Generate All</a>
+
+<style>
+.auto-btn {
+    margin-left: 10px;
+    font-size: 0.9em;
+    text-decoration: none;
+    background: #f5f5f5;
+    border: 1px solid #ccc;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #444;
+}
+.auto-btn:hover {
+    background: #e2e2e2;
+}
+</style>
 {% endblock %}

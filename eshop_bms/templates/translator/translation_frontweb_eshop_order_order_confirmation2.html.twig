@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<form method="post" action="{{ path('frontweb_translation_submit') }}">
+    <input type="hidden" name="original_path" value="eshop_order/order_confirmation2.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group">
+        <label>Order Confirmation</label>
+        <input type="hidden" name="original__auto_order_confirmation_2" value="Order Confirmation">
+        <input type="text" name="field__auto_order_confirmation_2" placeholder="Order Confirmation">
+    </div>
+    <div class="field-group">
+        <label>My Order</label>
+        <input type="hidden" name="original__auto_my_order_3" value="My Order">
+        <input type="text" name="field__auto_my_order_3" placeholder="My Order">
+    </div>
+    <div class="field-group">
+        <label>Order ID:</label>
+        <input type="hidden" name="original__auto_order_id__4" value="Order ID:">
+        <input type="text" name="field__auto_order_id__4" placeholder="Order ID:">
+    </div>
+    <div class="field-group">
+        <label>Subtotal:</label>
+        <input type="hidden" name="original__auto_subtotal__9" value="Subtotal:">
+        <input type="text" name="field__auto_subtotal__9" placeholder="Subtotal:">
+    </div>
+    <div class="field-group">
+        <label>Tax:</label>
+        <input type="hidden" name="original__auto_tax__11" value="Tax:">
+        <input type="text" name="field__auto_tax__11" placeholder="Tax:">
+    </div>
+    <div class="field-group">
+        <label>Total Price:</label>
+        <input type="hidden" name="original__auto_total_price__14" value="Total Price:">
+        <input type="text" name="field__auto_total_price__14" placeholder="Total Price:">
+    </div>
+    <div class="field-group">
+        <label>Back to My Orders</label>
+        <input type="hidden" name="original__auto_back_to_my_orders_17" value="Back to My Orders">
+        <input type="text" name="field__auto_back_to_my_orders_17" placeholder="Back to My Orders">
+    </div>
+    <div class="field-group">
+        <label>Return Order</label>
+        <input type="hidden" name="original__auto_return_order_19" value="Return Order">
+        <input type="text" name="field__auto_return_order_19" placeholder="Return Order">
+    </div>
+<input type="hidden" name="original__template_extends" value="eyUgZXh0ZW5kcyAnZXNob3BfYmFzZS5odG1sLnR3aWcnICV9"><input type="hidden" name="field__template_extends" value="eyUgZXh0ZW5kcyAnbG9jYWxlL0NaL2VzaG9wX2Jhc2UuaHRtbC50d2lnJyAlfQ==">
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

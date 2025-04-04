@@ -27,6 +27,37 @@ nav a:hover {
     transform: scale(1.05); /* 微微放大 */
 }
 
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 18px;
+    text-align: left;
+}
+
+.styled-table th, .styled-table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+}
+
+.styled-table thead tr {
+    background-color: #009879;
+    color: #ffffff;
+    text-align: left;
+}
+
+.status-pending {
+    background-color: white; /* 白色 */
+}
+
+.status-accepted {
+    background-color: #c3e6cb; /* 绿色 */
+}
+
+.status-rejected {
+    background-color: #f5c6cb; /* 红色 */
+}
+
 /* 响应式适配：当屏幕小于600px时，改为竖排 */
 @media (max-width: 600px) {
     nav {
