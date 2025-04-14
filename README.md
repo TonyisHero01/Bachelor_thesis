@@ -40,7 +40,6 @@ psql -U your_username -d eshop_cms -f DB/order.sql
 psql -U your_username -d eshop_cms -f DB/order_items.sql
 psql -U your_username -d eshop_cms -f DB/product.sql
 psql -U your_username -d eshop_cms -f DB/shopInfo.sql
-psql -U your_username -d eshop_cms -f DB/wishlist.sql
 ```
 ### 4. Configure environment variables
 Edit .env:
