@@ -109,6 +109,64 @@
         <script src="{{ asset('../assets/eshopEdit.js') }}"></script>
     </form>
     {% endif %}
+
+    {% if 'ROLE_WAREHOUSEMAN' in roles %}
+    <hr>
+    <h2 style="margin-top: 50px;">📊 Dashboard</h2>
+
+    <div style="max-width: 1000px;">
+      <h3>📈 Sales in the Last 30 Days</h3>
+      <canvas id="salesChart"></canvas>
+
+      <h3>🔥 Top 5 Best-Selling Products</h3>
+      <canvas id="topProductsChart"></canvas>
+
+      <h3>💰 Top 5 Customers by Spending</h3>
+      <canvas id="topCustomersChart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const salesData = {{ sales|json_encode|raw }};
+      const topProducts = {{ topProducts|json_encode|raw }};
+      const topCustomers = {{ topCustomers|json_encode|raw }};
+
+      new Chart(document.getElementById('salesChart'), {
+        type: 'line',
+        data: {
+          labels: salesData.map(d => d.date),
+          datasets: [{
+            label: 'Sales (CZK)',
+            data: salesData.map(d => parseFloat(d.total)),
+            fill: true,
+            tension: 0.1
+          }]
+        }
+      });
+
+      new Chart(document.getElementById('topProductsChart'), {
+        type: 'bar',
+        data: {
+          labels: topProducts.map(d => d.product_name),
+          datasets: [{
+            label: 'Quantity Sold',
+            data: topProducts.map(d => parseFloat(d.total_quantity))
+          }]
+        }
+      });
+
+      new Chart(document.getElementById('topCustomersChart'), {
+        type: 'bar',
+        data: {
+          labels: topCustomers.map(d => d.email),
+          datasets: [{
+            label: 'Total Spent (CZK)',
+            data: topCustomers.map(d => parseFloat(d.total_spent))
+          }]
+        }
+      });
+    </script>
+    {% endif %}
   </div>
 
   <div class="sidebar">

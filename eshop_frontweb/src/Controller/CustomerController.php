@@ -3,7 +3,10 @@
 // src/Controller/CustomerController.php
 namespace App\Controller;
 
-use Symfony\Component\Security\Core\Security;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use App\Security\CustomerLoginFormAuthenticator;
 use App\Entity\ShopInfo;
 use App\Entity\Customer;
 use App\Entity\Product;
@@ -24,13 +27,19 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Psr\Log\LoggerInterface;
 use Twig\Environment;
 
 class CustomerController extends BaseController
 {
-    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
-    {
+    public function __construct(
+        EntityManagerInterface $entityManager,
+        Environment $twig,
+        LoggerInterface $logger,
+        private TokenStorageInterface $tokenStorage,
+        private RequestStack $requestStack
+    ) {
         parent::__construct($twig, $logger);
         $this->entityManager = $entityManager;
         $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
@@ -78,8 +87,11 @@ class CustomerController extends BaseController
     }
 
     #[Route('/customer/register', name: 'customer_register')]
-    public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
-    {
+    public function register(
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        EntityManagerInterface $entityManager
+    ): Response {
         $customer = new Customer();
         $form = $this->createForm(CustomerRegistrationFormType::class, $customer);
         $form->handleRequest($request);
@@ -94,6 +106,13 @@ class CustomerController extends BaseController
 
             $entityManager->persist($customer);
             $entityManager->flush();
+
+            // ✅ 手动登录
+            $token = new UsernamePasswordToken($customer, 'customer', $customer->getRoles());
+            $this->tokenStorage->setToken($token);
+
+            $session = $this->requestStack->getSession();
+            $session->set('_security_customer', serialize($token));
 
             return $this->redirectToRoute('customer_home');
         }

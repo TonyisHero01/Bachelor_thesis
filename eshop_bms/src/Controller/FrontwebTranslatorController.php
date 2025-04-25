@@ -66,6 +66,7 @@ class FrontwebTranslatorController extends AbstractController
         }
 
         $originalContent = file_get_contents($sourceFile);
+        $logger->info("[Frontweb Translator] 📄 原始模板内容加载完成");
 
         // 替换 {% extends ... %}
         $encodedOriginalExtends = $request->request->get('original__template_extends');
@@ -81,7 +82,7 @@ class FrontwebTranslatorController extends AbstractController
             }
         }
 
-        // 使用正则仅替换 HTML 标签内的文本，忽略 {{}} 和 {% %}
+        // 拆分模板：保留 Twig 表达式不动，仅替换普通 HTML 文本
         $tokens = preg_split('/({{.*?}}|{%\s.*?%})/s', $originalContent, -1, PREG_SPLIT_DELIM_CAPTURE);
 
         foreach ($request->request->all() as $key => $value) {
@@ -91,13 +92,16 @@ class FrontwebTranslatorController extends AbstractController
                 $translatedText = $request->request->get('field__' . $suffix);
 
                 if ($translatedText && $translatedText !== $originalText) {
+                    $escapedOriginal = preg_quote($originalText, '/');
+                    $escapedOriginal = preg_replace('/\\\\\{\\\\\{.*?\\\\\}\\\\\}/', '.*?', $escapedOriginal);
+                    $pattern = '/' . $escapedOriginal . '/s';
+
                     foreach ($tokens as $i => $token) {
-                        $trimmed = ltrim($token);
-                        if (!str_starts_with($trimmed, '{%') && !str_starts_with($trimmed, '{{')) {
-                            // 用正则精确匹配文本节点
-                            $tokens[$i] = preg_replace_callback('/>([^<]*?)</', function ($matches) use ($originalText, $translatedText) {
-                                return '>' . ($matches[1] === $originalText ? $translatedText : $matches[1]) . '<';
-                            }, $token);
+                        if (!str_starts_with(trim($token), '{%') && !str_starts_with(trim($token), '{{')) {
+                            $tokens[$i] = preg_replace_callback($pattern, function ($match) use ($translatedText, $logger) {
+                                $logger->info("✅ 正则命中片段：{$match[0]} → $translatedText");
+                                return $translatedText;
+                            }, $token, 1);
                         }
                     }
                 }

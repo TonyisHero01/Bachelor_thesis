@@ -95,8 +95,8 @@
         {% for currency in currencies %}
           <div class="currency-pair" data-currency-id="{{ currency.id }}">
             <input type="text" name="currencyCode[]" placeholder="{{ translations.currency_code ?? 'Currency Code (e.g., USD)' }}" value="{{ currency.name }}" required>
-            <input type="number" name="currencyHodnota[]" placeholder="{{ translations.value ?? 'Value' }}" value="{{ currency.value }}" step="0.01" required>
-            <input type="radio" name="isVýchozíCurrency" value="{{ currency.id }}" {% if currency.isVýchozí %}checked{% endif %}> {{ translations.default ?? 'Default' }}
+            <input type="number" name="currencyValue[]" placeholder="{{ translations.value ?? 'Value' }}" value="{{ currency.value }}" step="0.01" required>
+            <input type="radio" name="isDefaultCurrency" value="{{ currency.id }}" {% if currency.isDefault %}checked{% endif %}> {{ translations.default ?? 'Default' }}
             <button type="button" class="delete-currency" onclick="deleteCurrency(this)">Vymazat</button>
           </div>
         {% endfor %}
@@ -108,6 +108,64 @@
         <button type="button" id="backButton" onclick="discard()">{{ translations.discard_changes ?? 'Discard Changes' }}</button>
         <script src="{{ asset('../assets/eshopEdit.js') }}"></script>
     </form>
+    {% endif %}
+
+    {% if 'ROLE_WAREHOUSEMAN' in roles %}
+    <hr>
+    <h2 style="margin-top: 50px;">📊 Dashboard</h2>
+
+    <div style="max-width: 1000px;">
+      <h3>📈 Prodeje za posledních 30 dní</h3>
+      <canvas id="salesChart"></canvas>
+
+      <h3>🔥 5 nejprodávanějších produktů</h3>
+      <canvas id="topProductsChart"></canvas>
+
+      <h3>💰 Top 5 zákazníků podle útraty</h3>
+      <canvas id="topCustomersChart"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const salesData = {{ sales|json_encode|raw }};
+      const topProducts = {{ topProducts|json_encode|raw }};
+      const topCustomers = {{ topCustomers|json_encode|raw }};
+
+      new Chart(document.getElementById('salesChart'), {
+        type: 'line',
+        data: {
+          labels: salesData.map(d => d.date),
+          datasets: [{
+            label: 'Sales (CZK)',
+            data: salesData.map(d => parseFloat(d.total)),
+            fill: true,
+            tension: 0.1
+          }]
+        }
+      });
+
+      new Chart(document.getElementById('topProductsChart'), {
+        type: 'bar',
+        data: {
+          labels: topProducts.map(d => d.product_name),
+          datasets: [{
+            label: 'Quantity Sold',
+            data: topProducts.map(d => parseFloat(d.total_quantity))
+          }]
+        }
+      });
+
+      new Chart(document.getElementById('topCustomersChart'), {
+        type: 'bar',
+        data: {
+          labels: topCustomers.map(d => d.email),
+          datasets: [{
+            label: 'Total Spent (CZK)',
+            data: topCustomers.map(d => parseFloat(d.total_spent))
+          }]
+        }
+      });
+    </script>
     {% endif %}
   </div>
 

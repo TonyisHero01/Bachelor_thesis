@@ -22,17 +22,45 @@ class HomeController extends BaseController
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->renderLocalized('employee/employee_not_logged.html.twig', [], $request);
         }
-        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
 
+        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
         $user = $tokenStorage->getToken()->getUser();
         $roles = $user->getRoles();
-
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
+
+        // ✅ 添加 dashboard 数据
+        $sales = $entityManager->getConnection()->executeQuery("
+            SELECT DATE(order_created_at) AS date, SUM(total_price) AS total
+            FROM orders
+            WHERE order_created_at >= NOW() - INTERVAL '30 days'
+            GROUP BY DATE(order_created_at)
+            ORDER BY date ASC
+        ")->fetchAllAssociative();
+
+        $topProducts = $entityManager->getConnection()->executeQuery("
+            SELECT product_name, SUM(quantity) AS total_quantity
+            FROM order_items
+            GROUP BY product_name
+            ORDER BY total_quantity DESC
+            LIMIT 5
+        ")->fetchAllAssociative();
+
+        $topCustomers = $entityManager->getConnection()->executeQuery("
+            SELECT c.email, SUM(o.total_price) AS total_spent
+            FROM orders o
+            JOIN customer c ON c.id = o.customer_id
+            GROUP BY c.email
+            ORDER BY total_spent DESC
+            LIMIT 5
+        ")->fetchAllAssociative();
 
         return $this->renderLocalized('bms_home/home.html.twig', [
             'shopInfo' => $shopInfo,
             'roles' => $roles,
             'currencies' => $currencies,
+            'sales' => $sales,
+            'topProducts' => $topProducts,
+            'topCustomers' => $topCustomers,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
