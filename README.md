@@ -4,7 +4,7 @@
 ## Requirements
 
 - **PHP** 8.2+
-- **Symfony** 6+
+- **Symfony** 7.0.10
 - **Python** 3.12+
 - **PostgreSQL** 14+
 - **Composer** 2+
