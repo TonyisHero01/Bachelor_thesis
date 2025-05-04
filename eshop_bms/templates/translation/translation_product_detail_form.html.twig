@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate Product #{{ product.id }}{% endblock %}
+
+{% block body %}
+<h2>📝 Translate Product #{{ product.id }} – {{ lang|upper }}</h2>
+
+<p style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404;">
+    Please fill in the translation fields for this product.
+</p>
+
+<form method="post" action="{{ path('translation_product_detail_submit', {'lang': lang, 'id': product.id}) }}">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group">
+        <label>Name</label>
+        <div class="original-text"><strong>Original:</strong> {{ product.name }}</div>
+        <input type="text" name="translated_name" placeholder="Translated Name" value="{{ translation.name ?? '' }}">
+    </div>
+
+    <div class="field-group">
+        <label>Description</label>
+        <div class="original-text"><strong>Original:</strong> {{ product.description }}</div>
+        <textarea name="translated_description" placeholder="Translated Description">{{ translation.description ?? '' }}</textarea>
+    </div>
+
+    <div class="field-group">
+        <label>Material</label>
+        <div class="original-text"><strong>Original:</strong> {{ product.material }}</div>
+        <input type="text" name="translated_material" placeholder="Translated Material" value="{{ translation.material ?? '' }}">
+    </div>
+
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ path('translation_product_form_list', {'lang': lang}) }}" class="btn btn-secondary">← Back</a>
+</form>
+{% endblock %}

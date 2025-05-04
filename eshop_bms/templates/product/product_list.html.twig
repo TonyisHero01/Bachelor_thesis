@@ -49,7 +49,7 @@
                 <td class="product-name">{{ product.name }}</td> 
                 <td class="product-name">{{ product.category }}</td>
                 <td class="number-in-stock">{{ product.numberInStock }}</td> 
-                <td class="add-time">{{ product.addTime }}</td> 
+                <td class="add-time">{{ product.createdAt|date('Y-m-d H:i') }}</td> 
                 <td class="price">{{ product.price }}</td> 
                 <td class="editButton"><span class="edit-button" type="button" onclick="edit({{ product.id }})"><i class="fa-regular fa-pen-to-square" style="color: green;"></i></span></td>
                 <td class="deleteButton"><span class="delete-button" type="button" onclick="delete_({{ product.id }})"><i class="fas fa-trash" style="color: red;"></i></span></td>
@@ -98,6 +98,23 @@
             <input type="text" id="categoryName" name="categoryName" required maxlength="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"><br>
             <button type="button" id="addCategoryButton" onclick="createCategory()" disabled>Create</button>
             <button id="cancelCategoryAddButton" type="button" onclick="cancelCreateForm()" style="display: none;">Cancel</button>
+        </form>
+    </div>
+
+    <div class="popuptext" id="myModifyCategoryPopup" style="display: none;">
+        <form oninput="enableModifyCategoryButton()">
+            <label for="modifyCategorySelect">Select Category</label>
+            <select id="modifyCategorySelect">
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select><br>
+
+            <label for="newCategoryName">New Name</label>
+            <input type="text" id="newCategoryName" required><br>
+
+            <button type="button" id="modifyCategoryButton" onclick="modifyCategory()" disabled>Modify</button>
+            <button type="button" onclick="cancelModifyCategoryForm()">Cancel</button>
         </form>
     </div>
     

@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\ColorRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ColorRepository::class)]
@@ -19,6 +21,19 @@ class Color
 
     #[ORM\Column(length: 7, nullable: false, options: ["default" => "#FFFFFF"])]
     private ?string $hex = '#FFFFFF';
+
+    #[ORM\OneToMany(mappedBy: 'color', targetEntity: ColorTranslation::class, cascade: ['persist', 'remove'])]
+    private Collection $translations;
+
+    public function __construct()
+    {
+        $this->translations = new ArrayCollection();
+    }
+
+    public function __toString(): string
+    {
+        return $this->name ?? '';
+    }
 
     public function getId(): ?int
     {
@@ -49,5 +64,42 @@ class Color
         
         $this->hex = $hex;
         return $this;
+    }
+
+    public function getTranslations(): Collection
+    {
+        return $this->translations;
+    }
+
+    public function addTranslation(ColorTranslation $translation): static
+    {
+        if (!$this->translations->contains($translation)) {
+            $this->translations[] = $translation;
+            $translation->setColor($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTranslation(ColorTranslation $translation): static
+    {
+        if ($this->translations->removeElement($translation)) {
+            if ($translation->getColor() === $this) {
+                $translation->setColor(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getTranslatedName(string $locale): string
+    {
+        foreach ($this->translations as $translation) {
+            if ($translation->getLocale() === $locale) {
+                return $translation->getName();
+            }
+        }
+
+        return $this->name ?? '';
     }
 }

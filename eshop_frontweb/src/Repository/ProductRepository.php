@@ -7,6 +7,7 @@ use App\Entity\OrderItem;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
+
 /**
  * @extends ServiceEntityRepository<Product>
  *
@@ -21,64 +22,86 @@ class ProductRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Product::class);
     }
-    public function findTopSellingProducts(int $limit = 10): array
+    public function findTopSellingProducts(int $limit = 4): array
     {
-        return $this->getEntityManager()->createQuery(
-            'SELECT p
-            FROM App\Entity\Product p
-            WHERE p.sku IN (
-                SELECT oi.sku
-                FROM App\Entity\OrderItem oi
-                GROUP BY oi.sku
-                ORDER BY SUM(oi.quantity) DESC
-            )
-            AND p.version = (
+        $connection = $this->getEntityManager()->getConnection();
+
+        // 查询销量最高的 SKU
+        $sql = '
+            SELECT sku
+            FROM order_items
+            GROUP BY sku
+            ORDER BY SUM(quantity) DESC
+            LIMIT ' . (int) $limit;
+
+        $result = $connection->executeQuery($sql);
+        $topSkus = array_column($result->fetchAllAssociative(), 'sku');
+
+        if (empty($topSkus)) {
+            return [];
+        }
+
+        // 查询这些 SKU 中最新版本的商品，连带翻译字段
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.translations', 't')  // 加载翻译
+            ->addSelect('t')                   // 选择翻译数据
+            ->where('p.hidden = false')
+            ->andWhere('p.version = (
                 SELECT MAX(p2.version)
                 FROM App\Entity\Product p2
                 WHERE p2.sku = p.sku
-            )'
-        )
-        ->setMaxResults($limit)
-        ->getResult();
+            )')
+            ->andWhere('p.sku IN (:skus)')
+            ->setParameter('skus', $topSkus);
+
+        $products = $qb->getQuery()->getResult();
+
+        // 过滤掉没有图片的
+        return array_filter($products, fn($p) => $p->hasImages());
     }
     public function findLatestVersionProducts(): array
     {
         return $this->createQueryBuilder('p')
+            ->leftJoin('p.translations', 't')  // 预加载翻译
+            ->addSelect('t')                   // 选择翻译数据
             ->where('p.version = (
                 SELECT MAX(p2.version)
                 FROM App\Entity\Product p2
                 WHERE p2.sku = p.sku
                 AND (p2.size = p.size OR p2.size IS NULL)
             )')
-            ->orderBy('p.add_time', 'DESC')
+            ->orderBy('p.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
     }
     public function findLastFourProducts(): array
     {
-        $products = $this->createQueryBuilder('p')
-            ->where('p.image_urls IS NOT NULL')
-            ->andWhere('p.hidden = false') // 直接在查询中排除 hidden = true 的商品
-            ->orderBy('p.add_time', 'DESC') // 按 add_time 降序排序
-            ->getQuery()
-            ->getResult();
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.translations', 't')
+            ->addSelect('t')
+            ->where('p.hidden = false')
+            ->andWhere('p.image_urls IS NOT NULL')
+            ->andWhere('p.version = (
+                SELECT MAX(p2.version)
+                FROM App\Entity\Product p2
+                WHERE p2.sku = p.sku
+            )')
+            ->orderBy('p.createdAt', 'DESC');
 
-        // **用 PHP 过滤相同 SKU**
+        $products = $qb->getQuery()->getResult();
+
+        // 使用 PHP 过滤掉重复 SKU，只保留前 4 个不同 SKU 的产品
         $seenSkus = [];
-        $filteredProducts = [];
+        $filtered = [];
         foreach ($products as $product) {
-            if (!in_array($product->getSku(), $seenSkus)) { // 只保留 SKU 不重复的商品
+            if (!in_array($product->getSku(), $seenSkus) && $product->hasImages()) {
                 $seenSkus[] = $product->getSku();
-                $filteredProducts[] = $product;
-
-                // **一旦找到 4 个不同 SKU 的商品，直接返回**
-                if (count($filteredProducts) >= 4) {
-                    break;
-                }
+                $filtered[] = $product;
             }
+            if (count($filtered) >= 4) break;
         }
 
-        return $filteredProducts; // 返回最多 4 个不同 SKU 的商品
+        return $filtered;
     }
     public function findByCategoryName(string $categoryName): array
     {

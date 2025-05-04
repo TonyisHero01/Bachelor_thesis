@@ -17,6 +17,11 @@ class Size
     #[ORM\Column(type: 'string', length: 50, unique: true)]
     private ?string $name = null;
 
+    public function __toString(): string
+    {
+        return $this->name;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

@@ -22,7 +22,12 @@ class CategoryRepository extends ServiceEntityRepository
     }
     public function findAllCategories(): array
     {
-        return $this->findBy([], ['id' => 'DESC']);
+        return $this->createQueryBuilder('c')
+            ->leftJoin('c.translations', 't')
+            ->addSelect('t')
+            ->orderBy('c.id', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 //    /**
 //     * @return Category[] Returns an array of Category objects

@@ -15,3 +15,29 @@ CREATE TABLE orders (
 );
 
 ALTER TABLE orders ADD COLUMN delivery_method VARCHAR(20) NOT NULL DEFAULT 'pickup';
+
+
+
+
+
+
+
+
+CREATE TABLE orders (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL,
+    address TEXT,
+    order_created_at TIMESTAMP DEFAULT now(),
+    pickup_or_delivery_at TIMESTAMP,
+    is_completed BOOLEAN DEFAULT false,
+    payment_status VARCHAR(50) DEFAULT 'PENDING',
+    payment_method VARCHAR(50),
+    delivery_status VARCHAR(50) DEFAULT 'PENDING',
+    notes TEXT,
+    discount NUMERIC(10,2) DEFAULT 0.00,
+    delivery_method VARCHAR(20) NOT NULL DEFAULT 'pickup',
+
+    CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id)
+        REFERENCES customer(id) ON DELETE CASCADE
+);

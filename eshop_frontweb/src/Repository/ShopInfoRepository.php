@@ -21,6 +21,15 @@ class ShopInfoRepository extends ServiceEntityRepository
         parent::__construct($registry, ShopInfo::class);
     }
 
+    public function findWithTranslations(): ?ShopInfo
+    {
+        return $this->createQueryBuilder('s')
+            ->leftJoin('s.translations', 't')
+            ->addSelect('t')
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
 //    /**
 //     * @return ShopInfo[] Returns an array of ShopInfo objects
 //     */

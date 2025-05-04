@@ -108,7 +108,7 @@ async function save_() {
     var discountElement = document.getElementById("discount");
     var hideBox = document.getElementById('hideBox');
     var hide = hideBox.checked ? 1 : 0;
-    var category = categoryElement.options[categoryElement.selectedIndex].text;
+    var category = categoryElement.value;
     var attributes = {};
     const keys = document.getElementsByName("attributeKey[]");
     const values = document.getElementsByName("attributeValue[]");
@@ -129,7 +129,7 @@ async function save_() {
         },
         body: JSON.stringify({
             "name" : nameElement.value, 
-            "category" : category,
+            "category": parseInt(category) || null,
             "description" : descriptionElement.value,
             "number_in_stock" : numberInStockElement.value,
             "image_urls": imagePaths,  // 上传的所有图片路径

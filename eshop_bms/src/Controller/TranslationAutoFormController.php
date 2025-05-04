@@ -9,9 +9,17 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Finder\Finder;
+use Doctrine\ORM\EntityManagerInterface;
 
 class TranslationAutoFormController extends AbstractController
 {
+
+    private EntityManagerInterface $entityManager;
+
+    public function __construct(EntityManagerInterface $entityManager)
+    {
+        $this->entityManager = $entityManager;
+    }
     #[Route('/translator/generate-form', name: 'generate_translation_form')]
     #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form')]
     public function generateForm(Request $request, LoggerInterface $logger): Response
@@ -44,12 +52,12 @@ class TranslationAutoFormController extends AbstractController
             $isFrontweb = str_starts_with($realPath, $frontwebTemplates);
 
             if (str_contains($realPath, '_form')) {
-                $logger->info("🚫 Skipped _form partial: $realPath");
+                $logger->info("\u{1F6AB} Skipped _form partial: $realPath");
                 continue;
             }
-
+            
             if (!$isFrontweb && str_ends_with($realPath, 'base.html.twig')) {
-                $logger->info("🚫 Skipped BMS base template: $realPath");
+                $logger->info("\u{1F6AB} Skipped BMS base template: $realPath");
                 continue;
             }
 
@@ -70,12 +78,73 @@ class TranslationAutoFormController extends AbstractController
             }
         }
 
+        // Add ShopInfo forms for all languages
+        $localeDir = $projectDir . '/templates/locale';
+        $langs = array_filter(scandir($localeDir), fn($l) => !in_array($l, ['.', '..']) && is_dir($localeDir . '/' . $l));
+        $this->generateShopInfoForm($logger);
+
         $html = "<h1>✅ Auto Translation Summary</h1>";
         $html .= "<h2>Scanned:</h2><ul>" . implode('', array_map(fn($p) => "<li>$p</li>", $scanned)) . "</ul>";
         $html .= "<h2>✅ Success:</h2><ul>" . implode('', array_map(fn($p) => "<li>$p</li>", $success)) . "</ul>";
         $html .= "<h2>❌ Errors:</h2><ul>" . implode('', array_map(fn($e) => "<li style='color:red;'>$e</li>", $errors)) . "</ul>";
 
         return new Response($html);
+    }
+
+    private function generateShopInfoForm(LoggerInterface $logger): void
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $fields = [
+            'aboutUs' => 'About Us',
+            'howToOrder' => 'How to Order',
+            'businessConditions' => 'Business Conditions',
+            'privacyPolicy' => 'Privacy Policy',
+            'shippingInfo' => 'Shipping Info',
+            'payment' => 'Payment',
+            'refund' => 'Refund',
+        ];
+
+        // 获取英文原始数据
+        $shopInfo = $this->entityManager->getRepository(\App\Entity\ShopInfo::class)->find(1); // 默认只有一条记录
+
+        $formFields = '';
+        foreach ($fields as $field => $label) {
+            $escapedLabel = htmlspecialchars($label, ENT_QUOTES);
+            $originalValue = htmlspecialchars($shopInfo->{'get' . ucfirst($field)}() ?? '', ENT_QUOTES);
+
+            $formFields .= <<<HTML
+    <div class="field-group">
+        <label>{$escapedLabel}</label>
+        <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em>{$originalValue}</em></div>
+        <input type="hidden" name="original__{$field}" value="{$escapedLabel}">
+        <textarea name="field__{$field}" placeholder="{$escapedLabel}"></textarea>
+    </div>
+
+    HTML;
+        }
+
+        $output = <<<TWIG
+    {% extends 'base.html.twig' %}
+
+    {% block title %}Translate Shop Info{% endblock %}
+
+    {% block body %}
+    <p style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404;">
+        ⚠️ Please fill in the localized version of the website content for selected language.
+    </p>
+
+    <form method="post" action="{{ path('translation_shop_info_submit') }}">
+        <input type="hidden" name="target_language" value="{{ lang }}">
+
+    {$formFields}
+        <button type="submit">Save Translations</button>
+    </form>
+    {% endblock %}
+    TWIG;
+
+        $outputPath = "$projectDir/templates/translator/translation_shop_info.html.twig";
+        (new Filesystem())->dumpFile($outputPath, $output);
+        $logger->info("✅ Generated shop_info form");
     }
 
     private function handleSingleGeneration(Request $request, LoggerInterface $logger): Response

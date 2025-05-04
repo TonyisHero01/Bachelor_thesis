@@ -34,12 +34,12 @@
                 
                 <div class="header_center">
                     {#<h1 type="button" onclick="backToHomePage()">{{shopInfo.getEshopName()}}</h1>#}
-                    <a href="{{path('app_eshop_home')}}"><h1>{{shopInfo.getEshopName()}}</h1></a>
+                    <a href="{{path('app_eshop_home', {'_locale': locale})}}"><h1>{{shopInfo.getEshopName()}}</h1></a>
                 </div>
                 
                 <div class="header_right">
                     <div class="field">
-                        <input type="text" class="search__input" placeholder="搜索产品...">
+                        <input type="text" class="search__input" placeholder="Search...">
                         <button class="search__button">
                             <svg class="icon-search" viewBox="0 0 24 24" stroke-width="2" stroke="currentBarva" fill="none">
                                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -214,13 +214,13 @@
                         <!-- Barva Filter -->
                         <!-- 颜色过滤 -->
                         <div class="filter-section">
-                            <h4>Barva</h4>
+                            <h4>Color</h4>
                             <div class="color-options">
                                 {% for color in colors %}
                                     <label class="custom-checkbox circle">
-                                        <input type="checkbox" id="color-{{ color.id }}" value="{{ color.name }}">
+                                        <input type="checkbox" name="color" value="{{ color.id }}">
                                         <span class="checkmark" id="checkmark-{{ color.id }}" style="background-color: {{ color.hex }};"></span>
-                                        {{ color.name }}
+                                        {{ color.getTranslatedName(locale) }}
                                     </label>
                                 {% endfor %}
                             </div>
@@ -232,7 +232,7 @@
                             <div class="size-options">
                                 {% for size in sizes %}
                                     <label class="custom-checkbox large">
-                                        <input type="checkbox" id="size-{{ size.id }}" value="{{ size.name }}">
+                                        <input type="checkbox" name="size" value="{{ size.id }}">
                                         <span class="checkmark"></span> {{ size.name }}
                                     </label>
                                 {% endfor %}
@@ -241,7 +241,7 @@
                         <button id="reset-filters" class="filter-button reset">Reset Filtry</button>
 
                         <!-- Apply Filter Button -->
-                        <button id="apply-filters" class="filter-button apply">Apply Filtry</button>
+                        <button id="apply-filters" class="filter-button apply">Aplikovat filtry</button>
                     </aside>
                     <style>
                     /* 主体内容区域，包含 Sidebar 和 Content */
@@ -260,9 +260,31 @@
 
             <!-- Footer -->
             <footer class="footer">
-                <p>{{ shopInfo.address }}</p>
-                <p>{{ shopInfo.telephone }}</p>
-                <p>{{ shopInfo.email }}</p>
+                <div class="footer-content">
+                    <div class="footer-left">
+                        <h3>{{ shopInfo.getEshopName() }}</h3>
+                        <p>{{ shopInfo.address }}</p>
+                        <p>📞 {{ shopInfo.telephone }}</p>
+                        <p>✉️  {{ shopInfo.email }}</p>
+                    </div>
+
+                    <div class="footer-right">
+                        <h3>Informace</h3>
+                        <div class="footer-links-grid">
+                            <a href="{{ path('page_about_us') }}" class="static-link">O nás</a>
+                            <a href="{{ path('page_how_to_order') }}" class="static-link">Jak objednat</a>
+                            <a href="{{ path('page_business_conditions') }}" class="static-link">Obchodní podmínky</a>
+                            <a href="{{ path('page_privacy_policy') }}" class="static-link">Zásady ochrany osobních údajů</a>
+                            <a href="{{ path('page_shipping_info') }}" class="static-link">Informace o dopravě</a>
+                            <a href="{{ path('page_payment') }}" class="static-link">Platba</a>
+                            <a href="{{ path('page_refund') }}" class="static-link">Vrácení peněz</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-bottom">
+                    <p>© {{ "now"|date("Y") }} {{ shopInfo.getEshopName() }}. All rights reserved.</p>
+                </div>
             </footer>
 
             <!-- 移动端搜索弹窗 -->

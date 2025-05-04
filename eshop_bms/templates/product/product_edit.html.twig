@@ -20,14 +20,14 @@
             {% for productVersion in productsWithSameSku %}
                 <option value="{{ localized_path('edit_product', {'id': productVersion.id}) }}"
                     {% if productVersion.id == product.id %}selected{% endif %}>
-                    Version {{ productVersion.version }} - {{ productVersion.addTime|date('Y-m-d H:i') }}
+                    Version {{ productVersion.version }} - {{ productVersion.updatedAt|date('Y-m-d H:i') }}
                 </option>
             {% endfor %}
         </select>
         <label for="name">Name</label>
         <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ product.name }}"><br>
         <p id="last modified">Added time: </p>
-        <p id="add_time">{{ product.addTime }}</p>
+        <p id="add_time">{{ product.createdAt|date('Y-m-d H:i') }}</p>
         <div id="sku">SKU: {{ product.sku }}</div>
         <label for="categoryOptions">Choose Category:</label><br>
         <select id="categoryOptions" name="categoryOptions">
@@ -57,10 +57,10 @@
             <input type="hidden" class="image_path" value="">
         </div>
         <label for="sizeOptions">Choose Size:</label><br>
-        <select id="sizeOptions" name="sizeOptions">
-            <option value="">None</option> <!-- 默认无尺寸 -->
+        <select id="sizeOptions" name="size">
+            <option value="">None</option>
             {% for size in sizes %}
-                <option value="{{ size.name }}" {% if size.name == product.size %}selected{% endif %}>
+                <option value="{{ size.id }}" {% if product.size and size.id == product.size.id %}selected{% endif %}>
                     {{ size.name }}
                 </option>
             {% endfor %}
@@ -78,7 +78,7 @@
         <label for="colorOptions">Choose Color:</label><br>
         <select id="colorOptions" name="colorOptions">
             {% for color in colors %}
-                <option value="{{ color.name }}" {% if color.name == product.color %}selected{% endif %}>{{ color.name }}</option>
+                <option value="{{ color.id }}" {% if color.name == product.color %}selected{% endif %}>{{ color.name }}</option>
             {% endfor %}
         </select><br>
         <div id="attributes-container">

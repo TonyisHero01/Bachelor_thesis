@@ -212,11 +212,11 @@ class OrderController extends BaseController
             $price = $product->getPrice();
             $discount = $product->getDiscount();
             $taxRate = $product->getTaxRate();
-
+        
             $finalUnitPrice = $price * ($discount / 100);
             $subtotal = $finalUnitPrice * $quantity;
             $subtotalExclTax = $subtotal / (1 + $taxRate / 100);
-
+        
             $orderItem = new OrderItem();
             $orderItem->setOrder($order);
             $orderItem->setProduct($product);
@@ -225,8 +225,22 @@ class OrderController extends BaseController
             $orderItem->setQuantity($quantity);
             $orderItem->setUnitPrice(round($finalUnitPrice, 2));
             $orderItem->setSubtotal(round($subtotalExclTax, 2));
-
+        
             $this->entityManager->persist($orderItem);
+        
+            // 减去库存
+            $currentStock = $product->getNumberInStock();
+            $newStock = $currentStock - $quantity;
+        
+            if ($newStock < 0) {
+                return new JsonResponse([
+                    "success" => false,
+                    "message" => "Insufficient stock for product: " . $product->getName()
+                ], 400);
+            }
+        
+            $product->setNumberInStock($newStock);
+            $this->entityManager->persist($product);
         }
 
         $this->entityManager->flush();

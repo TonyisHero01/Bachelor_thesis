@@ -166,6 +166,46 @@ function formatDateTime() {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
+function openModifyCategoryForm() {
+    document.getElementById("myModifyCategoryPopup").style.display = "block";
+}
+
+// 🔹 关闭 "Modify Category" 窗口
+function cancelModifyCategoryForm() {
+    document.getElementById("myModifyCategoryPopup").style.display = "none";
+}
+
+// 🔹 启用 "Modify Category" 按钮
+function enableModifyCategoryButton() {
+    document.getElementById("modifyCategoryButton").disabled = document.getElementById("newCategoryName").value.trim() === "";
+}
+
+// 🔹 发送请求修改 Category
+function modifyCategory() {
+    const categoryId = document.getElementById("modifyCategorySelect").value;
+    const newCategoryName = document.getElementById("newCategoryName").value.trim();
+    if (!newCategoryName) return;
+
+    fetch("/bms/modify_category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            id: categoryId,
+            new_name: newCategoryName
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert("Category modified successfully!");
+            location.reload();
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(error => console.error("Error:", error));
+}
+
 function openModifyColorForm() {
     document.getElementById("myModifyColorPopup").style.display = "block";
 

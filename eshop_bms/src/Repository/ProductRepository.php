@@ -30,8 +30,9 @@ class ProductRepository extends ServiceEntityRepository
 
         // 主查询：获取 SKU 最新版本的完整产品数据
         return $this->createQueryBuilder('p')
-            ->where("p.version = ($subQuery)")  // 只取最新版本
-            ->orderBy('p.add_time', 'DESC')  // 按时间降序
+            ->where("p.version = ($subQuery)")
+            ->orderBy('p.createdAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')  // 保证 createdAt 相同时稳定排序
             ->getQuery()
             ->getResult();
     }

@@ -14,7 +14,7 @@
     <div class="filter-overlay"></div>
     <div class="sidebar">
         <div class="filter-header">
-            <h2 class="filter-title">Filtr</h2>
+            <h2 class="filter-title">Filter</h2>
             <button class="close-filter">&times;</button>
         </div>
 
@@ -23,8 +23,8 @@
             <div class="filter-options">
                 {% for color in colors %}
                     <div class="filter-option">
-                        <input type="checkbox" id="color-{{ color.id }}" name="color" value="{{ color.name }}">
-                        <label for="color-{{ color.id }}">{{ color.name }}</label>
+                        <input type="checkbox" id="color-{{ color.id }}" name="color" value="{{ color.id }}">
+                        <label for="color-{{ color.id }}">{{ color.getTranslatedName(locale) }}</label>
                     </div>
                 {% endfor %}
             </div>
@@ -57,13 +57,12 @@
              data-description="{{ product.description }}"
              data-number-in-stock="{{ product.numberInStock }}"
              data-image-urls="{{ product.imageUrls|json_encode }}"
-             data-add-time="{{ product.addTime|date('Y-m-d\TH:i:s') }}"
              data-width="{{ product.width }}"
              data-height="{{ product.height }}"
              data-length="{{ product.length }}"
              data-weight="{{ product.weight }}"
              data-material="{{ product.material }}"
-             data-color="{{ product.color }}"
+             data-color="{{ product.color ? product.color.id : '' }}"
              data-price="{{ product.price }}"
              data-hidden="{{ product.hidden ? 'true' : 'false' }}"
              data-discount="{{ product.discount }}"
@@ -74,13 +73,16 @@
              data-created-at="{{ product.createdAt|date('Y-m-d\TH:i:s') }}"
              data-updated-at="{{ product.updatedAt|date('Y-m-d\TH:i:s') }}"
              data-tax-rate="{{ product.taxRate }}"
-             data-size="{{ product.size }}">
+             data-size="{{ product.size is not null ? product.size.id : '' }}">
                 {% if product.getImageUrls() is not empty %}
-                    <a href="{{ path('show_eshop_product', {'id': product.id, '_locale': locale}) }}" class="product-card">
+                    <a href="{{ path('show_eshop_product', {'id': product.id, '_locale': locale}) }}" class="product-card {{ product.numberInStock <= 0 ? 'sold-out' : '' }}">
                         <div class="product-image-wrapper">
                             <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                            {% if product.numberInStock <= 0 %}
+                                <div class="sold-out-label">Vyprodáno</div>
+                            {% endif %}
                         </div>
-                        <div class="product-name">{{ product.name }}</div>
+                        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
                         <div class="product-price">
                             {% if product.discount < 100 %}
                                 {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}

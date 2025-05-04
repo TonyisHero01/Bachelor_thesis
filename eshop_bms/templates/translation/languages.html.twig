@@ -8,7 +8,7 @@
 <ul>
   {% for lang in languages %}
     <li>
-      <a href="{{ localized_path('translator_page_list', { lang: lang }) }}">{{ lang }}</a>
+      <a href="{{ path('translator_center', {'lang': lang}) }}">{{ lang }}</a>
       <form method="post" action="{{ localized_path('translator_delete_language', { lang: lang }) }}" style="display:inline;" onsubmit="return confirm('Delete language {{ lang }}?')">
         <button type="submit">🗑️</button>
       </form>

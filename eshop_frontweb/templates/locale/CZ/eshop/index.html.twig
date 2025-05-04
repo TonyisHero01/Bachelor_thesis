@@ -5,7 +5,9 @@
     <div class="container">
         <div class="bar" id="nav-menu">
             {% for category in categories %}
-                <a href="{{ path('app_eshop_category', {'id': category.id}) }}">{{ category.name }}<span></span></a>
+                <a href="{{ path('app_eshop_category', {'id': category.id}) }}">
+                    {{ category.getTranslatedName(locale) }}<span></span>
+                </a>
             {% endfor %}
         </div>
         <div class="swiper-container">
@@ -33,7 +35,7 @@
             {% for product in new_products %}
                 <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
                     <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-                    <div class="product-name">{{ product.name }}</div>
+                    <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
                     <div class="product-price">
                         {% if product.discount < 100 %}
                             {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
@@ -54,7 +56,7 @@
             {% for product in popular_products %}
                 <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
                     <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-                    <div class="product-name">{{ product.name }}</div>
+                    <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
                     <div class="product-price">
                         {% if product.discount < 100 %}
                             {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}

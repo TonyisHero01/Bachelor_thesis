@@ -9,9 +9,232 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Finder\Finder;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Entity\ShopInfo;
+use App\Entity\ShopInfoTranslation;
+use App\Entity\Category;
+use App\Entity\CategoryTranslation;
+use App\Entity\Color;
+use App\Entity\ColorTranslation;
+use App\Entity\Product;
+use App\Entity\ProductTranslation;
 
 class TranslatorController extends AbstractController
 {
+    #[Route('/translation/product/{lang}/{id}', name: 'translation_product_detail_form', methods: ['GET'])]
+    public function showProductDetailForm(EntityManagerInterface $em, string $lang, int $id): Response
+    {
+        $product = $em->getRepository(Product::class)->find($id);
+        if (!$product) {
+            throw $this->createNotFoundException("Product not found");
+        }
+
+        $translation = $em->getRepository(ProductTranslation::class)->findOneBy([
+            'product' => $product,
+            'locale' => $lang,
+        ]);
+        
+        $map = [];
+        if ($translation) {
+            $map = [
+                'name' => $translation->getName(),
+                'description' => $translation->getDescription(),
+                'material' => $translation->getMaterial(),
+            ];
+        }
+
+        return $this->render('translation/translation_product_detail_form.html.twig', [
+            'lang' => $lang,
+            'product' => $product,
+            'translation' => $map,
+        ]);
+    }
+
+    #[Route('/translation/product/{id}/{lang}/submit', name: 'translation_product_detail_submit', methods: ['POST'])]
+    public function submitProductDetailTranslation(
+        int $id,
+        string $lang,
+        Request $request,
+        EntityManagerInterface $em
+    ): Response {
+        $product = $em->getRepository(Product::class)->find($id);
+        if (!$product) {
+            throw $this->createNotFoundException('Product not found.');
+        }
+
+        $translation = $em->getRepository(ProductTranslation::class)->findOneBy([
+            'product' => $product,
+            'locale' => $lang,
+        ]) ?? (new ProductTranslation())
+            ->setProduct($product)
+            ->setLocale($lang);
+
+        $translation
+            ->setName($request->request->get('translated_name'))
+            ->setDescription($request->request->get('translated_description'))
+            ->setMaterial($request->request->get('translated_material'));
+
+        $em->persist($translation);
+        $em->flush();
+
+        $this->addFlash('success', 'Translation saved.');
+        return $this->redirectToRoute('translation_product_form_list', ['lang' => $lang]);
+    }
+    #[Route('/translation/product/{lang}', name: 'translation_product_form_list', methods: ['GET'])]
+    public function showProductTranslationForm(string $lang, EntityManagerInterface $em): Response
+    {
+        $products = $em->getRepository(Product::class)->findLatestVersionProducts();
+
+        $translations = $em->getRepository(ProductTranslation::class)->findBy(['locale' => $lang]);
+
+        $translatedMap = [];
+        foreach ($translations as $t) {
+            $translatedMap[$t->getProduct()->getId()] = [
+                'name' => $t->getName(),
+                'description' => $t->getDescription(),
+                'material' => $t->getMaterial(),
+            ];
+        }
+
+        return $this->render('translation/translation_product_form_list.html.twig', [
+            'lang' => $lang,
+            'products' => $products,
+            'translatedMap' => $translatedMap,
+        ]);
+    }
+
+    #[Route('/translation/product/submit', name: 'translation_product_submit', methods: ['POST'])]
+    public function submitProductTranslations(Request $request, EntityManagerInterface $em): Response
+    {
+        $lang = $request->request->get('target_language', 'en');
+        $data = $request->request->all();
+
+        foreach ($data as $key => $value) {
+            if (!str_starts_with($key, 'field__')) continue;
+
+            // 解析字段名和 product ID
+            // e.g., field__name__123 => ['name', '123']
+            if (!preg_match('/^field__(\w+)__(\d+)$/', $key, $matches)) continue;
+
+            $field = $matches[1];
+            $productId = (int) $matches[2];
+            $originalKey = "original__{$field}__{$productId}";
+            $originalText = $data[$originalKey] ?? '';
+
+            if (!trim($value)) continue;
+
+            // 查找产品
+            $product = $em->getRepository(Product::class)->find($productId);
+            if (!$product) continue;
+
+            // 查找或创建翻译记录
+            $translationRepo = $em->getRepository(ProductTranslation::class);
+            $translation = $translationRepo->findOneBy([
+                'product' => $product,
+                'language' => $lang,
+                'field' => $field,
+            ]);
+
+            if (!$translation) {
+                $translation = new ProductTranslation();
+                $translation->setProduct($product);
+                $translation->setLanguage($lang);
+                $translation->setField($field);
+            }
+
+            $translation->setOriginal($originalText);
+            $translation->setTranslation($value);
+            $em->persist($translation);
+        }
+
+        $em->flush();
+
+        $this->addFlash('success', 'Translations saved successfully.');
+        return $this->redirectToRoute('translation_product_form', ['lang' => $lang]);
+    }
+
+    #[Route('/translation/color/{lang}', name: 'color_translation_form')]
+    public function showColorTranslationForm(EntityManagerInterface $em, string $lang): Response
+    {
+        $colors = $em->getRepository(Color::class)->findAll();
+        $translations = $em->getRepository(ColorTranslation::class)->findBy(['locale' => $lang]);
+
+        $translatedNames = [];
+        foreach ($translations as $t) {
+            $translatedNames[$t->getColor()->getId()] = $t->getName();
+        }
+
+        return $this->render('translation/color_translation_form.html.twig', [
+            'lang' => $lang,
+            'colors' => $colors,
+            'translatedNames' => $translatedNames,
+        ]);
+    }
+
+    #[Route('/translation/color/{lang}/submit', name: 'color_translation_submit', methods: ['POST'])]
+    public function submitColorTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
+    {
+        $ids = $request->request->all('color_ids');
+        $names = $request->request->all('translated_names');
+
+        foreach ($ids as $i => $id) {
+            $color = $em->getRepository(Color::class)->find($id);
+            if (!$color) continue;
+
+            $translation = $em->getRepository(ColorTranslation::class)->findOneBy([
+                'color' => $color,
+                'locale' => $lang,
+            ]) ?? new ColorTranslation();
+
+            $translation->setColor($color);
+            $translation->setLocale($lang);
+            $translation->setName($names[$i]);
+
+            $em->persist($translation);
+        }
+
+        $em->flush();
+
+        return $this->redirectToRoute('translator_center', ['lang' => $lang]);
+    }
+    #[Route('/translator/shop-info/submit', name: 'translation_shop_info_submit', methods: ['POST'])]
+    public function submitShopInfoTranslation(Request $request, EntityManagerInterface $em): Response
+    {
+        $targetLang = $request->request->get('target_language');
+        if (!$targetLang) {
+            return new Response("Missing target_language", 400);
+        }
+
+        $shopInfo = $em->getRepository(ShopInfo::class)->find(1);
+        if (!$shopInfo) {
+            return new Response("No ShopInfo found", 404);
+        }
+
+        $translation = $em->getRepository(ShopInfoTranslation::class)
+            ->findOneBy(['shopInfo' => $shopInfo, 'locale' => $targetLang]) ?? new ShopInfoTranslation();
+
+        $translation->setShopInfo($shopInfo);
+        $translation->setLocale($targetLang);
+
+        foreach ($request->request->all() as $key => $value) {
+            if (str_starts_with($key, 'field__')) {
+                $field = substr($key, 7);
+                if (property_exists(ShopInfoTranslation::class, $field)) {
+                    $setter = 'set' . ucfirst($field);
+                    if (method_exists($translation, $setter)) {
+                        $translation->$setter($value);
+                    }
+                }
+            }
+        }
+
+        $em->persist($translation);
+        $em->flush();
+
+        return $this->redirectToRoute('translator_page_list', [
+            'lang' => $targetLang,
+        ]);
+    }
     #[Route('/translation', name: 'translator_languages')]
     public function showLanguages(KernelInterface $kernel): Response
     {
@@ -83,6 +306,54 @@ class TranslatorController extends AbstractController
             'bmsPages' => $bmsPages,
             'frontwebPages' => $frontwebPages,
         ]);
+    }
+
+    #[Route('/translation/{lang}/center', name: 'translator_center', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
+    public function showTranslationCenter(string $lang): Response
+    {
+        return $this->render('translation/translation_center.html.twig', [
+            'lang' => $lang,
+        ]);
+    }
+
+    #[Route('/translation/category/{lang}', name: 'category_translation_form')]
+    public function categoryTranslationForm(string $lang, EntityManagerInterface $em): Response
+    {
+        $categories = $em->getRepository(Category::class)->findAll();
+
+        return $this->render('translation/category_translation_form.html.twig', [
+            'categories' => $categories,
+            'lang' => $lang,
+        ]);
+    }
+
+    #[Route('/translation/category/{lang}/submit', name: 'category_translation_submit', methods: ['POST'])]
+    public function submitCategoryTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
+    {
+        $ids = $request->request->all('category_ids');
+        $names = $request->request->all('translated_names');
+
+        foreach ($ids as $i => $id) {
+            $category = $em->getRepository(Category::class)->find($id);
+            if (!$category) continue;
+
+            $translatedName = $names[$i] ?? '';
+            if (!$translatedName) continue;
+
+            $translation = $em->getRepository(CategoryTranslation::class)->findOneBy([
+                'category' => $category,
+                'locale' => $lang
+            ]) ?? new CategoryTranslation();
+
+            $translation->setCategory($category);
+            $translation->setLocale($lang);
+            $translation->setName($translatedName);
+            $em->persist($translation);
+        }
+
+        $em->flush();
+
+        return $this->redirectToRoute('translator_center', ['lang' => $lang]);
     }
 
     #[Route('/translator/form/{path}/{lang}', name: 'translator_form', requirements: ['path' => '.+'])]

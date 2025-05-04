@@ -15,7 +15,8 @@ CREATE TABLE shop_info (
     logo VARCHAR(255),
     carousel_pictures JSON,
     company_name VARCHAR(255),
-    cin VARCHAR(50)
+    cin VARCHAR(50),
+    hide_prices BOOLEAN DEFAULT false
 );
 
 INSERT INTO shop_info (
@@ -53,5 +54,3 @@ INSERT INTO shop_info (
     '',
     ''
 );
-
-ALTER TABLE shop_info ADD COLUMN hide_prices BOOLEAN DEFAULT FALSE;

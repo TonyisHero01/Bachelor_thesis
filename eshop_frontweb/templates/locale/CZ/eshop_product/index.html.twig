@@ -19,7 +19,7 @@
         <div class="swiper-button-prev"></div>
     </div>
     <div class="product-quick-detail">
-        <div class="product-name">{{product.name}}</div>
+        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
         {% if not shopInfo.hidePrices %}
             <div class="product-price-section">
                 {% if product.discount < 100 %}
@@ -60,7 +60,7 @@
         {% if product.height is not empty and product.height != 0 %}<li>Výška: {{ product.height }} cm</li>{% endif %}
         {% if product.length is not empty and product.length != 0 %}<li>Délka: {{ product.length }} cm</li>{% endif %}
         {% if product.weight is not empty and product.weight != 0 %}<li>Hmotnost: {{ product.weight }} kg</li>{% endif %}
-        {% if product.material is not empty %}<li>Materiál: {{ product.material }}</li>{% endif %}
+        {% if product.material is not empty %}<li>Materiál: {{ product.getTranslatedMaterial(locale) }}</li>{% endif %}
         {% if product.color is not empty %}<li>Barva: {{ product.color }}</li>{% endif %}
         {% if product.taxRate is not empty and product.taxRate != 0 %}<li>Daňová sazba: {{ product.taxRate }}%</li>{% endif %}
         {% if product.size is not empty %}<li>Velikost: {{ product.size }}</li>{% endif %}
@@ -75,7 +75,7 @@
 
 <div class="description">Popis</div>
 <div class="description-content">
-{{product.description | raw}}
+{{ product.getTranslatedDescription(locale) | raw }}
 </div>
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 <script src="{{ asset('../assets/eshopHome.js') }}"></script>

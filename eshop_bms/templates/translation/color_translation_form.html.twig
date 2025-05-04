@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Color Translation - {{ lang|upper }}{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1>Translate Colors ({{ lang|upper }})</h1>
+
+        <form method="POST" action="{{ path('color_translation_submit', { lang: lang }) }}">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Color ID</th>
+                        <th>Original Name</th>
+                        <th>Translated Name ({{ lang|upper }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for color in colors %}
+                        <tr>
+                            <td>{{ color.id }}</td>
+                            <td>{{ color.name }}</td>
+                            <td>
+                                <input type="hidden" name="color_ids[]" value="{{ color.id }}">
+                                <input type="text" name="translated_names[]" class="form-control"
+                                       value="{{ translations[color.id]|default('') }}">
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <button type="submit" class="btn btn-primary">Save Translations</button>
+            <a href="{{ path('translator_center', { lang: lang }) }}" class="btn btn-secondary">Back to Center</a>
+        </form>
+    </div>
+{% endblock %}

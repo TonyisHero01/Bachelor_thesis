@@ -19,7 +19,7 @@
         <div class="swiper-button-prev"></div>
     </div>
     <div class="product-quick-detail">
-        <div class="product-name">{{product.name}}</div>
+        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
         {% if not shopInfo.hidePrices %}
             <div class="product-price-section">
                 {% if product.discount < 100 %}
@@ -60,7 +60,7 @@
         {% if product.height is not empty and product.height != 0 %}<li>Height: {{ product.height }} cm</li>{% endif %}
         {% if product.length is not empty and product.length != 0 %}<li>Length: {{ product.length }} cm</li>{% endif %}
         {% if product.weight is not empty and product.weight != 0 %}<li>Weight: {{ product.weight }} kg</li>{% endif %}
-        {% if product.material is not empty %}<li>Material: {{ product.material }}</li>{% endif %}
+        {% if product.material is not empty %}<li>Material: {{ product.getTranslatedMaterial(locale) }}</li>{% endif %}
         {% if product.color is not empty %}<li>Color: {{ product.color }}</li>{% endif %}
         {% if product.taxRate is not empty and product.taxRate != 0 %}<li>Tax Rate: {{ product.taxRate }}%</li>{% endif %}
         {% if product.size is not empty %}<li>Size: {{ product.size }}</li>{% endif %}
@@ -75,7 +75,7 @@
 
 <div class="description">Description</div>
 <div class="description-content">
-{{product.description | raw}}
+{{ product.getTranslatedDescription(locale) | raw }}
 </div>
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 <script src="{{ asset('../assets/eshopHome.js') }}"></script>

@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container mt-4">
+    <h2>Translation Center - {{ lang|upper }}</h2>
+    <ul class="translation-options">
+        <li>
+            <a class="btn btn-primary" href="{{ path('translator_page_list', {'lang': lang}) }}">Translate Pages</a>
+        </li>
+        <li>
+            <a class="btn btn-secondary" href="{{ path('category_translation_form', {'lang': lang}) }}">Translate Categories</a>
+        </li>
+        <li>
+            <a class="btn btn-secondary" href="{{ path('color_translation_form', {'lang': lang}) }}">Translate Colors</a>
+        </li>
+        <li>
+            <a class="btn btn-secondary" href="{{ path('translation_product_form_list', {'lang': lang}) }}">Translate Products</a>
+        </li>
+    </ul>
+</div>
+{% endblock %}

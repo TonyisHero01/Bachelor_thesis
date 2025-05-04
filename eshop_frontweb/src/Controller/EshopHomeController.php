@@ -9,6 +9,7 @@ use App\Entity\Size;
 use App\Repository\ProductRepository;
 use App\Repository\ColorRepository;
 use App\Repository\SizeRepository;
+use App\Repository\ShopInfoRepository;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,16 +31,19 @@ class EshopHomeController extends BaseController
     }
 
     #[Route('/homepage', name: 'app_eshop_home')]
-    public function index(Request $request): Response
+    public function index(Request $request, ShopInfoRepository $shopInfoRepository): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         $new_products = $this->entityManager->getRepository(Product::class)->findLastFourProducts();
         $popularProducts = $this->entityManager->getRepository(Product::class)->findTopSellingProducts(10);
 
+        $shopInfo = $shopInfoRepository->findWithTranslations();
+        $locale = $request->get('_locale') ?? $request->getLocale();
+
         return $this->renderLocalized('eshop/index.html.twig', [
             'show_sidebar' => false,
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
+            'shopInfo' => $shopInfo,
+            'locale' => $locale,
             'languages' => $this->getAvailableLanguages(),
             'new_products' => $new_products,
             'popular_products' => $popularProducts,
@@ -55,8 +59,8 @@ class EshopHomeController extends BaseController
         ColorRepository $colorRepository,
         SizeRepository $sizeRepository
     ): Response {
-        $categoryName = $category->getName();
-        $allProducts = $productRepository->findBy(['category' => $categoryName]);
+        $categoryName = $category->getTranslatedName($request->getLocale());
+        $allProducts = $productRepository->findBy(['category' => $category]);
 
         $filtered = array_filter($allProducts, fn($p) => !$p->getHidden() && !empty($p->getImageUrls()));
         usort($filtered, fn($a, $b) => $b->getId() <=> $a->getId());
@@ -95,4 +99,6 @@ class EshopHomeController extends BaseController
             'translations' => $translations,
         ], $request);
     }
+
+
 }

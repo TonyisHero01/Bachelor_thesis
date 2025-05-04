@@ -1,32 +1,40 @@
-CREATE TABLE Product (
+CREATE TABLE product (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(255) DEFAULT NULL,
-    description TEXT DEFAULT NULL,
-    number_in_stock INT NOT NULL,
-    image_urls JSON DEFAULT NULL,
-    add_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    width DOUBLE PRECISION DEFAULT NULL,
-    height DOUBLE PRECISION DEFAULT NULL,
-    length DOUBLE PRECISION DEFAULT NULL,
-    weight DOUBLE PRECISION DEFAULT NULL,
-    material VARCHAR(255) DEFAULT NULL,
-    color VARCHAR(255) DEFAULT NULL,
-    price DOUBLE PRECISION DEFAULT NULL,
-    hidden BOOLEAN NOT NULL DEFAULT false,
+    description TEXT,
+    number_in_stock INTEGER NOT NULL,
+    image_urls JSON,
+    add_time VARCHAR(255) NOT NULL,
+    width DOUBLE PRECISION,
+    height DOUBLE PRECISION,
+    length DOUBLE PRECISION,
+    weight DOUBLE PRECISION,
+    material VARCHAR(255),
+    price DOUBLE PRECISION,
+    hidden BOOLEAN NOT NULL,
     discount DOUBLE PRECISION NOT NULL DEFAULT 100,
+    attributes JSONB DEFAULT '{}'::jsonb,
+    version INTEGER NOT NULL DEFAULT 1,
     sku VARCHAR(255) NOT NULL DEFAULT 'UNKNOWN',
-    attributes JSONB DEFAULT '{}',
-    version INT NOT NULL DEFAULT 1,
-    currency_id INT NOT NULL,
+    currency_id INTEGER NOT NULL,
+    tax_rate DOUBLE PRECISION NOT NULL DEFAULT 21,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    category_id INTEGER,
+    color_id INTEGER,
+    size_id INTEGER,
+
+    CONSTRAINT fk_product_currency FOREIGN KEY (currency_id)
+        REFERENCES currency(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+
+    CONSTRAINT fk_product_size FOREIGN KEY (size_id)
+        REFERENCES size(id) ON DELETE SET NULL,
+
+    CONSTRAINT fk_product_category FOREIGN KEY (category_id)
+        REFERENCES category(id) ON DELETE SET NULL,
+
+    CONSTRAINT fk_product_color FOREIGN KEY (color_id)
+        REFERENCES productcolor(id) ON DELETE SET NULL
 );
 
-ALTER TABLE Product
-ADD CONSTRAINT fk_product_currency FOREIGN KEY (currency_id) REFERENCES Currency (id) ON DELETE RESTRICT ON UPDATE CASCADE;
-
-CREATE INDEX idx_product_sku ON Product (sku);
-
-ALTER TABLE Product ADD COLUMN tax_rate DOUBLE PRECISION NOT NULL DEFAULT 21;
-ALTER TABLE Product ADD COLUMN size VARCHAR(10) DEFAULT NULL;
+CREATE INDEX idx_product_sku ON product(sku);

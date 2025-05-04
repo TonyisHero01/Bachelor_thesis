@@ -56,7 +56,6 @@ class ProductController extends BaseController
 
         $name = $input["name"] ?? "Unnamed Product";
         $number_in_stock = $input["number_in_stock"] ?? 0;
-        $add_time = $input["add_time"] ?? (new \DateTime())->format('Y-m-d H:i:s');
         $price = $input["price"] ?? 0.00;
         $sku = $input["sku"] ?? "UNKNOWN";
         $currencyId = $input["currency_id"] ?? null;
@@ -75,10 +74,11 @@ class ProductController extends BaseController
         $product = new Product();
         $product->setName($name);
         $product->setNumberInStock($number_in_stock);
-        $product->setAddTime($add_time);
         $product->setPrice($price);
         $product->setSku($sku);
-        $product->setCurrency($currency); // 设置货币
+        $product->setCurrency($currency);
+        $product->setCreatedAt(new \DateTimeImmutable());
+        $product->setUpdatedAt(new \DateTimeImmutable());
 
         $entityManager->persist($product);
         $entityManager->flush();
@@ -132,11 +132,12 @@ class ProductController extends BaseController
 
         foreach ($products as $product) 
         {
-            $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getAddTime() . ' ' . $product->getPrice() . '</div>' . '<br>';
+            $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getCreatedAt()->format('Y-m-d H:i:s') . ' ' . $product->getPrice() . '</div>' . '<br>';
         }
         $logger->info(json_encode($product_list));
         $colors = $entityManager->getRepository(Color::class)->findAll();
         $sizes = $entityManager->getRepository(Size::class)->findAll();
+        $categories = $entityManager->getRepository(Category::class)->findAll();
         return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $products,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -144,8 +145,31 @@ class ProductController extends BaseController
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
             'form' => $form,
             'colors' => $colors,
-            'sizes' => $sizes
+            'sizes' => $sizes,
+            'categories' => $categories,
         ]);
+    }
+
+    #[Route('/bms/modify_category', name: 'modify_category', methods: ['POST'])]
+    public function modifyCategory(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+        $id = $data['id'] ?? null;
+        $newName = $data['new_name'] ?? null;
+
+        if (!$id || !$newName) {
+            return new JsonResponse(['success' => false, 'message' => 'Missing ID or new name'], 400);
+        }
+
+        $category = $em->getRepository(Category::class)->find($id);
+        if (!$category) {
+            return new JsonResponse(['success' => false, 'message' => 'Category not found'], 404);
+        }
+
+        $category->setName($newName);
+        $em->flush();
+
+        return new JsonResponse(['success' => true]);
     }
 
     #[Route('/bms/product_edit/{id}', name: 'edit_product')]
@@ -223,19 +247,53 @@ class ProductController extends BaseController
             // **创建新产品实例**
             $newProduct = new Product();
             $newProduct->setName($data['name'] ?? $currentProduct->getName());
-            $newProduct->setCategory($data['category'] ?? $currentProduct->getCategory());
+            $categoryRepo = $entityManager->getRepository(Category::class);
+            $category = null;
+
+            if (isset($data['category']) && $data['category'] !== null && $data['category'] !== '') {
+                $category = $categoryRepo->find($data['category']);  // 这里的 $data['category'] 应该是 category_id
+            } elseif ($currentProduct->getCategory()) {
+                $category = $currentProduct->getCategory();
+            }
+
+            $newProduct->setCategory($category);
             $newProduct->setDescription($data['description'] ?? $currentProduct->getDescription());
-            $newProduct->setNumberInStock($data['number_in_stock'] ?? $currentProduct->getNumberInStock());
-            $newProduct->setSize($data['size'] ?? $currentProduct->getSize());
-            $newProduct->setWidth($data['width'] ?? $currentProduct->getWidth());
-            $newProduct->setHeight($data['height'] ?? $currentProduct->getHeight());
-            $newProduct->setLength($data['length'] ?? $currentProduct->getLength());
-            $newProduct->setWeight($data['weight'] ?? $currentProduct->getWeight());
+            $newProduct->setNumberInStock(isset($data['number_in_stock']) ? (int)$data['number_in_stock'] : $currentProduct->getNumberInStock());
+            $sizeId = $data['size'] ?? null;
+            $sizeId = ($sizeId === '' || $sizeId === null) ? null : $sizeId;
+
+            if ($sizeId !== null) {
+                $sizeEntity = $entityManager->getRepository(Size::class)->find($sizeId);
+                $newProduct->setSize($sizeEntity);
+            } else {
+                $newProduct->setSize(null); // 或 $currentProduct->getSize()，取决于业务
+            }
+            $newProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
+            $newProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
+            $newProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
+            $newProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
             $newProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
-            $newProduct->setColor($data['color'] ?? $currentProduct->getColor());
-            $newProduct->setPrice($data['price'] ?? $currentProduct->getPrice());
-            $newProduct->setDiscount($data['discount'] ?? $currentProduct->getDiscount());
+            $colorId = $data['color'] ?? null;
+
+            if ($colorId !== null) {
+                $logger->info("🟡 colorId received from request: " . $colorId);
+                
+                $colorEntity = $entityManager->getRepository(Color::class)->find($colorId);
+
+                if ($colorEntity) {
+                    $logger->info("🟢 Found Color entity: " . $colorEntity->getName());
+                    $newProduct->setColor($colorEntity);
+                } else {
+                    $logger->warning("🔴 Color entity not found for ID: " . $colorId);
+                }
+            } else {
+                $logger->warning("⚠️ No colorId provided, fallback to current product's color.");
+                $newProduct->setColor($currentProduct->getColor());
+            }
+            $newProduct->setPrice(isset($data['price']) ? (float)$data['price'] : $currentProduct->getPrice());
+            $newProduct->setDiscount(isset($data['discount']) ? (float)$data['discount'] : $currentProduct->getDiscount());
             $newProduct->setSku($currentProduct->getSku()); // **保留 SKU**
+            $newProduct->setTaxRate(isset($data['tax_rate']) ? (float)$data['tax_rate'] : $currentProduct->getTaxRate());
 
             // **处理 hidden 逻辑**
             $hidden = isset($data['hidden']) ? (bool)$data['hidden'] : $currentProduct->getHidden();
@@ -252,8 +310,14 @@ class ProductController extends BaseController
             // **设置版本号**
             $newProduct->setVersion($newVersion);
 
+            $newProduct->setCreatedAt($currentProduct->getCreatedAt());
+
             // **设置添加时间**
-            $newProduct->setAddTime($data['edit_time'] ?? (new \DateTime())->format('Y-m-d H:i:s'));
+            $newProduct->setUpdatedAt(
+                isset($data['edit_time']) 
+                    ? new \DateTimeImmutable($data['edit_time']) 
+                    : new \DateTimeImmutable()
+            );
 
             // **处理货币**
             $currencyId = $data["currency_id"] ?? null;
@@ -287,7 +351,11 @@ class ProductController extends BaseController
 
             // **保存新产品**
             $entityManager->persist($newProduct);
+
+            $logger->info("✅ Entered saveProduct for SKU: " . $newProduct->getSku());
             $entityManager->flush();
+
+            
 
             return new JsonResponse(["status" => "Success", "new_product_id" => $newProduct->getId()]);
         } catch (\Exception $e) {

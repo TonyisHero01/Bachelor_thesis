@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\ShopInfoRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -65,199 +67,86 @@ class ShopInfo
     #[ORM\Column(type: "boolean", options: ["default" => false])]
     private bool $hidePrices = false;
 
-    // Getters and Setters
+    #[ORM\OneToMany(mappedBy: 'shopInfo', targetEntity: ShopInfoTranslation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $translations;
 
-    public function getId(): ?int
+    public function __construct()
     {
-        return $this->id;
+        $this->translations = new ArrayCollection();
     }
 
-    public function getEshopName(): ?string
-    {
-        return $this->eshopName;
-    }
+    public function getId(): ?int { return $this->id; }
+    public function getEshopName(): ?string { return $this->eshopName; }
+    public function setEshopName(?string $eshopName): static { $this->eshopName = $eshopName; return $this; }
+    public function getAddress(): ?string { return $this->address; }
+    public function setAddress(?string $address): static { $this->address = $address; return $this; }
+    public function getTelephone(): ?string { return $this->telephone; }
+    public function setTelephone(?string $telephone): static { $this->telephone = $telephone; return $this; }
+    public function getEmail(): ?string { return $this->email; }
+    public function setEmail(?string $email): static { $this->email = $email; return $this; }
+    public function getAboutUs(): ?string { return $this->aboutUs; }
+    public function setAboutUs(?string $aboutUs): static { $this->aboutUs = $aboutUs; return $this; }
+    public function getHowToOrder(): ?string { return $this->howToOrder; }
+    public function setHowToOrder(?string $howToOrder): static { $this->howToOrder = $howToOrder; return $this; }
+    public function getBusinessConditions(): ?string { return $this->businessConditions; }
+    public function setBusinessConditions(?string $businessConditions): static { $this->businessConditions = $businessConditions; return $this; }
+    public function getPrivacyPolicy(): ?string { return $this->privacyPolicy; }
+    public function setPrivacyPolicy(?string $privacyPolicy): static { $this->privacyPolicy = $privacyPolicy; return $this; }
+    public function getShippingInfo(): ?string { return $this->shippingInfo; }
+    public function setShippingInfo(?string $shippingInfo): static { $this->shippingInfo = $shippingInfo; return $this; }
+    public function getPayment(): ?string { return $this->payment; }
+    public function setPayment(?string $payment): static { $this->payment = $payment; return $this; }
+    public function getRefund(): ?string { return $this->refund; }
+    public function setRefund(?string $refund): static { $this->refund = $refund; return $this; }
+    public function getColorCode(): ?string { return $this->colorCode; }
+    public function setColorCode(?string $colorCode): static { $this->colorCode = $colorCode; return $this; }
+    public function getLogo(): ?string { return $this->logo; }
+    public function setLogo(?string $logo): static { $this->logo = $logo; return $this; }
+    public function getCarouselPictures(): ?array { return $this->carouselPictures; }
+    public function setCarouselPictures(?array $carouselPictures): static { $this->carouselPictures = $carouselPictures; return $this; }
+    public function getCompanyName(): ?string { return $this->companyName; }
+    public function setCompanyName(?string $companyName): static { $this->companyName = $companyName; return $this; }
+    public function getCin(): ?string { return $this->cin; }
+    public function setCin(?string $cin): static { $this->cin = $cin; return $this; }
+    public function getHidePrices(): bool { return $this->hidePrices; }
+    public function setHidePrices(bool $hidePrices): static { $this->hidePrices = $hidePrices; return $this; }
 
-    public function setEshopName(?string $eshopName): static
+    public function getTranslations(): Collection { return $this->translations; }
+
+    public function addTranslation(ShopInfoTranslation $translation): static
     {
-        $this->eshopName = $eshopName;
+        if (!$this->translations->contains($translation)) {
+            $this->translations[] = $translation;
+            $translation->setShopInfo($this);
+        }
         return $this;
     }
 
-    public function getAddress(): ?string
+    public function removeTranslation(ShopInfoTranslation $translation): static
     {
-        return $this->address;
-    }
-
-    public function setAddress(?string $address): static
-    {
-        $this->address = $address;
+        if ($this->translations->removeElement($translation)) {
+            if ($translation->getShopInfo() === $this) {
+                $translation->setShopInfo(null);
+            }
+        }
         return $this;
     }
 
-    public function getTelephone(): ?string
+    public function getTranslatedField(string $field, string $locale): ?string
     {
-        return $this->telephone;
-    }
+        foreach ($this->translations as $translation) {
+            if ($translation->getLocale() === $locale) {
+                $getter = 'get' . ucfirst($field);
+                if (method_exists($translation, $getter)) {
+                    $value = $translation->$getter();
+                    if ($value !== null) {
+                        return $value;
+                    }
+                }
+            }
+        }
 
-    public function setTelephone(?string $telephone): static
-    {
-        $this->telephone = $telephone;
-        return $this;
-    }
-
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
-
-    public function setEmail(?string $email): static
-    {
-        $this->email = $email;
-        return $this;
-    }
-
-    public function getAboutUs(): ?string
-    {
-        return $this->aboutUs;
-    }
-
-    public function setAboutUs(?string $aboutUs): static
-    {
-        $this->aboutUs = $aboutUs;
-        return $this;
-    }
-
-    public function getHowToOrder(): ?string
-    {
-        return $this->howToOrder;
-    }
-
-    public function setHowToOrder(?string $howToOrder): static
-    {
-        $this->howToOrder = $howToOrder;
-        return $this;
-    }
-
-    public function getBusinessConditions(): ?string
-    {
-        return $this->businessConditions;
-    }
-
-    public function setBusinessConditions(?string $businessConditions): static
-    {
-        $this->businessConditions = $businessConditions;
-        return $this;
-    }
-
-    public function getPrivacyPolicy(): ?string
-    {
-        return $this->privacyPolicy;
-    }
-
-    public function setPrivacyPolicy(?string $privacyPolicy): static
-    {
-        $this->privacyPolicy = $privacyPolicy;
-        return $this;
-    }
-
-    public function getShippingInfo(): ?string
-    {
-        return $this->shippingInfo;
-    }
-
-    public function setShippingInfo(?string $shippingInfo): static
-    {
-        $this->shippingInfo = $shippingInfo;
-        return $this;
-    }
-
-    public function getPayment(): ?string
-    {
-        return $this->payment;
-    }
-
-    public function setPayment(?string $payment): static
-    {
-        $this->payment = $payment;
-        return $this;
-    }
-
-    public function getRefund(): ?string
-    {
-        return $this->refund;
-    }
-
-    public function setRefund(?string $refund): static
-    {
-        $this->refund = $refund;
-        return $this;
-    }
-
-    public function getColorCode(): ?string
-    {
-        return $this->colorCode;
-    }
-
-    public function setColorCode(?string $colorCode): static
-    {
-        $this->colorCode = $colorCode;
-        return $this;
-    }
-
-    public function getLogo(): ?string
-    {
-        return $this->logo;
-    }
-
-    public function setLogo(?string $logo): static
-    {
-        $this->logo = $logo;
-        return $this;
-    }
-
-    public function getCarouselPictures(): ?array
-    {
-        return $this->carouselPictures;
-    }
-
-    public function setCarouselPictures(?array $carouselPictures): static
-    {
-        $this->carouselPictures = $carouselPictures;
-        return $this;
-    }
-
-    public function getCompanyName(): ?string
-    {
-        return $this->companyName;
-    }
-
-    public function setCompanyName(?string $companyName): static
-    {
-        $this->companyName = $companyName;
-        return $this;
-    }
-
-    public function getCin(): ?string
-    {
-        return $this->cin;
-    }
-
-    public function setCin(?string $cin): static
-    {
-        $this->cin = $cin;
-        return $this;
-    }
-
-    // Getter
-    public function getHidePrices(): bool
-    {
-        return $this->hidePrices;
-    }
-
-    // Setter
-    public function setHidePrices(bool $hidePrices): static
-    {
-        $this->hidePrices = $hidePrices;
-        return $this;
+        $ownGetter = 'get' . ucfirst($field);
+        return method_exists($this, $ownGetter) ? $this->$ownGetter() : null;
     }
 }

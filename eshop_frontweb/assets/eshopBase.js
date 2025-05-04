@@ -278,13 +278,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener("click", function() {
-    const selectedColors = Array.from(document.querySelectorAll('.color-options input:checked')).map(el => el.value);
-    const selectedSizes = Array.from(document.querySelectorAll('.size-options input:checked')).map(el => el.value);
+    const selectedColors = Array.from(document.querySelectorAll('input[name="color"]:checked')).map(el => el.value);
+    console.log("🟡 selectedColors: ", selectedColors);
+    console.log("🟢 productColor: ", productColor);
+    const selectedSizes = Array.from(document.querySelectorAll('input[name="size"]:checked')).map(el => el.value);
     const minPrice = parseFloat(document.getElementById("price-selected-min").textContent);
     const maxPrice = parseFloat(document.getElementById("price-selected-max").textContent);
-
+    
     document.querySelectorAll(".product-item").forEach(product => {
-        const productColor = product.getAttribute("data-color");
+        const productColor = String(product.getAttribute("data-color"));
         const productSize = product.getAttribute("data-size");
         const productPrice = parseFloat(product.getAttribute("data-price"));
 
@@ -297,6 +299,8 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    
+
     // 7. 窗口大小改变处理
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768) {
@@ -306,5 +310,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 body.style.overflow = '';
             }
         }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.footer-links a.static-link').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const label = link.innerText.trim(); // ❗️去掉 encodeURIComponent
+            const url = new URL(link.href, window.location.origin);
+            url.searchParams.set('title', label);
+            window.location.href = url.toString(); // 自动编码 title
+        });
     });
 });
