@@ -43,7 +43,8 @@
         {% set ids = '' %}
         {% for product in products %}
             {% set ids = ids ~ product.id ~ ',' %}
-            <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}"> 
+            <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}"
+            {% if product.hidden %}style="background-color: #f0f0f0;"{% endif %}>
             {# <tr id="{{ product.id }}" data-edit-route="{{ localized_path('save_product') }}"> #}
                 </div>
                 <td class="product-name">{{ product.name }}</td> 

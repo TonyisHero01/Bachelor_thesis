@@ -60,6 +60,15 @@ class ProductController extends BaseController
         $sku = $input["sku"] ?? "UNKNOWN";
         $currencyId = $input["currency_id"] ?? null;
 
+        // ✅ 检查是否存在相同 SKU（只查找未隐藏版本也可以更严格）
+        $existing = $entityManager->getRepository(Product::class)->findOneBy(['sku' => $sku]);
+        if ($existing) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'SKU already exists. Please use a unique SKU.'
+            ], 400);
+        }
+
         // 获取默认货币（如果 currency_id 为空）
         if ($currencyId === null) {
             $currency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
@@ -79,6 +88,8 @@ class ProductController extends BaseController
         $product->setCurrency($currency);
         $product->setCreatedAt(new \DateTimeImmutable());
         $product->setUpdatedAt(new \DateTimeImmutable());
+        $product->setVersion(1); // 默认初始版本为 1
+        $product->setHidden(false); // 默认显示
 
         $entityManager->persist($product);
         $entityManager->flush();
@@ -229,10 +240,65 @@ class ProductController extends BaseController
                 return new JsonResponse(["status" => "Error", "message" => "Product not found"], 404);
             }
 
-            // 解析 JSON 数据
             $data = json_decode($request->getContent(), true);
+            $logger->info("📝 Incoming product save data: " . json_encode($data));
 
-            // 查询数据库，获取当前 SKU 下的最大版本号
+            $noVersionUpdate = $data['no_version_update'] ?? false;
+
+            if ($noVersionUpdate) {
+                $logger->info("✏️ 直接更新当前版本产品，无需新版本");
+
+                $currentProduct->setName($data['name'] ?? $currentProduct->getName());
+                $currentProduct->setDescription($data['description'] ?? $currentProduct->getDescription());
+                $currentProduct->setNumberInStock($data['number_in_stock'] ?? $currentProduct->getNumberInStock());
+                $currentProduct->setPrice($data['price'] ?? $currentProduct->getPrice());
+                $currentProduct->setDiscount($data['discount'] ?? $currentProduct->getDiscount());
+                $currentProduct->setTaxRate($data['tax_rate'] ?? $currentProduct->getTaxRate());
+                $currentProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
+                $currentProduct->setAttributes($data['attributes'] ?? $currentProduct->getAttributes());
+
+                $currentProduct->setWidth($data['width'] ?? $currentProduct->getWidth());
+                $currentProduct->setHeight($data['height'] ?? $currentProduct->getHeight());
+                $currentProduct->setLength($data['length'] ?? $currentProduct->getLength());
+                $currentProduct->setWeight($data['weight'] ?? $currentProduct->getWeight());
+
+                if (!empty($data['size'])) {
+                    $size = $entityManager->getRepository(Size::class)->find($data['size']);
+                    if ($size) {
+                        $currentProduct->setSize($size);
+                    }
+                }
+
+                if (!empty($data['color'])) {
+                    $color = $entityManager->getRepository(Color::class)->find($data['color']);
+                    if ($color) {
+                        $currentProduct->setColor($color);
+                    }
+                }
+
+                if (!empty($data['category'])) {
+                    $category = $entityManager->getRepository(Category::class)->find($data['category']);
+                    if ($category) {
+                        $currentProduct->setCategory($category);
+                    }
+                }
+
+                if (isset($data['image_urls'])) {
+                    $validUrls = array_filter($data['image_urls'], fn($url) => !empty($url));
+                    $currentProduct->setImageUrls($validUrls);
+                }
+
+                if (isset($data['hidden'])) {
+                    $currentProduct->setHidden((bool)$data['hidden']);
+                }
+
+                $currentProduct->setUpdatedAt(new \DateTimeImmutable());
+                $entityManager->flush();
+
+                return new JsonResponse(["status" => "Success", "message" => "Updated current version"]);
+            }
+
+            // 否则创建新版本
             $maxVersion = $entityManager->createQueryBuilder()
                 ->select('MAX(p.version)')
                 ->from(Product::class, 'p')
@@ -240,128 +306,70 @@ class ProductController extends BaseController
                 ->setParameter('sku', $currentProduct->getSku())
                 ->getQuery()
                 ->getSingleScalarResult();
-
-            // **新版本号 = 当前最大版本号 + 1**
             $newVersion = $maxVersion + 1;
 
-            // **创建新产品实例**
             $newProduct = new Product();
-            $newProduct->setName($data['name'] ?? $currentProduct->getName());
-            $categoryRepo = $entityManager->getRepository(Category::class);
-            $category = null;
-
-            if (isset($data['category']) && $data['category'] !== null && $data['category'] !== '') {
-                $category = $categoryRepo->find($data['category']);  // 这里的 $data['category'] 应该是 category_id
-            } elseif ($currentProduct->getCategory()) {
-                $category = $currentProduct->getCategory();
-            }
-
-            $newProduct->setCategory($category);
-            $newProduct->setDescription($data['description'] ?? $currentProduct->getDescription());
-            $newProduct->setNumberInStock(isset($data['number_in_stock']) ? (int)$data['number_in_stock'] : $currentProduct->getNumberInStock());
-            $sizeId = $data['size'] ?? null;
-            $sizeId = ($sizeId === '' || $sizeId === null) ? null : $sizeId;
-
-            if ($sizeId !== null) {
-                $sizeEntity = $entityManager->getRepository(Size::class)->find($sizeId);
-                $newProduct->setSize($sizeEntity);
-            } else {
-                $newProduct->setSize(null); // 或 $currentProduct->getSize()，取决于业务
-            }
-            $newProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
-            $newProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
-            $newProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
-            $newProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
-            $newProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
-            $colorId = $data['color'] ?? null;
-
-            if ($colorId !== null) {
-                $logger->info("🟡 colorId received from request: " . $colorId);
-                
-                $colorEntity = $entityManager->getRepository(Color::class)->find($colorId);
-
-                if ($colorEntity) {
-                    $logger->info("🟢 Found Color entity: " . $colorEntity->getName());
-                    $newProduct->setColor($colorEntity);
-                } else {
-                    $logger->warning("🔴 Color entity not found for ID: " . $colorId);
-                }
-            } else {
-                $logger->warning("⚠️ No colorId provided, fallback to current product's color.");
-                $newProduct->setColor($currentProduct->getColor());
-            }
-            $newProduct->setPrice(isset($data['price']) ? (float)$data['price'] : $currentProduct->getPrice());
-            $newProduct->setDiscount(isset($data['discount']) ? (float)$data['discount'] : $currentProduct->getDiscount());
-            $newProduct->setSku($currentProduct->getSku()); // **保留 SKU**
-            $newProduct->setTaxRate(isset($data['tax_rate']) ? (float)$data['tax_rate'] : $currentProduct->getTaxRate());
-
-            // **处理 hidden 逻辑**
-            $hidden = isset($data['hidden']) ? (bool)$data['hidden'] : $currentProduct->getHidden();
-            $newProduct->setHidden($hidden);
-
-            // **设置 attributes**
-            $newProduct->setAttributes($data['attributes'] ?? []);
-
-            // **处理图片**
-            $imageUrls = array_filter($data['image_urls'] ?? [], fn($url) => !empty($url));
-            $existingImageUrls = $currentProduct->getImageUrls() ?? [];
-            $newProduct->setImageUrls(array_merge($existingImageUrls, $imageUrls));
-
-            // **设置版本号**
+            $newProduct->setSku($currentProduct->getSku());
             $newProduct->setVersion($newVersion);
-
             $newProduct->setCreatedAt($currentProduct->getCreatedAt());
 
-            // **设置添加时间**
+            $newProduct->setName($data['name'] ?? $currentProduct->getName());
+            $newProduct->setDescription($data['description'] ?? $currentProduct->getDescription());
+            $newProduct->setNumberInStock($data['number_in_stock'] ?? $currentProduct->getNumberInStock());
+            $newProduct->setPrice($data['price'] ?? $currentProduct->getPrice());
+            $newProduct->setDiscount($data['discount'] ?? $currentProduct->getDiscount());
+            $newProduct->setTaxRate($data['tax_rate'] ?? $currentProduct->getTaxRate());
+            $newProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
+            $newProduct->setAttributes($data['attributes'] ?? []);
+
+            $newProduct->setWidth($data['width'] ?? $currentProduct->getWidth());
+            $newProduct->setHeight($data['height'] ?? $currentProduct->getHeight());
+            $newProduct->setLength($data['length'] ?? $currentProduct->getLength());
+            $newProduct->setWeight($data['weight'] ?? $currentProduct->getWeight());
+
+            if (!empty($data['category'])) {
+                $category = $entityManager->getRepository(Category::class)->find($data['category']);
+                $newProduct->setCategory($category);
+            } else {
+                $newProduct->setCategory($currentProduct->getCategory());
+            }
+
+            if (!empty($data['size'])) {
+                $size = $entityManager->getRepository(Size::class)->find($data['size']);
+                $newProduct->setSize($size);
+            } else {
+                $newProduct->setSize($currentProduct->getSize());
+            }
+
+            if (!empty($data['color'])) {
+                $color = $entityManager->getRepository(Color::class)->find($data['color']);
+                $newProduct->setColor($color);
+            } else {
+                $newProduct->setColor($currentProduct->getColor());
+            }
+
+            $currency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
+            $newProduct->setCurrency($currency);
+
+            $newProduct->setHidden($data['hidden'] ?? false);
+
+            $imageUrls = array_filter($data['image_urls'] ?? [], fn($url) => !empty($url));
+            $existingUrls = $currentProduct->getImageUrls() ?? [];
+            $newProduct->setImageUrls(array_merge($existingUrls, $imageUrls));
+
             $newProduct->setUpdatedAt(
-                isset($data['edit_time']) 
-                    ? new \DateTimeImmutable($data['edit_time']) 
+                isset($data['edit_time'])
+                    ? new \DateTimeImmutable($data['edit_time'])
                     : new \DateTimeImmutable()
             );
 
-            // **处理货币**
-            $currencyId = $data["currency_id"] ?? null;
-            if (!$currencyId) {
-                $defaultCurrency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
-                if ($defaultCurrency) {
-                    $currencyId = $defaultCurrency->getId();
-                } else {
-                    return new JsonResponse(['status' => 'error', 'message' => 'No default currency found!'], 400);
-                }
-            }
-            $currency = $entityManager->getRepository(Currency::class)->find($currencyId);
-            if (!$currency) {
-                return new JsonResponse(['status' => 'error', 'message' => 'Currency not found!'], 400);
-            }
-            $newProduct->setCurrency($currency);
-
-            // **处理税率**
-            $logger->info('Received tax_rate: ' . json_encode($data['tax_rate'] ?? 'Not Provided'));
-            $newProduct->setTaxRate($data['tax_rate'] ?? $currentProduct->getTaxRate());
-
-            // **✅ 如果 hidden 变更，则更新所有相同 SKU 的商品**
-            $entityManager->createQueryBuilder()
-                ->update(Product::class, 'p')
-                ->set('p.hidden', ':hidden')
-                ->where('p.sku = :sku')
-                ->setParameter('hidden', $hidden)
-                ->setParameter('sku', $newProduct->getSku())
-                ->getQuery()
-                ->execute();
-
-            // **保存新产品**
             $entityManager->persist($newProduct);
-
-            $logger->info("✅ Entered saveProduct for SKU: " . $newProduct->getSku());
             $entityManager->flush();
-
-            
 
             return new JsonResponse(["status" => "Success", "new_product_id" => $newProduct->getId()]);
         } catch (\Exception $e) {
-            $logger->error('An error occurred: ' . $e->getMessage());
-            $logger->error('Stack trace: ' . $e->getTraceAsString());
-            return new JsonResponse(["status" => "Error"], 500);
+            $logger->error('❌ Error in saveProduct: ' . $e->getMessage());
+            return new JsonResponse(["status" => "Error", "message" => $e->getMessage()], 500);
         }
     }
     #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'])]

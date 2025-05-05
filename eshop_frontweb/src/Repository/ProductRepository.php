@@ -70,6 +70,7 @@ class ProductRepository extends ServiceEntityRepository
                 WHERE p2.sku = p.sku
                 AND (p2.size = p.size OR p2.size IS NULL)
             )')
+            ->andWhere('p.hidden = false')
             ->orderBy('p.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
@@ -107,6 +108,7 @@ class ProductRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->where('p.category = :categoryName')
+            ->andWhere('p.hidden = false')
             ->setParameter('categoryName', $categoryName)
             ->getQuery()
             ->getResult();

@@ -113,6 +113,8 @@ async function save_() {
     const keys = document.getElementsByName("attributeKey[]");
     const values = document.getElementsByName("attributeValue[]");
     var taxRate = document.getElementById("tax_rate");
+    var noVersionUpdateBox = document.getElementById('noVersionUpdate');
+    var noVersionUpdate = noVersionUpdateBox.checked ? 1 : 0;
 
     for (let i = 0; i < keys.length; i++) {
         const key = keys[i].value.trim();
@@ -145,7 +147,8 @@ async function save_() {
             "discount": discountElement.value,
             "edit_time": formatDateTime(),
             "attributes": attributes,
-            "tax_rate": taxRate.value
+            "tax_rate": taxRate.value,
+            "no_version_update": noVersionUpdate
         })
     });
 

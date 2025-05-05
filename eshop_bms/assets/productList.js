@@ -81,28 +81,34 @@ function enableColorAddButton() {
     }
 }
 async function create() {
-    console.log("funguje create");
-    var editRoute = document.getElementById('routeData').getAttribute("data-create-route")
-    //var productListRoute = document.getElementById('routeData').getAttribute("data-edit-route")
-    var response = await fetch(editRoute,{
+    const editRoute = document.getElementById('routeData').getAttribute("data-create-route");
+
+    const response = await fetch(editRoute, {
         method: "POST",
         headers: {
-            'content-type' : 'application/json'
+            'content-type': 'application/json'
         },
         body: JSON.stringify({
-            "name" : nameElement.value,
-            "sku" : sku.value,
-            "number_in_stock" :numberInStockElement.value,
-            "add_time" : formatDateTime(),
-            "price" :priceElement.value
+            "name": nameElement.value,
+            "sku": sku.value,
+            "number_in_stock": numberInStockElement.value,
+            "add_time": formatDateTime(),
+            "price": priceElement.value
         })
     });
-    //console.log(await response.text());
-    
-    var id = (await response.json())["id"];
+
+    const result = await response.json();
+
+    // ✅ 处理错误响应
+    if (!result.success) {
+        alert(result.message || "Failed to create product.");
+        return;
+    }
+
+    // ✅ 成功跳转
+    const id = result.id;
     console.log(id);
     window.location.href = '/bms/product_edit/' + id;
-    
 }
 
 async function createCategory() {

@@ -109,6 +109,10 @@
         <label for="hideBox">
             <input type="checkbox" id="hideBox" name="hideBox" {% if product.hidden %}checked{% endif %}> Hide Product
         </label><br>
+        <label for="noVersionUpdate">
+            <input type="checkbox" id="noVersionUpdate" name="no_version_update">
+            Don't create new version
+        </label><br>
         <div class="buttons">
         <button type="button" id="saveButton" onclick="save_()">Save</button>
         <button type="button" id="backButton" onclick="backToProducts()">Back to products</button>
