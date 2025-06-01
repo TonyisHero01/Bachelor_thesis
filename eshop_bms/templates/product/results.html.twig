@@ -28,7 +28,7 @@
             <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}">
                 <td class="product-name">{{ product.name }}</td> 
                 <td class="number-in-stock">{{ product.numberInStock }}</td> 
-                <td class="add-time">{{ product.addTime|date('Y-m-d H:i') }}</td> 
+                <td class="add-time">{{ product.createdAt|date('Y-m-d H:i') }}</td> 
                 <td class="price">{{ product.price }}</td> 
                 <td class="button"><span class="edit-button" type="button" onclick="edit({{ product.id }})">Edit</span></td>
                 <td class="button"><span class="delete-button" type="button" onclick="delete_({{ product.id }})">Delete</span></td>

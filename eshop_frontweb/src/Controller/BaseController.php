@@ -24,7 +24,6 @@ class BaseController extends AbstractController
         $localizedPath = "locale/{$locale}/{$template}";
         $this->logger?->info("🌐 Current locale: " . $locale);
 
-        // ✅ 自动注入参数
         $parameters['locale'] = $locale;
         $parameters['languages'] = $parameters['languages'] ?? $this->getAvailableLanguages();
         $parameters['translations'] = $parameters['translations'] ?? $this->getTranslations($request);
@@ -44,7 +43,6 @@ class BaseController extends AbstractController
         $locale = $request->get('_locale') ?? $request->query->get('_locale') ?? $request->getLocale();
         $localizedPath = "locale/{$locale}/{$template}";
 
-        // 自动注入翻译
         $parameters['translations'] = $parameters['translations'] ?? $this->getTranslations($request);
 
         if ($this->twig && $this->twig->getLoader()->exists($localizedPath)) {
@@ -80,7 +78,7 @@ class BaseController extends AbstractController
             return array_merge($originalMap, $fieldMap);
         }
 
-        return []; // fallback
+        return [];
     }
 
     protected function getAvailableLanguages(): array

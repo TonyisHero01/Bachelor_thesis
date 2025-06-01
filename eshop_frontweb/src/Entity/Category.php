@@ -102,6 +102,6 @@ class Category
             }
         }
 
-        return $this->name; // fallback
+        return $this->name;
     }
 }

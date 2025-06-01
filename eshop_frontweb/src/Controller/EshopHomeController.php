@@ -77,7 +77,6 @@ class EshopHomeController extends BaseController
         $translations = $this->getTranslations($request);
         $translations['base_template'] = 'eshop_base.html.twig';
 
-        // 如果存在 localized 的 base 模板，使用它
         $locale = $request->getLocale();
         $localizedBasePath = "locale/{$locale}/eshop_base.html.twig";
         $projectDir = $this->getParameter('kernel.project_dir');

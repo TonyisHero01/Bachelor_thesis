@@ -82,7 +82,6 @@ class FrontwebTranslatorController extends AbstractController
             }
         }
 
-        // 拆分模板：保留 Twig 表达式不动，仅替换普通 HTML 文本
         $tokens = preg_split('/({{.*?}}|{%\s.*?%})/s', $originalContent, -1, PREG_SPLIT_DELIM_CAPTURE);
 
         foreach ($request->request->all() as $key => $value) {

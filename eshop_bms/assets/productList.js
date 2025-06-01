@@ -1,21 +1,18 @@
 function edit(productId) {
-    // 构建编辑路由
     const editRoute = document.getElementById(productId).getAttribute('data-edit-route');
-    console.log('bms'+editRoute);
     if (editRoute) {
-        // 跳转到编辑页面
         window.location.href = editRoute;
     } else {
         console.error('Edit route not found for product ID ' + productId);
     }
 }
 
-var popup = document.getElementById("myPopup");
-var cancelButton = document.getElementById("cancelButton");
-var cancelCategoryAddButton = document.getElementById("cancelCategoryAddButton");
-var categoryPopup = document.getElementById("myCategoryPopup");
-var cancelColorAddButton = document.getElementById("cancelColorAddButton");
-var colorPopup = document.getElementById("myColorPopup");
+const popup = document.getElementById("myPopup");
+const cancelButton = document.getElementById("cancelButton");
+const cancelCategoryAddButton = document.getElementById("cancelCategoryAddButton");
+const categoryPopup = document.getElementById("myCategoryPopup");
+const cancelColorAddButton = document.getElementById("cancelColorAddButton");
+const colorPopup = document.getElementById("myColorPopup");
 function openCreateForm() {
     popup.removeAttribute("style");
     cancelButton.removeAttribute("style");
@@ -32,23 +29,19 @@ function openColorAddForm() {
 }
 
 function cancelCreateForm() {
-    console.log("cancel");
     popup.setAttribute("style", "display: none;");
     categoryPopup.setAttribute("style", "display: none;");
     cancelButton.setAttribute("style", "display: none;");
-    //window.location.href = "<?php echo APP_DIRECTORY?>products;
 }
-var nameElement = document.getElementById("name");
-var skuElement = document.getElementById("sku");
-var numberInStockElement = document.getElementById("number_in_stock");
-var priceElement = document.getElementById("price");
+const nameElement = document.getElementById("name");
+const skuElement = document.getElementById("sku");
+const numberInStockElement = document.getElementById("number_in_stock");
+const priceElement = document.getElementById("price");
 
-var categoryNameElement = document.getElementById("categoryName");
-var colorNameElement = document.getElementById("colorName");
+const categoryNameElement = document.getElementById("categoryName");
+const colorNameElement = document.getElementById("colorName");
 const colorHexElement = document.getElementById('colorHex');
 function enableCreateButton () {
-    console.log("called func");
-    
     var submitElement = document.getElementById("createButton");
     if (nameElement.value != "" && nameElement.value.length <= 32 & numberInStockElement != "" & priceElement != "") {
         submitElement.removeAttribute("disabled");
@@ -58,8 +51,6 @@ function enableCreateButton () {
     }
 }
 function enableCategoryAddButton() {
-    console.log("called func");
-    
     var submitElement = document.getElementById("addCategoryButton");
     if (categoryNameElement.value != "" && nameElement.value.length <= 32) {
         submitElement.removeAttribute("disabled");
@@ -70,8 +61,6 @@ function enableCategoryAddButton() {
 }
 
 function enableColorAddButton() {
-    console.log("called func");
-    
     var submitElement = document.getElementById("addColorButton");
     if (colorNameElement.value != "" && nameElement.value.length <= 32) {
         submitElement.removeAttribute("disabled");
@@ -99,22 +88,17 @@ async function create() {
 
     const result = await response.json();
 
-    // ✅ 处理错误响应
     if (!result.success) {
         alert(result.message || "Failed to create product.");
         return;
     }
 
-    // ✅ 成功跳转
     const id = result.id;
-    console.log(id);
     window.location.href = '/bms/product_edit/' + id;
 }
 
 async function createCategory() {
-    console.log("funguje create");
-    //var productListRoute = document.getElementById('routeData').getAttribute("data-edit-route")
-    var response = await fetch('/bms/save_category',{
+    let response = await fetch('/bms/save_category',{
         method: "POST",
         headers: {
             'content-type' : 'application/json'
@@ -123,25 +107,18 @@ async function createCategory() {
             "name" : categoryNameElement.value,
         })
     });
-    //console.log(await response.text());
-    
-    var id = (await response.json())["id"];
-    console.log(id);
+    let id = (await response.json())["id"];
     window.location.href = '/bms/product_list';
 }
 
 async function createColor() {
-    console.log("funguje create");
     const colorName = colorNameElement.value.trim();
     const colorHex = colorHexElement.value.trim();
-
-    // 检查输入是否为空
     if (!colorName || !/^#[A-Fa-f0-9]{6}$/.test(colorHex)) {
         alert("Invalid color name or hex code!");
         return;
     }
-    //var productListRoute = document.getElementById('routeData').getAttribute("data-edit-route")
-    var response = await fetch('/bms/save_color',{
+    let response = await fetch('/bms/save_color',{
         method: "POST",
         headers: {
             'content-type' : 'application/json'
@@ -151,10 +128,7 @@ async function createColor() {
             "hex": colorHex 
         })
     });
-    //console.log(await response.text());
-    
-    var id = (await response.json())["id"];
-    console.log(id);
+    let id = (await response.json())["id"];
     window.location.href = '/bms/product_list';
     
 }
@@ -162,13 +136,11 @@ async function createColor() {
 function formatDateTime() {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从 0 开始，需要加 1
+    const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-
-    // 返回格式为 YYYY-MM-DD HH:MM:SS
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
@@ -176,17 +148,14 @@ function openModifyCategoryForm() {
     document.getElementById("myModifyCategoryPopup").style.display = "block";
 }
 
-// 🔹 关闭 "Modify Category" 窗口
 function cancelModifyCategoryForm() {
     document.getElementById("myModifyCategoryPopup").style.display = "none";
 }
 
-// 🔹 启用 "Modify Category" 按钮
 function enableModifyCategoryButton() {
     document.getElementById("modifyCategoryButton").disabled = document.getElementById("newCategoryName").value.trim() === "";
 }
 
-// 🔹 发送请求修改 Category
 function modifyCategory() {
     const categoryId = document.getElementById("modifyCategorySelect").value;
     const newCategoryName = document.getElementById("newCategoryName").value.trim();
@@ -214,8 +183,6 @@ function modifyCategory() {
 
 function openModifyColorForm() {
     document.getElementById("myModifyColorPopup").style.display = "block";
-
-    // 设置默认颜色
     let selectElement = document.getElementById("modifyColorSelect");
     let colorHex = selectElement.options[selectElement.selectedIndex].getAttribute("data-hex");
     document.getElementById("newColorHex").value = colorHex;
@@ -230,10 +197,9 @@ function enableModifyColorButton() {
     document.getElementById("modifyColorButton").disabled = newColorName.length === 0;
 }
 
-// 当选择颜色变化时，更新颜色输入框
 document.getElementById("modifyColorSelect").addEventListener("change", function() {
-    let selectedOption = this.options[this.selectedIndex];
-    let colorHex = selectedOption.getAttribute("data-hex");
+    const selectedOption = this.options[this.selectedIndex];
+    const colorHex = selectedOption.getAttribute("data-hex");
     document.getElementById("newColorHex").value = colorHex;
 });
 
@@ -268,23 +234,19 @@ async function modifyColor() {
     }
 }
 
-// 🔹 打开 "Add Size" 窗口
 function openSizeAddForm() {
     document.getElementById("mySizePopup").style.display = "block";
 }
 
-// 🔹 关闭 "Add Size" 窗口
 function cancelCreateForm() {
     document.getElementById("mySizePopup").style.display = "none";
     document.getElementById("myModifySizePopup").style.display = "none";
 }
 
-// 🔹 启用 "Add Size" 按钮
 function enableSizeAddButton() {
     document.getElementById("addSizeButton").disabled = document.getElementById("sizeName").value.trim() === "";
 }
 
-// 🔹 发送请求创建新 Size
 function createSize() {
     const sizeName = document.getElementById("sizeName").value.trim();
     if (!sizeName) return;
@@ -298,7 +260,7 @@ function createSize() {
     .then(data => {
         if (data.success) {
             alert("Size added successfully!");
-            location.reload(); // 重新加载页面
+            location.reload();
         } else {
             alert("Error: " + data.message);
         }
@@ -306,22 +268,18 @@ function createSize() {
     .catch(error => console.error("Error:", error));
 }
 
-// 🔹 打开 "Modify Size" 窗口
 function openModifySizeForm() {
     document.getElementById("myModifySizePopup").style.display = "block";
 }
 
-// 🔹 关闭 "Modify Size" 窗口
 function cancelModifySizeForm() {
     document.getElementById("myModifySizePopup").style.display = "none";
 }
 
-// 🔹 启用 "Modify Size" 按钮
 function enableModifySizeButton() {
     document.getElementById("modifySizeButton").disabled = document.getElementById("newSizeName").value.trim() === "";
 }
 
-// 🔹 发送请求修改 Size
 function modifySize() {
     const sizeId = document.getElementById("modifySizeSelect").value;
     const newSizeName = document.getElementById("newSizeName").value.trim();
@@ -336,7 +294,7 @@ function modifySize() {
     .then(data => {
         if (data.success) {
             alert("Size modified successfully!");
-            location.reload(); // 重新加载页面
+            location.reload();
         } else {
             alert("Error: " + data.message);
         }

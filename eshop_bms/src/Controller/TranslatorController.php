@@ -112,8 +112,6 @@ class TranslatorController extends AbstractController
         foreach ($data as $key => $value) {
             if (!str_starts_with($key, 'field__')) continue;
 
-            // 解析字段名和 product ID
-            // e.g., field__name__123 => ['name', '123']
             if (!preg_match('/^field__(\w+)__(\d+)$/', $key, $matches)) continue;
 
             $field = $matches[1];
@@ -123,11 +121,9 @@ class TranslatorController extends AbstractController
 
             if (!trim($value)) continue;
 
-            // 查找产品
             $product = $em->getRepository(Product::class)->find($productId);
             if (!$product) continue;
 
-            // 查找或创建翻译记录
             $translationRepo = $em->getRepository(ProductTranslation::class);
             $translation = $translationRepo->findOneBy([
                 'product' => $product,
@@ -435,19 +431,15 @@ class TranslatorController extends AbstractController
         }
 
         $originalContent = file_get_contents($sourceFile);
-        $logger->info("📄 原始内容:\n" . $originalContent);
 
         $twigPlaceholders = [];
 
-        // 替换 {{ ... }} 表达式
         $originalContent = preg_replace_callback('/{{.*?}}/s', function ($matches) use (&$twigPlaceholders, $logger) {
             $key = '__TWIG_EXPR__' . count($twigPlaceholders) . '__';
             $twigPlaceholders[$key] = $matches[0];
-            $logger->debug("🧩 替换 Twig 表达式: {$matches[0]} -> $key");
             return $key;
         }, $originalContent);
 
-        // 替换 {% ... %}，保留 extends
         $originalContent = preg_replace_callback('/{%\s*(.*?)\s*%}/s', function ($matches) use (&$twigPlaceholders, $logger) {
             $content = trim($matches[1]);
             if (str_starts_with($content, 'extends')) {
@@ -455,11 +447,9 @@ class TranslatorController extends AbstractController
             }
             $key = '__TWIG_BLOCK__' . count($twigPlaceholders) . '__';
             $twigPlaceholders[$key] = $matches[0];
-            $logger->debug("🧩 替换 Twig block: {$matches[0]} -> $key");
             return $key;
         }, $originalContent);
 
-        // 替换所有翻译内容
         foreach ($request->request->all() as $key => $value) {
             if (str_starts_with($key, 'original__')) {
                 $suffix = substr($key, strlen('original__'));
@@ -467,40 +457,25 @@ class TranslatorController extends AbstractController
                 $translatedText = $request->request->get('field__' . $suffix);
         
                 if ($translatedText && $translatedText !== $originalText) {
-                    $logger->info("🔄 尝试替换: '$originalText' → '$translatedText'");
-        
-                    // 尝试构建匹配包含占位符的版本
                     $escapedOriginal = preg_quote($originalText, '/');
-                    $escapedOriginal = str_replace('\{\{.*?\}\}', '\{\{.*?\}\}', $escapedOriginal);  // 通配 Twig 表达式
+                    $escapedOriginal = str_replace('\{\{.*?\}\}', '\{\{.*?\}\}', $escapedOriginal);
                     $pattern = '/' . $escapedOriginal . '/s';
-        
-                    // logger 输出正则
-                    $logger->debug("🔍 正则匹配模式: {$pattern}");
-        
-                    // 执行替换
+
                     $originalContentBefore = $originalContent;
                     $originalContent = preg_replace_callback($pattern, function ($matches) use ($translatedText, $logger) {
-                        $logger->info("✅ 正则替换命中：{$matches[0]}");
                         return $translatedText;
                     }, $originalContent, 1);
-        
-                    // 如果没有发生替换
-                    if ($originalContent === $originalContentBefore) {
-                        $logger->warning("❌ 替换失败：{$originalText} 没有找到匹配项");
-                    }
+
                 }
             }
         }
 
-        // 替换 extends 模板指令
         if (
             $request->request->has('original__template_extends') &&
             $request->request->has('field__template_extends')
         ) {
             $originalExtends = base64_decode($request->request->get('original__template_extends'));
             $translatedExtends = base64_decode($request->request->get('field__template_extends'));
-
-            $logger->info("🧩 替换 extends 指令: $originalExtends → $translatedExtends");
 
             $originalContent = preg_replace(
                 '/' . preg_quote($originalExtends, '/') . '/',
@@ -509,22 +484,15 @@ class TranslatorController extends AbstractController
             );
         }
 
-        // 还原 Twig 表达式
         $originalContent = strtr($originalContent, $twigPlaceholders);
-        $logger->info("💾 最终翻译文件内容:\n" . $originalContent);
 
-        // 检查 shopInfo 方法
         if (preg_match_all('/shopInfo\.get([a-zA-Z0-9_]+)\(\)/', $originalContent, $matches)) {
             foreach ($matches[1] as $methodSuffix) {
                 $fullMethod = 'get' . $methodSuffix;
-                if (!method_exists(\App\Entity\ShopInfo::class, $fullMethod)) {
-                    $logger->warning("⚠️ 翻译文件中调用了不存在的 shopInfo 方法: $fullMethod()");
-                }
             }
         }
 
         file_put_contents($translatedFile, $originalContent);
-        $logger->info("✅ 已保存翻译至: $translatedFile");
 
         return new Response("✅ Translation saved to: $translatedFile");
     }

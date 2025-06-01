@@ -107,7 +107,6 @@ class Customer implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    // Getter and setter for wishlist
     public function getWishlist(): array
     {
         return $this->wishlist ?? [];
@@ -121,7 +120,6 @@ class Customer implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function addToWishlist(int $productId): self
     {
-        // 确保 wishlist 是一个数组
         if ($this->wishlist === null) {
             $this->wishlist = [];
         }
@@ -138,7 +136,6 @@ class Customer implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    // Implementing methods from UserInterface
     public function getPassword(): ?string
     {
         return $this->password_hash;

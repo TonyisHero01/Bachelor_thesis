@@ -99,8 +99,6 @@ class Product
         return $this->name ?? '';
     }
 
-    // ------- Getters and Setters -------
-
     public function getId(): ?int { return $this->id; }
 
     public function getName(): ?string { return $this->name; }
@@ -169,7 +167,6 @@ class Product
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static { $this->updatedAt = $updatedAt; return $this; }
 
-    // ------- Translations -------
     public function getTranslations(): Collection
     {
         return $this->translations;

@@ -17,7 +17,7 @@ class OrderItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * 查找订单的所有商品
+     * Show Order Products
      */
     public function findItemsByOrder(int $orderId)
     {

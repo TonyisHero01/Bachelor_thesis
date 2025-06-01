@@ -1,5 +1,4 @@
 <?php
-// src/Controller/AccountingController.php
 namespace App\Controller;
 
 use App\Entity\Order;
@@ -111,7 +110,6 @@ class AccountingController extends BaseController
 
         $this->addFlash('success', 'Invoice email sent successfully!');
 
-        // ✅ 使用 redirectToRouteLocalized，保持语言一致
         return $this->redirectToRouteLocalized('accounting_order_detail', [
             'id' => $order->getId()
         ], 302, $request);

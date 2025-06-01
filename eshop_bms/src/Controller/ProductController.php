@@ -36,7 +36,7 @@ class ProductController extends BaseController
         LoggerInterface $logger,
         Environment $twig
     ) {
-        parent::__construct($twig, $logger); // 👈 关键！必须调用父类构造函数
+        parent::__construct($twig, $logger);
         $this->params = $params;
         $this->em = $em;
         $this->auth = $auth;
@@ -60,7 +60,6 @@ class ProductController extends BaseController
         $sku = $input["sku"] ?? "UNKNOWN";
         $currencyId = $input["currency_id"] ?? null;
 
-        // ✅ 检查是否存在相同 SKU（只查找未隐藏版本也可以更严格）
         $existing = $entityManager->getRepository(Product::class)->findOneBy(['sku' => $sku]);
         if ($existing) {
             return new JsonResponse([
@@ -69,7 +68,6 @@ class ProductController extends BaseController
             ], 400);
         }
 
-        // 获取默认货币（如果 currency_id 为空）
         if ($currencyId === null) {
             $currency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
         } else {
@@ -88,8 +86,8 @@ class ProductController extends BaseController
         $product->setCurrency($currency);
         $product->setCreatedAt(new \DateTimeImmutable());
         $product->setUpdatedAt(new \DateTimeImmutable());
-        $product->setVersion(1); // 默认初始版本为 1
-        $product->setHidden(false); // 默认显示
+        $product->setVersion(1);
+        $product->setHidden(false);
 
         $entityManager->persist($product);
         $entityManager->flush();
@@ -127,14 +125,11 @@ class ProductController extends BaseController
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
         if ($user) {
-            // 获取用户的角色，返回一个数组
             $roles = $user->getRoles();
             
-            // 打印用户角色以进行调试
-            $logger->info(json_encode($roles));  // 或使用日志记录
+            $logger->info(json_encode($roles));
         } else {
-            // 用户未登录
-            dump('用户未登录');
+            dump('User not logged in');
         }
         $products = $entityManager->getRepository(Product::class)->findLatestVersionProducts();
         $form = $this->createForm(ProductType::class, new Product());
@@ -202,7 +197,6 @@ class ProductController extends BaseController
             throw $this->createNotFoundException('Product not found');
         }
 
-        // 获取同一 SKU 的所有版本的产品
         $productsWithSameSku = $productRepository->findBy(['sku' => $product->getSku()], ['version' => 'DESC']);
 
         $categories = $entityManager->getRepository(Category::class)->findAllCategories();
@@ -211,7 +205,7 @@ class ProductController extends BaseController
 
         return $this->renderLocalized('product/product_edit.html.twig', [
             'product' => $product,
-            'productsWithSameSku' => $productsWithSameSku, // 将所有版本传递给模板
+            'productsWithSameSku' => $productsWithSameSku,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
@@ -241,13 +235,10 @@ class ProductController extends BaseController
             }
 
             $data = json_decode($request->getContent(), true);
-            $logger->info("📝 Incoming product save data: " . json_encode($data));
 
-            $noVersionUpdate = $data['no_version_update'] ?? false;
+            $noVersionUpdate = filter_var($data['no_version_update'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
             if ($noVersionUpdate) {
-                $logger->info("✏️ 直接更新当前版本产品，无需新版本");
-
                 $currentProduct->setName($data['name'] ?? $currentProduct->getName());
                 $currentProduct->setDescription($data['description'] ?? $currentProduct->getDescription());
                 $currentProduct->setNumberInStock($data['number_in_stock'] ?? $currentProduct->getNumberInStock());
@@ -257,10 +248,10 @@ class ProductController extends BaseController
                 $currentProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
                 $currentProduct->setAttributes($data['attributes'] ?? $currentProduct->getAttributes());
 
-                $currentProduct->setWidth($data['width'] ?? $currentProduct->getWidth());
-                $currentProduct->setHeight($data['height'] ?? $currentProduct->getHeight());
-                $currentProduct->setLength($data['length'] ?? $currentProduct->getLength());
-                $currentProduct->setWeight($data['weight'] ?? $currentProduct->getWeight());
+                $currentProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
+                $currentProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
+                $currentProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
+                $currentProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
 
                 if (!empty($data['size'])) {
                     $size = $entityManager->getRepository(Size::class)->find($data['size']);
@@ -298,7 +289,6 @@ class ProductController extends BaseController
                 return new JsonResponse(["status" => "Success", "message" => "Updated current version"]);
             }
 
-            // 否则创建新版本
             $maxVersion = $entityManager->createQueryBuilder()
                 ->select('MAX(p.version)')
                 ->from(Product::class, 'p')
@@ -322,10 +312,10 @@ class ProductController extends BaseController
             $newProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
             $newProduct->setAttributes($data['attributes'] ?? []);
 
-            $newProduct->setWidth($data['width'] ?? $currentProduct->getWidth());
-            $newProduct->setHeight($data['height'] ?? $currentProduct->getHeight());
-            $newProduct->setLength($data['length'] ?? $currentProduct->getLength());
-            $newProduct->setWeight($data['weight'] ?? $currentProduct->getWeight());
+            $newProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
+            $newProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
+            $newProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
+            $newProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
 
             if (!empty($data['category'])) {
                 $category = $entityManager->getRepository(Category::class)->find($data['category']);
@@ -388,10 +378,8 @@ class ProductController extends BaseController
         if ($product) {
             $sku = $product->getSku();
 
-            // 找到所有具有相同SKU的商品
             $productsWithSameSku = $productRepository->findBy(['sku' => $sku]);
 
-            // 删除所有这些商品
             foreach ($productsWithSameSku as $productToDelete) {
                 $entityManager->remove($productToDelete);
             }
@@ -417,12 +405,11 @@ class ProductController extends BaseController
         }
 
         $name = $product->getName();
-        $files = $request->files->get('images'); // 获取上传的图片
-        $existingImageUrls = $product->getImageUrls() ?? []; // 获取现有的图片路径数组
+        $files = $request->files->get('images');
+        $existingImageUrls = $product->getImageUrls() ?? [];
 
-        // 设置 image_count 从现有图片数量加 1 开始
         $this->image_count = count($existingImageUrls) + 1;
-        $newImageUrls = []; // 存储新上传的图片路径
+        $newImageUrls = [];
 
         if (!$files) {
             $logger->info('No files received');
@@ -434,12 +421,10 @@ class ProductController extends BaseController
             $newFilename = $name . $this->image_count . '.' . $file->guessExtension();
             $file->move($this->getParameter('images_directory'), $newFilename);
             
-            // 将新文件名添加到数组中
             $newImageUrls[] = $newFilename;
             $this->image_count++;
         }
 
-        // 合并新旧图片路径并保存到数据库
         $product->setImageUrls(array_merge($existingImageUrls, $newImageUrls));
         $entityManager->persist($product);
         $entityManager->flush();
@@ -453,7 +438,6 @@ class ProductController extends BaseController
         $imageUrl = $data['imageUrl'] ?? null;
 
         if ($imageUrl) {
-            // 从产品的 imageUrls 字段中删除该图片路径
             $product = $entityManager->getRepository(Product::class)->find($id);
             if ($product) {
                 $imageUrls = $product->getImageUrls();
@@ -463,7 +447,6 @@ class ProductController extends BaseController
                 $entityManager->persist($product);
                 $entityManager->flush();
 
-                // 删除图片文件
                 $fileSystem = new Filesystem();
                 $filePath = $this->getParameter('images_directory') . '/' . $imageUrl;
                 if ($fileSystem->exists($filePath)) {
@@ -488,15 +471,12 @@ class ProductController extends BaseController
         LoggerInterface $logger,
         Request $request
     ): Response {
-        $logger->info('\u5f53\u524d\u7528\u6237\u8eab\u4efd\u9a8c\u8bc1\u72b6\u6001: ' . ($this->isGranted('IS_AUTHENTICATED_FULLY') ? '已认证' : '未认证'));
-        $logger->info('当前用户角色: ' . json_encode($this->getUser()?->getRoles()));
 
         if (!$authChecker->isGranted('ROLE_WAREHOUSE_MANAGER')) {
-            throw new AccessDeniedException('您没有权限执行此操作。');
+            throw new AccessDeniedException('You do not have permission to perform this action.');
         }
 
         if (!$authChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            $logger->info('未登录');
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
@@ -567,7 +547,6 @@ class ProductController extends BaseController
         }
 
         $session->set('search_results', $sortedResults);
-        $logger->info("Python搜索结果: " . json_encode($sortedResults));
 
         return new JsonResponse(['results' => $sortedResults]);
     }
@@ -577,26 +556,21 @@ class ProductController extends BaseController
         EntityManagerInterface $entityManager,
         AuthorizationCheckerInterface $authorizationChecker
     ): Response {
-        // 检查用户是否登录
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
         }
 
-        // 从会话中获取搜索结果（带 similarity 的结构）
         $searchResults = $session->get('search_results', []);
 
         if (empty($searchResults)) {
             return $this->renderLocalized('product/no_results.html.twig', []);
         }
 
-        // 提取 id 列表
         $ids = array_column($searchResults, 'id');
 
-        // 查询产品
         $productRepository = $entityManager->getRepository(Product::class);
         $products = $productRepository->findBy(['id' => $ids]);
 
-        // 根据 id 顺序排序
         $productsById = [];
         foreach ($products as $product) {
             $productsById[$product->getId()] = $product;

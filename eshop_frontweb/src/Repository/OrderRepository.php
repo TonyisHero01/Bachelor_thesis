@@ -17,7 +17,7 @@ class OrderRepository extends ServiceEntityRepository
     }
 
     /**
-     * 查找用户的订单
+     * Find user’s orders
      */
     public function findOrdersByCustomer(int $customerId)
     {
@@ -30,7 +30,7 @@ class OrderRepository extends ServiceEntityRepository
     }
 
     /**
-     * 查找指定订单（确保该订单属于当前用户）
+     * Find the specified order (ensure the order belongs to the current user)
      */
     public function findOrderByIdAndCustomer(int $orderId, int $customerId)
     {

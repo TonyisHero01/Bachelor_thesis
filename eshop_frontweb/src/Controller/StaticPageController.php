@@ -13,7 +13,7 @@ class StaticPageController extends BaseController
 {
     private function getShopInfo(EntityManagerInterface $em): ?ShopInfo
     {
-        return $em->getRepository(ShopInfo::class)->findWithTranslations(); // 自动带翻译
+        return $em->getRepository(ShopInfo::class)->findWithTranslations();
     }
 
     #[Route('/about-us', name: 'page_about_us')]

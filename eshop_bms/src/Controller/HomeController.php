@@ -28,7 +28,6 @@ class HomeController extends BaseController
         $roles = $user->getRoles();
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
 
-        // ✅ 添加 dashboard 数据
         $sales = $entityManager->getConnection()->executeQuery("
             SELECT DATE(order_created_at) AS date, SUM(total_price) AS total
             FROM orders

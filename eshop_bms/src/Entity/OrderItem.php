@@ -33,8 +33,6 @@ class OrderItem
     #[ORM\Column(type: "decimal", precision: 10, scale: 2)]
     private float $subtotal;
 
-    // Getters and Setters...
-
     public function getId(): int
     {
         return $this->id;

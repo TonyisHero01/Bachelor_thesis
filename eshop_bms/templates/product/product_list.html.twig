@@ -29,6 +29,9 @@
         <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search Product">
         <button type="button" id="searchButton" onclick="search_()" >Search</button>
     </form>
+    <div id="loadingSpinner" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999;">
+        <i class="fas fa-spinner fa-spin fa-3x"></i>
+    </div>
     <script src="{{ asset('../assets/search.js') }}"></script>
     <table>
         <tr id="product_list_header">

@@ -1,5 +1,4 @@
 <?php
-// src/Security/CustomerLoginFormAuthenticator.php
 namespace App\Security;
 
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -41,8 +40,6 @@ class CustomerLoginFormAuthenticator extends AbstractLoginFormAuthenticator
             ]
         );
     }
-
-    // src/Security/CustomerLoginFormAuthenticator.php
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {

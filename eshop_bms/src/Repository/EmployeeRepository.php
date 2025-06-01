@@ -39,7 +39,7 @@ class EmployeeRepository extends ServiceEntityRepository implements PasswordUpgr
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
-    // 在 EmployeeRepository 中修改 findAllEmployees() 方法：
+
     public function findAllEmployees()
     {
         return $this->createQueryBuilder('e')
@@ -70,35 +70,10 @@ class EmployeeRepository extends ServiceEntityRepository implements PasswordUpgr
         
         $entityManager = $this->getEntityManager();
     
-        // 创建 Native Query
         $query = $entityManager->createNativeQuery($sql, $rsm);
         $query->setParameter('role', json_encode(['ROLE_ADMIN']));
 
         return $query->getResult();
 
     }
-//    /**
-//     * @return Employee[] Returns an array of Employee objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('e')
-//            ->andWhere('e.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('e.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
-
-//    public function findOneBySomeField($value): ?Employee
-//    {
-//        return $this->createQueryBuilder('e')
-//            ->andWhere('e.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 }

@@ -26,7 +26,7 @@ class OrderController extends BaseController
 
     public function __construct(EntityManagerInterface $entityManager, Security $security, Environment $twig, LoggerInterface $logger)
     {
-        parent::__construct($twig, $logger); // Logger & Twig will be injected by Symfony DI
+        parent::__construct($twig, $logger);
         $this->entityManager = $entityManager;
         $this->security = $security;
         $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
@@ -227,8 +227,7 @@ class OrderController extends BaseController
             $orderItem->setSubtotal(round($subtotalExclTax, 2));
         
             $this->entityManager->persist($orderItem);
-        
-            // 减去库存
+
             $currentStock = $product->getNumberInStock();
             $newStock = $currentStock - $quantity;
         

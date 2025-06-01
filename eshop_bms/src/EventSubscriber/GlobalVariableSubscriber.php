@@ -20,10 +20,9 @@ class GlobalVariableSubscriber implements EventSubscriberInterface
 
     public function onKernelController(ControllerEvent $event): void
     {
-        $shopInfo = $this->shopInfoRepository->findOneBy([]); // 只取一条记录
+        $shopInfo = $this->shopInfoRepository->findOneBy([]);
         $this->twig->addGlobal('shopName', $shopInfo ? $shopInfo->getEshopName() : 'My Shop');
 
-        // 获取语言列表
         $localeDir = __DIR__ . '/../../templates/locale';
         $languages = is_dir($localeDir) ? array_filter(scandir($localeDir), fn($f) => is_dir($localeDir . '/' . $f) && !in_array($f, ['.', '..'])) : [];
 

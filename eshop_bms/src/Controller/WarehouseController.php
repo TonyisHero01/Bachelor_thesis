@@ -64,7 +64,6 @@ class WarehouseController extends BaseController
             return new JsonResponse(['success' => false, 'message' => 'Order not found.'], 404);
         }
 
-        // 标记订单为已完成
         $order->setIsCompleted(true);
         $entityManager->persist($order);
         $entityManager->flush();
@@ -117,7 +116,6 @@ class WarehouseController extends BaseController
             return new JsonResponse(['success' => false, 'message' => 'Invalid status.'], 400);
         }
 
-        // 添加状态字段到 ReturnRequest
         $returnRequest->setStatus($status);
         $entityManager->persist($returnRequest);
         $entityManager->flush();

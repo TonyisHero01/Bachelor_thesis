@@ -1,5 +1,4 @@
 <?php
-// src/Twig/AppExtension.php
 namespace App\Twig;
 
 use App\Repository\CartRepository;

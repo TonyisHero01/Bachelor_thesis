@@ -1,6 +1,5 @@
 <?php
 
-// src/Controller/CustomerController.php
 namespace App\Controller;
 
 use Symfony\Bundle\SecurityBundle\Security;
@@ -107,7 +106,6 @@ class CustomerController extends BaseController
             $entityManager->persist($customer);
             $entityManager->flush();
 
-            // ✅ 手动登录
             $token = new UsernamePasswordToken($customer, 'customer', $customer->getRoles());
             $this->tokenStorage->setToken($token);
 
@@ -169,7 +167,6 @@ class CustomerController extends BaseController
             return new JsonResponse(['inWishlist' => false], 403);
         }
 
-        // 获取用户的 wishlist
         $wishlist = $user->getWishlist();
 
         return new JsonResponse(['inWishlist' => in_array($productId, $wishlist)]);
@@ -190,21 +187,19 @@ class CustomerController extends BaseController
             return new JsonResponse(['status' => 'error', 'message' => 'Product ID not provided'], 400);
         }
 
-        // 获取用户 wishlist
         $wishlist = $user->getWishlist();
 
-        // **如果已经在 wishlist 里，则移除**
         if (in_array($productId, $wishlist)) {
-            $wishlist = array_filter($wishlist, fn($id) => $id != $productId); // 关键：移除 ID
+            $wishlist = array_filter($wishlist, fn($id) => $id != $productId);
         } else {
-            $wishlist[] = (int) $productId; // 添加 ID
+            $wishlist[] = (int) $productId;
         }
 
-        $user->setWishlist(array_values($wishlist)); // 重新设置
+        $user->setWishlist(array_values($wishlist));
         $entityManager->persist($user);
         $entityManager->flush();
 
-        return new JsonResponse(['status' => 'success', 'wishlist' => $wishlist]); // 关键：返回最新的 wishlist
+        return new JsonResponse(['status' => 'success', 'wishlist' => $wishlist]);
     }
 
     #[Route('/wishlist/remove/{id}', name: 'remove_from_wishlist', methods: ['POST'])]
@@ -212,12 +207,12 @@ class CustomerController extends BaseController
     {
         $user = $this->getUser();
         if (!$user) {
-            return new JsonResponse(['success' => false, 'message' => '用户未登录'], 403);
+            return new JsonResponse(['success' => false, 'message' => 'User not logged in'], 403);
         }
 
         $wishlist = $user->getWishlist();
         if (!in_array($id, $wishlist)) {
-            return new JsonResponse(['success' => false, 'message' => '商品不在愿望单中'], 400);
+            return new JsonResponse(['success' => false, 'message' => 'The product is not in the wishlist.'], 400);
         }
 
         $wishlist = array_diff($wishlist, [$id]);
@@ -277,7 +272,6 @@ class CustomerController extends BaseController
         $cartItem->setQuantity($newQuantity);
         $entityManager->flush();
 
-        // 获取购物车总数
         $cartTotalQuantity = $entityManager->createQueryBuilder()
             ->select('SUM(c.quantity)')
             ->from(Cart::class, 'c')
@@ -310,7 +304,6 @@ class CustomerController extends BaseController
         $entityManager->remove($cartItem);
         $entityManager->flush();
 
-        // 获取购物车总数
         $cartTotalQuantity = $entityManager->createQueryBuilder()
             ->select('SUM(c.quantity)')
             ->from(Cart::class, 'c')

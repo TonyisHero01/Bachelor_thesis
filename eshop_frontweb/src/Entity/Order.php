@@ -54,15 +54,13 @@ class Order
     private Collection $orderItems;
 
     #[ORM\Column(type: "string", length: 20, options: ["default" => "pickup"])]
-    private string $deliveryMethod = "pickup";  // 🆕 添加的字段，存储配送方式
+    private string $deliveryMethod = "pickup";
 
     public function __construct()
     {
         $this->orderCreatedAt = new \DateTime();
         $this->orderItems = new ArrayCollection();
     }
-
-    // Getters and Setters...
 
     public function getId(): int
     {

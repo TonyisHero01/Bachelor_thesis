@@ -2,12 +2,8 @@ document.querySelector('.image_upload_input').addEventListener('change', preview
 function previewImages(event) {
     const files = event.target.files;
     const previewContainer = document.getElementById('image_container');
-
-    // 预览每一张图片
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        
-        // 确保文件是图片
         if (!file.type.startsWith('image/')) {
             continue;
         }
@@ -17,7 +13,6 @@ function previewImages(event) {
         img.width = 304;
         img.height = 228;
 
-        // 显示空的 img 元素，之后通过 FileReader 来设置图片内容
         previewContainer.appendChild(img);
 
         const reader = new FileReader();
@@ -27,15 +22,14 @@ function previewImages(event) {
             };
         })(img);
 
-        // 读取图片文件作为 Data URL
         reader.readAsDataURL(file);
     }
 }
-// 单独处理 LOGO 的上传
+
 function handleLogoUpload(event) {
     const file = event.target.files[0];
     const formData = new FormData();
-    formData.append('logo', file); // 使用 FormData 上传文件本身
+    formData.append('logo', file);
 
     fetch('/logo_save', {
         method: 'POST',
@@ -43,10 +37,8 @@ function handleLogoUpload(event) {
     })
     .then(response => response.json())
     .then(data => {
-        // 上传成功后返回的文件名
         if (data.filePath) {
             document.getElementById('logo_preview').src = `/images/${data.filePath}`;
-            console.log("上传的文件路径:", data.filePath);
         }
     })
     .catch(error => console.error('上传错误:', error));
@@ -54,24 +46,18 @@ function handleLogoUpload(event) {
 const handleImageUpload = event => {
     const files = event.target.files;
     const formData = new FormData();
-
-    // 上传多个图片
     for (let i = 0; i < files.length; i++) {
         formData.append('images[]', files[i]);
-        console.log(files[i]); // 打印每个文件
     }
     
     fetch('/image_save', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.text())  // 先获取原始响应
+    .then(response => response.text())
     .then(text => {
-        console.log("Server response:", text); // 打印服务器响应内容
         try {
-            const data = JSON.parse(text); // 转换为JSON，防止非JSON报错
-            console.log("Uploaded file paths:", data.filePaths);
-            
+            const data = JSON.parse(text);
         } catch (e) {
             console.error("Invalid JSON response");
         }
@@ -83,7 +69,6 @@ const handleImageUpload = event => {
 
 function deleteImage(imageName) {
     imageName = imageName.replace("images/", "");
-    console.log(`/delete_cimage/${imageName}`);
     fetch(`/delete_cimage/${imageName}`, {
         method: 'POST',
         headers: {
@@ -106,22 +91,22 @@ function deleteImage(imageName) {
 document.querySelector('.image_upload_input').addEventListener('change', handleImageUpload);
 
 async function save_() {
-    var eshopNameElement = document.getElementById("eshop_name");
-    var addressElement = document.getElementById("address");
-    var telElement = document.getElementById("tel");
-    var emailElement = document.getElementById("email");
-    var aboutElement = document.getElementById("about");
-    var howToOrderElement = document.getElementById("how_to_order");
-    var conditionsElement = document.getElementById("conditions");
-    var privacyElement = document.getElementById("privacy");
-    var shippingElement = document.getElementById("shipping");
-    var paymentElement = document.getElementById("payment");
-    var refundElement = document.getElementById("refund");
-    var colorElement = document.getElementById("color");
-    var logoUrlElement = document.getElementById("logo_url");
-    var companyName = document.getElementById("company_name");
-    var cin = document.getElementById("cin");
-    var hidePricesElement = document.getElementById("hide_prices"); // ✅ 获取隐藏价格选项
+    const eshopNameElement = document.getElementById("eshop_name");
+    const addressElement = document.getElementById("address");
+    const telElement = document.getElementById("tel");
+    const emailElement = document.getElementById("email");
+    const aboutElement = document.getElementById("about");
+    const howToOrderElement = document.getElementById("how_to_order");
+    const conditionsElement = document.getElementById("conditions");
+    const privacyElement = document.getElementById("privacy");
+    const shippingElement = document.getElementById("shipping");
+    const paymentElement = document.getElementById("payment");
+    const refundElement = document.getElementById("refund");
+    const colorElement = document.getElementById("color");
+    const logoUrlElement = document.getElementById("logo_url");
+    const companyName = document.getElementById("company_name");
+    const cin = document.getElementById("cin");
+    const hidePricesElement = document.getElementById("hide_prices");
 
     const imagePaths = Array.from(document.querySelectorAll('.image_path')).map(input => input.value);
 
@@ -137,8 +122,6 @@ async function save_() {
             isDefault: defaultCurrencyIndex && defaultCurrencyIndex.value == i
         });
     }
-    
-    // 构建请求数据对象
     let requestData = {
         "eshopName": eshopNameElement.value,
         "address": addressElement.value,
@@ -155,11 +138,10 @@ async function save_() {
         "color": colorElement.value,
         "companyName": companyName.value,
         "cin": cin.value,
-        "hidePrices": hidePricesElement.checked, // ✅ 添加隐藏价格字段
+        "hidePrices": hidePricesElement.checked,
         "currencies": currencies
     };
 
-    // 如果有新 logo 上传，则添加到请求数据中
     if (logoUrlElement.value) {
         requestData["logo_url"] = logoUrlElement.value.replace("C:\\fakepath\\", "");
     }
@@ -187,9 +169,7 @@ async function save_() {
 }
 function addCurrency() {
     const container = document.getElementById('currency-container');
-    const index = container.children.length; // 计算当前货币项数量
-
-    // 创建新的货币项
+    const index = container.children.length;
     const currencyPair = document.createElement('div');
     currencyPair.className = 'currency-pair';
     currencyPair.innerHTML = `

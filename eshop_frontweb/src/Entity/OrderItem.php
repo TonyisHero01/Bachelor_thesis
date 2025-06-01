@@ -36,8 +36,6 @@ class OrderItem
     #[ORM\Column(type: "decimal", precision: 10, scale: 2)]
     private float $subtotal;
 
-    // Getters and Setters...
-
     public function getId(): int
     {
         return $this->id;
@@ -115,10 +113,8 @@ class OrderItem
 
     public function getTaxAmount(): float
     {
-        // 获取商品的税率（假设 taxRate 存储为百分比，如 21 表示 21%）
         $taxRate = $this->product->getTaxRate() / 100;
 
-        // 计算税费 = 含税价格 - 不含税价格
         $taxAmount = ($this->unitPrice * $this->quantity) - $this->subtotal;
 
         return round($taxAmount, 2);

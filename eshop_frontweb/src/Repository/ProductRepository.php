@@ -26,7 +26,6 @@ class ProductRepository extends ServiceEntityRepository
     {
         $connection = $this->getEntityManager()->getConnection();
 
-        // 查询销量最高的 SKU
         $sql = '
             SELECT sku
             FROM order_items
@@ -41,10 +40,9 @@ class ProductRepository extends ServiceEntityRepository
             return [];
         }
 
-        // 查询这些 SKU 中最新版本的商品，连带翻译字段
         $qb = $this->createQueryBuilder('p')
-            ->leftJoin('p.translations', 't')  // 加载翻译
-            ->addSelect('t')                   // 选择翻译数据
+            ->leftJoin('p.translations', 't')
+            ->addSelect('t')
             ->where('p.hidden = false')
             ->andWhere('p.version = (
                 SELECT MAX(p2.version)
@@ -56,14 +54,13 @@ class ProductRepository extends ServiceEntityRepository
 
         $products = $qb->getQuery()->getResult();
 
-        // 过滤掉没有图片的
         return array_filter($products, fn($p) => $p->hasImages());
     }
     public function findLatestVersionProducts(): array
     {
         return $this->createQueryBuilder('p')
-            ->leftJoin('p.translations', 't')  // 预加载翻译
-            ->addSelect('t')                   // 选择翻译数据
+            ->leftJoin('p.translations', 't')
+            ->addSelect('t')
             ->where('p.version = (
                 SELECT MAX(p2.version)
                 FROM App\Entity\Product p2
@@ -91,7 +88,6 @@ class ProductRepository extends ServiceEntityRepository
 
         $products = $qb->getQuery()->getResult();
 
-        // 使用 PHP 过滤掉重复 SKU，只保留前 4 个不同 SKU 的产品
         $seenSkus = [];
         $filtered = [];
         foreach ($products as $product) {
@@ -113,30 +109,6 @@ class ProductRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
-    //    /**
-    //     * @return Product[] Returns an array of Product objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?Product
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
 
     public function findAllProducts(): array
     {

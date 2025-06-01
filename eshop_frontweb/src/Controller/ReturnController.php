@@ -12,7 +12,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
-use App\Controller\BaseController; // ✅ 改为继承 BaseController
+use App\Controller\BaseController;
 use Twig\Environment;
 use Psr\Log\LoggerInterface;
 

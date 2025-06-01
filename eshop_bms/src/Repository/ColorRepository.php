@@ -20,12 +20,6 @@ class ColorRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Color::class);
     }
-    /*
-    public function findAllCategories(): array
-    {
-        return $this->findBy([], ['id' => 'DESC']);
-    }
-        */
     public function findAllColors(): array
     {
         return $this->createQueryBuilder('c')
@@ -33,28 +27,4 @@ class ColorRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
-//    /**
-//     * @return Color[] Returns an array of Color objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('c')
-//            ->andWhere('c.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('c.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
-
-//    public function findOneBySomeField($value): ?Color
-//    {
-//        return $this->createQueryBuilder('c')
-//            ->andWhere('c.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 }

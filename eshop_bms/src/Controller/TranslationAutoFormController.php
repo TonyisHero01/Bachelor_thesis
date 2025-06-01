@@ -78,7 +78,6 @@ class TranslationAutoFormController extends AbstractController
             }
         }
 
-        // Add ShopInfo forms for all languages
         $localeDir = $projectDir . '/templates/locale';
         $langs = array_filter(scandir($localeDir), fn($l) => !in_array($l, ['.', '..']) && is_dir($localeDir . '/' . $l));
         $this->generateShopInfoForm($logger);
@@ -104,8 +103,7 @@ class TranslationAutoFormController extends AbstractController
             'refund' => 'Refund',
         ];
 
-        // 获取英文原始数据
-        $shopInfo = $this->entityManager->getRepository(\App\Entity\ShopInfo::class)->find(1); // 默认只有一条记录
+        $shopInfo = $this->entityManager->getRepository(\App\Entity\ShopInfo::class)->find(1);
 
         $formFields = '';
         foreach ($fields as $field => $label) {
@@ -223,7 +221,6 @@ class TranslationAutoFormController extends AbstractController
 HTML;
         }
 
-        // special extends field
         if ($isFrontweb && preg_match("/{%\\s*extends\\s+'(eshop_base\\.html\\.twig|base\\.html\\.twig)'\\s*%}/", $content, $match)) {
             $originalExtends = "{% extends '" . $match[1] . "' %}";
             $translatedExtends = $match[1] === 'eshop_base.html.twig'

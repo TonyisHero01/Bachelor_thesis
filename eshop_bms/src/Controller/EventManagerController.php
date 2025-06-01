@@ -1,5 +1,4 @@
 <?php
-// src/Controller/EventManagerController.php
 namespace App\Controller;
 
 use App\Repository\ProductRepository;

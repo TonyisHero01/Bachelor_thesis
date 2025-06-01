@@ -37,7 +37,7 @@ class ReturnRequest
     private ?string $userMessage = null;
 
     #[ORM\Column(type: "text")]
-    private string $productSkus;  // 存储多个 SKU
+    private string $productSkus;
 
     #[ORM\Column(type: "datetime")]
     private \DateTimeInterface $requestDate;

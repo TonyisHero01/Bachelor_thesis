@@ -1,28 +1,39 @@
-var searchInputElement = document.getElementById("searchInput");
+const searchInputElement = document.getElementById("searchInput");
 
 async function search_() {
-    //TODO: rewrite function
-    console.log("clicked search")
-    var response = await fetch('/bms/search',{
-        method: "POST",
-        headers: {
-            'content-type' : 'application/json'
-        },
-        body: JSON.stringify({
-            "query" : searchInputElement.value
-        })
-    });
-    //console.log(await response.text());
-    
-    var jsonResponse = await response.json();
-    var results = jsonResponse["results"];
-    
-    // Debugging: printing detailed results
-    console.log("Results: ", results);
-    results.forEach((result, index) => {
-        console.log(`Result ${index + 1}:`, result);
-    });
+    const spinner = document.getElementById("loadingSpinner");
     const locale = document.getElementById("current-locale").value;
-    console.log("Redirecting to: ", `/bms/results?_locale=${locale}`);
-    window.location.href = `/bms/results?_locale=${locale}`;
+
+    try {
+        // 显示 loading 动画
+        spinner.style.display = "block";
+
+        const response = await fetch('/bms/search', {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: searchInputElement.value
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const jsonResponse = await response.json();
+
+        // 可以根据返回结果进行处理或存储结果（如果有 sessionStorage 用于传值也可以）
+        const results = jsonResponse["results"];
+
+        // 跳转到结果页面
+        window.location.href = `/bms/results?_locale=${locale}`;
+    } catch (error) {
+        console.error("Search failed:", error);
+        alert("Search failed. Please try again.");
+    } finally {
+        // 隐藏 loading 动画
+        spinner.style.display = "none";
+    }
 }

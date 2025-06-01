@@ -6,7 +6,7 @@ function increaseQuantity() {
 }
 
 function decreaseQuantity() {
-    if (quantity > 1) { // 避免数量小于 1
+    if (quantity > 1) {
         quantity--;
         document.getElementById("quantity-value").innerText = quantity;
     }
