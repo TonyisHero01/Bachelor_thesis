@@ -20,14 +20,34 @@ class TranslationAutoFormController extends AbstractController
     {
         $this->entityManager = $entityManager;
     }
+
+
     #[Route('/translator/generate-form', name: 'generate_translation_form')]
     #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form')]
+    /**
+     * Generates a translation form for a single template, based on query parameter 'path'.
+     * Can be used for both BMS and frontweb templates depending on the route.
+     *
+     * @param Request $request HTTP request containing the 'path' parameter and optionally 'target_language'.
+     * @param LoggerInterface $logger Logger for debugging and progress info.
+     *
+     * @return Response HTTP response containing a generated translation form or error.
+     */
     public function generateForm(Request $request, LoggerInterface $logger): Response
     {
         return $this->handleSingleGeneration($request, $logger);
     }
 
     #[Route('/translator/generate-all', name: 'generate_all_translation_forms')]
+    /**
+     * Scans all templates in both BMS and frontweb directories and generates translation forms
+     * for those which are not excluded by naming conventions (e.g., _form partials, base layout).
+     *
+     * @param Request $request The current request, used to simulate sub-requests.
+     * @param LoggerInterface $logger Logger for progress and debugging output.
+     *
+     * @return Response A summary HTML response listing success, skipped, and error results.
+     */
     public function generateAll(Request $request, LoggerInterface $logger): Response
     {
         $projectDir = $this->getParameter('kernel.project_dir');
@@ -90,6 +110,14 @@ class TranslationAutoFormController extends AbstractController
         return new Response($html);
     }
 
+    /**
+     * Generates a special translation form for editable fields from ShopInfo entity,
+     * such as About Us, Privacy Policy, etc., and saves it as a Twig template.
+     *
+     * @param LoggerInterface $logger Logger used to record the generation process.
+     *
+     * @return void
+     */
     private function generateShopInfoForm(LoggerInterface $logger): void
     {
         $projectDir = $this->getParameter('kernel.project_dir');
@@ -145,6 +173,15 @@ class TranslationAutoFormController extends AbstractController
         $logger->info("✅ Generated shop_info form");
     }
 
+    /**
+     * Handles the logic of reading a single Twig template, extracting static text snippets,
+     * generating translation fields, and saving a corresponding translation form.
+     *
+     * @param Request $request Request object, must contain 'path' query param.
+     * @param LoggerInterface $logger Logger for debug information.
+     *
+     * @return Response 200 if successful, or 400/404 in case of error.
+     */
     private function handleSingleGeneration(Request $request, LoggerInterface $logger): Response
     {
         $sourcePath = $request->get('path');

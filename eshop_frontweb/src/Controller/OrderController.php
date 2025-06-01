@@ -33,6 +33,13 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/confirm/{id}', name: 'confirm_order', methods: ['POST'])]
+    /**
+     * Confirms an existing order.
+     * Currently a placeholder – assumes more business logic will be added later.
+     *
+     * @param int $id Order ID
+     * @return JsonResponse Confirmation result
+     */
     public function confirmOrder(int $id): JsonResponse
     {
         $order = $this->entityManager->getRepository(Order::class)->find($id);
@@ -48,6 +55,12 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/cancel/{id}', name: 'cancel_order', methods: ['POST'])]
+    /**
+     * Cancels and deletes the order with the given ID.
+     *
+     * @param int $id Order ID
+     * @return JsonResponse Deletion result
+     */
     public function cancelOrder(int $id): JsonResponse
     {
         $order = $this->entityManager->getRepository(Order::class)->find($id);
@@ -63,6 +76,15 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/success/{id}', name: 'order_success')]
+    /**
+     * Displays the success page after an order is completed.
+     *
+     * @param int $id Order ID
+     * @param Request $request HTTP request
+     * @return Response Rendered success page
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException if order not found
+     */
     public function orderSuccess(int $id, Request $request): Response
     {
         $order = $this->entityManager->getRepository(Order::class)->find($id);
@@ -83,6 +105,12 @@ class OrderController extends BaseController
     }
 
     #[Route('/cart/clear_after_success', name: 'clear_cart_after_success', methods: ['POST'])]
+    /**
+     * Clears the customer's cart after a successful order.
+     * Usually triggered via AJAX from the success page.
+     *
+     * @return JsonResponse Operation result
+     */
     public function clearCartAfterSuccess(): JsonResponse
     {
         $customer = $this->getUser();
@@ -102,6 +130,16 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/delivery-options/{id}', name: 'order_delivery_options', methods: ['GET'])]
+    /**
+     * Displays available delivery options for a given order.
+     * Ensures the order belongs to the current logged-in user.
+     *
+     * @param int $id Order ID
+     * @param Request $request HTTP request
+     * @return Response Rendered delivery options page
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException if order not found or access denied
+     */
     public function deliveryOptions(int $id, Request $request): Response
     {
         $order = $this->entityManager->getRepository(Order::class)->find($id);
@@ -123,6 +161,13 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/select_delivery', name: 'order_select_delivery', methods: ['GET'])]
+    /**
+     * Displays delivery method selection screen.
+     * Typically part of the checkout process.
+     *
+     * @param Request $request HTTP request
+     * @return Response Rendered delivery selection page
+     */
     public function selectDelivery(Request $request): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
@@ -136,6 +181,13 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/submit_delivery/{id}', name: 'order_submit_delivery', methods: ['POST'])]
+    /**
+     * Submits the selected delivery method, address, and optional notes.
+     *
+     * @param int $id Order ID
+     * @param Request $request JSON body: {"deliveryMethod": string, "address": string, "notes": string}
+     * @return JsonResponse Success or validation error
+     */
     public function submitDelivery(int $id, Request $request): JsonResponse
     {
         $order = $this->entityManager->getRepository(Order::class)->find($id);
@@ -163,6 +215,14 @@ class OrderController extends BaseController
     }
 
     #[Route('/order/create', name: 'order_create', methods: ['POST'])]
+    /**
+     * Creates a new order from the user's cart.
+     * Validates stock, applies discounts, calculates tax,
+     * saves order and associated order items.
+     *
+     * @param Request $request JSON body: {"deliveryMethod": string, "address": string, "notes": string}
+     * @return JsonResponse Result with order ID or error message
+     */
     public function createOrder(Request $request): JsonResponse
     {
         $user = $this->getUser();

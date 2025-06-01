@@ -42,7 +42,16 @@ class ProductController extends BaseController
         $this->auth = $auth;
     }
     private $image_count = 1;
+
     #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
+    /**
+     * Creates a new product entry in the database.
+     * Validates SKU uniqueness and assigns default currency if none is provided.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @return Response
+     */
     public function createProduct(
         EntityManagerInterface $entityManager,
         AuthorizationCheckerInterface $authorizationChecker
@@ -96,6 +105,15 @@ class ProductController extends BaseController
     }
 
     #[Route('/bms/product/{id}', name: 'show_product')]
+    /**
+     * Displays detailed information for a single product by ID.
+     * Throws 404 if product is not found.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param int $id Product ID
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @return Response
+     */
     public function show(EntityManagerInterface $entityManager, int $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -115,6 +133,16 @@ class ProductController extends BaseController
     }
 
     #[Route('/bms/product_list', name: 'show_All_products')]
+    /**
+     * Lists all latest-version products for admin users.
+     * Displays product creation form, available colors, sizes, and categories.
+     * Logs user roles and rendered product preview.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param LoggerInterface $logger
+     * @return Response
+     */
     public function showAllProducts(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -157,6 +185,13 @@ class ProductController extends BaseController
     }
 
     #[Route('/bms/modify_category', name: 'modify_category', methods: ['POST'])]
+    /**
+     * Modify the name of a category based on provided ID and new name.
+     *
+     * @param Request $request The HTTP request containing JSON with 'id' and 'new_name'.
+     * @param EntityManagerInterface $em Doctrine EntityManager for DB operations.
+     * @return JsonResponse Success or error message.
+     */
     public function modifyCategory(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -179,6 +214,16 @@ class ProductController extends BaseController
     }
 
     #[Route('/bms/product_edit/{id}', name: 'edit_product')]
+    /**
+     * Displays the product edit form and product history based on SKU.
+     *
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param int $id Product ID to edit.
+     * @param Request $request HTTP request object.
+     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
+     * @param LoggerInterface $logger Logger instance.
+     * @return Response Rendered edit product page.
+     */
     public function edit(
         EntityManagerInterface $entityManager,
         $id,
@@ -215,6 +260,18 @@ class ProductController extends BaseController
         ]);
     }
     #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'])]
+    /**
+     * Handles product saving logic. Supports both:
+     * - Updating current version (when no_version_update is true).
+     * - Creating new version with incremented version number.
+     *
+     * @param Request $request HTTP request with product data in JSON.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param int $id Product ID to update.
+     * @param LoggerInterface $logger Logger for error reporting.
+     * @param AuthorizationCheckerInterface $authorizationChecker Auth checker.
+     * @return Response JSON response indicating success or error.
+     */
     public function saveProduct(
         Request $request,
         EntityManagerInterface $entityManager,
@@ -363,6 +420,14 @@ class ProductController extends BaseController
         }
     }
     #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'])]
+    /**
+     * Deletes a product and all its versions sharing the same SKU.
+     *
+     * @param int $id The ID of one version of the product to delete.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
+     * @return Response JSON response indicating success or failure.
+     */
     public function deleteProduct(
         $id,  
         EntityManagerInterface $entityManager, 
@@ -392,6 +457,16 @@ class ProductController extends BaseController
         }
     }
     #[Route('/image_save/{id}', name: 'save_image')]
+    /**
+     * Saves uploaded images for a specific product.
+     *
+     * @param int $id Product ID.
+     * @param Request $request HTTP request with uploaded files.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param AuthorizationCheckerInterface $authorizationChecker Access checker.
+     * @param LoggerInterface $logger Logger for logging upload info.
+     * @return Response JSON with list of saved file names or error.
+     */
     public function saveImage($id, Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -431,7 +506,16 @@ class ProductController extends BaseController
 
         return new JsonResponse(['filePaths' => $newImageUrls]);
     }
+
     #[Route('/delete_image/{id}', name: 'delete_image', methods: ['POST'])]
+    /**
+     * Deletes a specific image from a product's image list and filesystem.
+     *
+     * @param int $id Product ID.
+     * @param Request $request JSON with 'imageUrl' to delete.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @return JsonResponse JSON status message.
+     */
     public function deleteImage($id, Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -464,6 +548,17 @@ class ProductController extends BaseController
      * @IsGranted("ROLE_WAREHOUSE_MANAGER")
      */
     #[Route('/bms/search', name: 'bms_search', methods: ['POST'])]
+    /**
+     * Performs a product search using an external TF-IDF Python script.
+     * Saves results to session for further display or filtering.
+     *
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param SessionInterface $session Symfony session for caching results.
+     * @param AuthorizationCheckerInterface $authChecker Role access checker.
+     * @param LoggerInterface $logger Logger for tracking command and output.
+     * @param Request $request JSON request containing search query.
+     * @return Response JSON containing search results (latest version product IDs and similarity scores).
+     */
     public function search(
         EntityManagerInterface $entityManager,
         SessionInterface $session,
@@ -550,7 +645,16 @@ class ProductController extends BaseController
 
         return new JsonResponse(['results' => $sortedResults]);
     }
+
     #[Route('/bms/results', name: 'results')]
+    /**
+     * Displays the product search results from session.
+     *
+     * @param SessionInterface $session Session storage for search results.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
+     * @return Response Rendered product results page or no-results page.
+     */
     public function results(
         SessionInterface $session,
         EntityManagerInterface $entityManager,
@@ -597,7 +701,15 @@ class ProductController extends BaseController
             'form' => $form
         ]);
     }
+
     #[Route('/bms/save_category', name: 'save_category')]
+    /**
+     * Creates a new category based on JSON input.
+     *
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
+     * @return Response Empty JSON response or login redirect.
+     */
     public function createCategory(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -616,7 +728,15 @@ class ProductController extends BaseController
 
         return new JsonResponse([]);
     }
+
     #[Route('/bms/save_color', name: 'save_color')]
+    /**
+     * Creates a new color entity with name and hex value from JSON input.
+     *
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
+     * @return Response Empty JSON response or login redirect.
+     */
     public function createColor(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -639,6 +759,13 @@ class ProductController extends BaseController
     }
 
     #[Route('/bms/modify_color', name: 'modify_color', methods: ['POST'])]
+    /**
+     * Modifies the name and hex value of an existing color.
+     *
+     * @param Request $request JSON request containing 'id', 'new_name', and 'new_hex'.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @return JsonResponse Success or error message.
+     */
     public function modifyColor(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -665,7 +792,15 @@ class ProductController extends BaseController
 
         return new JsonResponse(['status' => 'success']);
     }
+
     #[Route('/bms/create_size', name: 'size_create', methods: ['POST'])]
+    /**
+     * Creates a new size entity.
+     *
+     * @param Request $request JSON request containing 'name'.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @return JsonResponse Success or error message.
+     */
     public function createSize(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -684,6 +819,14 @@ class ProductController extends BaseController
     }
 
     #[Route('/bms/modify_size/{id}', name: 'size_modify', methods: ['POST'])]
+    /**
+     * Modifies an existing size name.
+     *
+     * @param int $id Size ID.
+     * @param Request $request JSON request with new size name.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
+     * @return JsonResponse Success or error message.
+     */
     public function modifySize(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);

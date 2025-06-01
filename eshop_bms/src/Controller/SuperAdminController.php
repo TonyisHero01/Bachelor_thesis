@@ -26,7 +26,13 @@ class SuperAdminController extends BaseController
         parent::__construct($twig, $logger);
         $this->params = $params;
     }
+
     #[Route('/super/admin', name: 'app_super_admin')]
+    /**
+     * Displays the main page for super admin.
+     *
+     * @return Response The rendered super admin index page.
+     */
     public function index(): Response
     {
         return $this->renderLocalized('super_admin/index.html.twig', [
@@ -35,6 +41,14 @@ class SuperAdminController extends BaseController
     }
 
     #[Route('/admin_list', name: 'show_All_admins')]
+    /**
+     * Shows a list of all admin users.
+     *
+     * @param EntityManagerInterface $entityManager Used to access the Employee repository.
+     * @param AuthorizationCheckerInterface $authorizationChecker Checks user authentication.
+     *
+     * @return Response The rendered admin list page, or a not-logged-in page if unauthorized.
+     */
     public function showAllAdmins(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -57,7 +71,18 @@ class SuperAdminController extends BaseController
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH')
         ]);
     }
+
     #[Route('/admin_edit/{id}', name: 'admin_edit')]
+    /**
+     * Shows the admin edit form for the given admin ID.
+     *
+     * @param EntityManagerInterface $entityManager Used to fetch the admin entity.
+     * @param int $id The ID of the admin to edit.
+     * @param Request $request The current request object.
+     * @param AuthorizationCheckerInterface $authorizationChecker Checks user authentication.
+     *
+     * @return Response The rendered edit form or not-logged-in page.
+     */
     public function edit(EntityManagerInterface $entityManager, $id, Request $request, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -73,7 +98,18 @@ class SuperAdminController extends BaseController
             'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH')
         ]);
     }
+
     #[Route('/admin_save/{id}', name: 'save_admin', methods: ['POST'])]
+    /**
+     * Saves changes to an admin's profile.
+     *
+     * @param Request $request The HTTP request containing JSON data.
+     * @param EntityManagerInterface $entityManager Used to persist admin entity changes.
+     * @param int $id The ID of the admin being updated.
+     * @param AuthorizationCheckerInterface $authorizationChecker Checks if user is authenticated.
+     *
+     * @return Response A JSON response indicating success or an error page if not logged in.
+     */
     public function saveAdmin(Request $request, EntityManagerInterface $entityManager, $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {

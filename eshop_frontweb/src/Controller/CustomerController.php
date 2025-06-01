@@ -45,6 +45,16 @@ class CustomerController extends BaseController
     }
 
     #[Route('/customer/login', name: 'customer_login')]
+    /**
+     * Displays the customer login form.
+     * Redirects to the customer home page if the user is already authenticated.
+     * Stores the referrer for post-login redirection.
+     *
+     * @param AuthenticationUtils $authenticationUtils
+     * @param Request $request
+     * @param SessionInterface $session
+     * @return Response
+     */
     public function login(AuthenticationUtils $authenticationUtils, Request $request, SessionInterface $session): Response
     {
         if ($this->getUser() instanceof Customer) {
@@ -73,6 +83,13 @@ class CustomerController extends BaseController
 
     #[Route('/customer/home', name: 'customer_home')]
     #[IsGranted('ROLE_CUSTOMER')]
+    /**
+     * Displays the customer home page.
+     * Requires the user to be authenticated.
+     *
+     * @param Request $request
+     * @return Response
+     */
     public function home(Request $request): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
@@ -85,6 +102,15 @@ class CustomerController extends BaseController
         ], $request);
     }
 
+    /**
+     * Handles customer registration.
+     * Automatically logs in the customer and redirects to the home page on success.
+     *
+     * @param Request $request
+     * @param UserPasswordHasherInterface $passwordHasher
+     * @param EntityManagerInterface $entityManager
+     * @return Response
+     */
     #[Route('/customer/register', name: 'customer_register')]
     public function register(
         Request $request,
@@ -127,12 +153,26 @@ class CustomerController extends BaseController
     }
 
     #[Route(path: '/logout', name: 'app_logout')]
+   /**
+     * Customer logout route.
+     * This method will never be executed directly; it is intercepted by Symfony firewall.
+     *
+     * @return void
+     */
     public function logout(): void
     {
         throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
     }
 
     #[Route('/customer/wishlist', name: 'customer_wishlist')]
+    /**
+     * Displays the wishlist for the currently logged-in customer.
+     * Redirects to login if unauthenticated.
+     *
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @return Response
+     */
     public function showWishlist(Request $request, EntityManagerInterface $entityManager): Response
     {
         $customer = $this->getUser();
@@ -159,6 +199,13 @@ class CustomerController extends BaseController
     }
 
     #[Route('/wishlist/check/{productId}', name: 'check_wishlist', methods: ['GET'])]
+    /**
+     * Checks if the specified product is in the customer's wishlist.
+     *
+     * @param int $productId
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse
+     */
     public function checkWishlist(int $productId, EntityManagerInterface $entityManager): JsonResponse
     {
         $user = $this->getUser();
@@ -173,6 +220,14 @@ class CustomerController extends BaseController
     }
 
     #[Route(path: '/add_to_wishlist', name: 'wishlist_adding', methods: ['POST'])]
+    /**
+     * Adds or removes a product from the customer's wishlist.
+     * Toggles wishlist state and returns updated wishlist as JSON.
+     *
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse
+     */
     public function addToWishlist(Request $request, EntityManagerInterface $entityManager): JsonResponse {
         $user = $this->getUser();
 
@@ -203,6 +258,13 @@ class CustomerController extends BaseController
     }
 
     #[Route('/wishlist/remove/{id}', name: 'remove_from_wishlist', methods: ['POST'])]
+    /**
+     * Removes a product from the customer's wishlist.
+     *
+     * @param int $id Product ID
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse
+     */
     public function removeFromWishlist(int $id, EntityManagerInterface $entityManager): JsonResponse
     {
         $user = $this->getUser();
@@ -223,6 +285,14 @@ class CustomerController extends BaseController
     }
 
     #[Route('/cart', name: 'customer_cart')]
+    /**
+     * Displays the customer's shopping cart.
+     * Redirects to login if not authenticated.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param Request $request
+     * @return Response
+     */
     public function showCart(EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$this->getUser()) {
@@ -249,6 +319,14 @@ class CustomerController extends BaseController
     }
 
     #[Route('/cart/update/{id}', name: 'update_cart', methods: ['POST'])]
+    /**
+     * Updates the quantity of an item in the cart.
+     *
+     * @param int $id Cart item ID
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse
+     */
     public function updateCart(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -288,6 +366,13 @@ class CustomerController extends BaseController
     }
 
     #[Route('/cart/remove/{id}', name: 'remove_from_cart', methods: ['POST'])]
+    /**
+     * Removes an item from the customer's cart.
+     *
+     * @param int $id Cart item ID
+     * @param EntityManagerInterface $entityManager
+     * @return JsonResponse
+     */
     public function removeFromCart(int $id, EntityManagerInterface $entityManager): JsonResponse
     {
         if (!$this->getUser()) {
@@ -320,6 +405,15 @@ class CustomerController extends BaseController
     }
 
     #[Route('/order-confirmation/{id}', name: 'order_confirmation', methods: ['GET'])]
+    /**
+     * Displays the order confirmation page.
+     * Ensures the order belongs to the logged-in customer.
+     *
+     * @param int $id Order ID
+     * @param EntityManagerInterface $entityManager
+     * @param Request $request
+     * @return Response
+     */
     public function orderConfirmation(int $id, EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$this->getUser()) {
@@ -347,6 +441,15 @@ class CustomerController extends BaseController
     }
 
     #[Route('/order-confirmation2/{id}', name: 'order_confirmation2', methods: ['GET'])]
+    /**
+     * Displays an alternative order confirmation page.
+     * Ensures the order belongs to the logged-in customer.
+     *
+     * @param int $id Order ID
+     * @param EntityManagerInterface $entityManager
+     * @param Request $request
+     * @return Response
+     */
     public function orderConfirmation2(int $id, EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$this->getUser()) {
@@ -374,6 +477,14 @@ class CustomerController extends BaseController
     }
 
     #[Route('/customer/orders', name: 'customer_orders')]
+    /**
+     * Displays all orders made by the current customer.
+     * Requires authentication.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param Request $request
+     * @return Response
+     */
     public function customerOrders(EntityManagerInterface $entityManager, Request $request): Response
     {
         $user = $this->getUser();
@@ -400,6 +511,14 @@ class CustomerController extends BaseController
     }
 
     #[Route('/customer/return-requests', name: 'customer_return_requests')]
+    /**
+     * Displays all return requests made by the current customer.
+     * Requires authentication and filters by user email.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param Request $request
+     * @return Response
+     */
     public function returnRequests(EntityManagerInterface $entityManager, Request $request): Response
     {
         $user = $this->getUser();

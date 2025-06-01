@@ -26,6 +26,15 @@ class ReturnController extends BaseController
     }
 
     #[Route('/order/{id}/return-form', name: 'return_form')]
+    /**
+     * Displays the return form for a completed order.
+     *
+     * @param int $id Order ID
+     * @param OrderRepository $orderRepository Repository for Order entity
+     * @param OrderItemRepository $orderItemRepository Repository for OrderItem entity
+     * @param Request $request Symfony HTTP request
+     * @return Response Return form page or redirect to order list if order is invalid
+     */
     public function returnForm(int $id, OrderRepository $orderRepository, OrderItemRepository $orderItemRepository, Request $request): \Symfony\Component\HttpFoundation\Response
     {
         $order = $orderRepository->find($id);
@@ -47,6 +56,27 @@ class ReturnController extends BaseController
     }
 
     #[Route('/order/{id}/submit-return', name: 'submit_return', methods: ['POST'])]
+    /**
+     * Handles submission of a return request.
+     *
+     * Validates the order, parses the input data, and stores a ReturnRequest entry.
+     *
+     * Expected JSON payload:
+     * {
+     *   "email": "string",
+     *   "phone": "string",
+     *   "name": "string",
+     *   "items": ["SKU123", "SKU456"],
+     *   "reason": "string",
+     *   "message": "string"
+     * }
+     *
+     * @param int $id Order ID
+     * @param Request $request HTTP request containing JSON payload
+     * @param EntityManagerInterface $entityManager Doctrine entity manager
+     * @param OrderRepository $orderRepository Repository to fetch Order entity
+     * @return JsonResponse JSON response with success/failure status and message
+     */
     public function submitReturn(
         int $id, 
         Request $request, 

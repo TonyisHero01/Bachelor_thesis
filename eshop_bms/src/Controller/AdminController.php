@@ -24,6 +24,12 @@ class AdminController extends BaseController
     }
 
     #[Route('/admin', name: 'app_admin')]
+    /**
+     * Displays the admin dashboard homepage.
+     *
+     * @param Request $request
+     * @return Response
+     */
     public function index(Request $request): Response
     {
         return $this->renderLocalized('admin/index.html.twig', [
@@ -32,6 +38,15 @@ class AdminController extends BaseController
     }
 
     #[Route('/employee_list', name: 'show_All_employees')]
+    /**
+     * Shows a list of all employees.
+     * Access restricted to authenticated users.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param Request $request
+     * @return Response
+     */
     public function showAllEmployees(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, Request $request): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -49,6 +64,16 @@ class AdminController extends BaseController
     }
 
     #[Route('/employee_delete/{id}', name: 'employee_delete')]
+    /**
+     * Deletes the specified employee.
+     * Responds with an empty JSON object on success or failure.
+     *
+     * @param int $id
+     * @param EntityManagerInterface $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param Request $request
+     * @return Response
+     */
     public function delete($id, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, Request $request): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -67,6 +92,15 @@ class AdminController extends BaseController
     }
 
     #[Route('/employee_edit/{id}', name: 'employee_edit')]
+    /**
+     * Displays the edit form for a specific employee.
+     *
+     * @param EntityManagerInterface $entityManager
+     * @param int $id
+     * @param Request $request
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @return Response
+     */
     public function edit(EntityManagerInterface $entityManager, $id, Request $request, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -85,6 +119,16 @@ class AdminController extends BaseController
     }
 
     #[Route('/employee_save/{id}', name: 'save_employee', methods: ['POST'])]
+    /**
+     * Saves changes to employee details.
+     * Expects a JSON payload and returns a JSON response.
+     *
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @param int $id
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @return Response
+     */
     public function saveEmployee(Request $request, EntityManagerInterface $entityManager, $id, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {

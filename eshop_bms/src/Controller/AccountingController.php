@@ -34,6 +34,13 @@ class AccountingController extends BaseController
     }
 
     #[Route('/bms/accounting', name: 'accounting')]
+    /**
+     * Displays a list of all completed orders in accounting view.
+     *
+     * @param OrderRepository $orderRepo
+     * @param Request $request
+     * @return Response
+     */
     public function index(OrderRepository $orderRepo, Request $request): Response
     {
         $orders = $orderRepo->findBy(['isCompleted' => true], ['orderCreatedAt' => 'DESC']);
@@ -44,6 +51,13 @@ class AccountingController extends BaseController
     }
 
     #[Route('/bms/accounting/order/{id}', name: 'accounting_order_detail')]
+    /**
+     * Shows the detail page of a specific completed order including line items.
+     *
+     * @param Order $order
+     * @param Request $request
+     * @return Response
+     */
     public function orderDetail(Order $order, Request $request): Response
     {
         return $this->renderLocalized('accounting/order_detail.html.twig', [
@@ -53,6 +67,13 @@ class AccountingController extends BaseController
     }
 
     #[Route('/bms/accounting/order/{id}/invoice/pdf', name: 'accounting_invoice_pdf')]
+    /**
+     * Generates a downloadable PDF invoice for the specified order.
+     *
+     * @param Order $order
+     * @param Request $request
+     * @return Response PDF response with invoice content
+     */
     public function generatePdf(Order $order, Request $request): Response
     {
         $html = $this->renderViewLocalized('accounting/invoice.html.twig', [
@@ -73,6 +94,16 @@ class AccountingController extends BaseController
     }
 
     #[Route('/bms/accounting/order/{id}/invoice/send', name: 'accounting_invoice_send')]
+    /**
+     * Sends the invoice PDF for the given order via email to the customer.
+     *
+     * @param Order $order
+     * @param MailerInterface $mailer
+     * @param KernelInterface $kernel
+     * @param ShopInfoRepository $shopInfoRepo
+     * @param Request $request
+     * @return Response Redirect response after sending
+     */
     public function sendInvoice(
         Order $order,
         MailerInterface $mailer,

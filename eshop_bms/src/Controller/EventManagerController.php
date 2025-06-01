@@ -11,6 +11,15 @@ use Symfony\Component\Routing\Annotation\Route;
 class EventManagerController extends BaseController
 {
     #[Route('/event-manager/discounts', name: 'event_manager_discounts')]
+    /**
+     * Displays the product discount management page.
+     * Shows only the latest version of each product (grouped by SKU).
+     * Supports filtering by SKU and product name.
+     *
+     * @param Request $request
+     * @param ProductRepository $productRepository
+     * @return Response
+     */
     public function manageDiscounts(Request $request, ProductRepository $productRepository): Response
     {
         $skuFilter = $request->query->get('sku');
@@ -24,6 +33,16 @@ class EventManagerController extends BaseController
     }
 
     #[Route('/event-manager/update-discounts', name: 'event_manager_update_discounts', methods: ['POST'])]
+    /**
+     * Processes bulk discount updates for products.
+     * Only applies discounts in the 0–100 range.
+     * No new product versions are created — updates are in-place.
+     *
+     * @param Request $request
+     * @param ProductRepository $productRepository
+     * @param EntityManagerInterface $em
+     * @return JsonResponse
+     */
     public function updateDiscounts(Request $request, ProductRepository $productRepository, EntityManagerInterface $em): JsonResponse
     {
         $data = json_decode($request->getContent(), true);

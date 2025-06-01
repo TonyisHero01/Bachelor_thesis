@@ -28,6 +28,22 @@ class SearchController extends BaseController
     }
 
     #[Route('/search', name: 'search', methods: ['POST'])]
+    /**
+     * Performs a product search using a Python TF-IDF script.
+     *
+     * Accepts a JSON POST request:
+     * {
+     *   "query": "search keywords"
+     * }
+     *
+     * Runs the TF-IDF script and returns an array of matched SKUs with similarity scores.
+     * Stores matched product IDs in the session for result rendering.
+     *
+     * @param Request $request Symfony request with JSON body
+     * @param SessionInterface $session Symfony session to persist result IDs
+     * @param LoggerInterface $logger PSR-3 logger for command execution logs
+     * @return JsonResponse JSON object with matched product IDs and similarity scores
+     */
     public function search(Request $request, SessionInterface $session, LoggerInterface $logger): JsonResponse
     {
         $inputJSON = file_get_contents('php://input');
@@ -102,6 +118,16 @@ class SearchController extends BaseController
     }
 
     #[Route('/search/results', name: 'search_results', methods: ['GET'])]
+    /**
+     * Renders the product search results page.
+     *
+     * Either uses results stored in the session (from the last `/search` request)
+     * or reruns the TF-IDF search if `?query=` is provided via GET.
+     *
+     * @param Request $request Symfony request (may contain 'query' parameter)
+     * @param SessionInterface $session Symfony session to retrieve cached results
+     * @return Response Rendered HTML response showing matched products
+     */
     public function searchResults(Request $request, SessionInterface $session): Response
     {
         $searchResults = $session->get('search_results', []);

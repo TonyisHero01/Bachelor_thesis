@@ -22,6 +22,17 @@ use App\Entity\ProductTranslation;
 class TranslatorController extends AbstractController
 {
     #[Route('/translation/product/{lang}/{id}', name: 'translation_product_detail_form', methods: ['GET'])]
+    /**
+     * Displays the translation form for a specific product in a given language.
+     *
+     * @Route("/translation/product/{lang}/{id}", name="translation_product_detail_form", methods={"GET"})
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param string $lang Language code (e.g., "en", "cz").
+     * @param int $id Product ID.
+     * 
+     * @return Response Rendered translation form for the specified product.
+     */
     public function showProductDetailForm(EntityManagerInterface $em, string $lang, int $id): Response
     {
         $product = $em->getRepository(Product::class)->find($id);
@@ -51,6 +62,19 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/product/{id}/{lang}/submit', name: 'translation_product_detail_submit', methods: ['POST'])]
+    /**
+     * Handles the submission of a translation for a specific product.
+     * Saves the translation into the ProductTranslation entity.
+     *
+     * @Route("/translation/product/{id}/{lang}/submit", name="translation_product_detail_submit", methods={"POST"})
+     *
+     * @param int $id Product ID.
+     * @param string $lang Target language code.
+     * @param Request $request HTTP request containing translated fields.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     *
+     * @return Response Redirects to product translation list after saving.
+     */
     public function submitProductDetailTranslation(
         int $id,
         string $lang,
@@ -80,7 +104,18 @@ class TranslatorController extends AbstractController
         $this->addFlash('success', 'Translation saved.');
         return $this->redirectToRoute('translation_product_form_list', ['lang' => $lang]);
     }
+
     #[Route('/translation/product/{lang}', name: 'translation_product_form_list', methods: ['GET'])]
+    /**
+     * Displays a list of products with translation input fields for the given language.
+     *
+     * @Route("/translation/product/{lang}", name="translation_product_form_list", methods={"GET"})
+     *
+     * @param string $lang Language code to show existing translations or input new ones.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     *
+     * @return Response Rendered list page of translatable products and their existing translations.
+     */
     public function showProductTranslationForm(string $lang, EntityManagerInterface $em): Response
     {
         $products = $em->getRepository(Product::class)->findLatestVersionProducts();
@@ -104,6 +139,17 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/product/submit', name: 'translation_product_submit', methods: ['POST'])]
+    /**
+     * Handles the submission of bulk product translations from the product list view.
+     * Updates or creates ProductTranslation entities per field and language.
+     *
+     * @Route("/translation/product/submit", name="translation_product_submit", methods={"POST"})
+     *
+     * @param Request $request The request containing all translated values.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     *
+     * @return Response Redirects to the translation list view with success message.
+     */
     public function submitProductTranslations(Request $request, EntityManagerInterface $em): Response
     {
         $lang = $request->request->get('target_language', 'en');
@@ -150,6 +196,16 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/color/{lang}', name: 'color_translation_form')]
+    /**
+     * Displays the form for translating color names into the specified language.
+     *
+     * @Route("/translation/color/{lang}", name="color_translation_form")
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param string $lang Target language code (e.g. "en", "cz").
+     *
+     * @return Response Rendered color translation form.
+     */
     public function showColorTranslationForm(EntityManagerInterface $em, string $lang): Response
     {
         $colors = $em->getRepository(Color::class)->findAll();
@@ -168,6 +224,17 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/color/{lang}/submit', name: 'color_translation_submit', methods: ['POST'])]
+    /**
+     * Handles submission of translated color names for the specified language.
+     *
+     * @Route("/translation/color/{lang}/submit", name="color_translation_submit", methods={"POST"})
+     *
+     * @param Request $request HTTP request containing translated color names.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param string $lang Target language code.
+     *
+     * @return Response Redirects to the translator center after saving.
+     */
     public function submitColorTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
     {
         $ids = $request->request->all('color_ids');
@@ -193,7 +260,18 @@ class TranslatorController extends AbstractController
 
         return $this->redirectToRoute('translator_center', ['lang' => $lang]);
     }
+
     #[Route('/translator/shop-info/submit', name: 'translation_shop_info_submit', methods: ['POST'])]
+    /**
+     * Handles submission of translated shop information fields (e.g., About Us, Payment).
+     *
+     * @Route("/translator/shop-info/submit", name="translation_shop_info_submit", methods={"POST"})
+     *
+     * @param Request $request HTTP request containing translated shop info fields.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     *
+     * @return Response Redirects to the translator page list or returns error if language is missing.
+     */
     public function submitShopInfoTranslation(Request $request, EntityManagerInterface $em): Response
     {
         $targetLang = $request->request->get('target_language');
@@ -231,7 +309,17 @@ class TranslatorController extends AbstractController
             'lang' => $targetLang,
         ]);
     }
+
     #[Route('/translation', name: 'translator_languages')]
+    /**
+     * Displays the list of available languages based on folders in templates/locale.
+     *
+     * @Route("/translation", name="translator_languages")
+     *
+     * @param KernelInterface $kernel Symfony kernel to resolve the project directory.
+     *
+     * @return Response Rendered list of supported translation languages.
+     */
     public function showLanguages(KernelInterface $kernel): Response
     {
         $localeDir = $kernel->getProjectDir() . '/templates/locale';
@@ -251,6 +339,17 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/add-language', name: 'translator_add_language', methods: ['POST'])]
+    /**
+     * Handles creation of a new language folder under templates/locale.
+     *
+     * @Route("/translation/add-language", name="translator_add_language", methods={"POST"})
+     *
+     * @param Request $request HTTP request containing 'language' input.
+     * @param KernelInterface $kernel Symfony kernel to resolve project directory.
+     * @param LoggerInterface $logger Logger for debugging input.
+     *
+     * @return Response Redirects to the language list page.
+     */
     public function addLanguage(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
         $language = $request->request->get('language');
@@ -270,6 +369,15 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/{lang}', name: 'translator_page_list', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
+    /**
+     * Shows the list of available translation forms (BMS and frontweb) for a selected language.
+     *
+     * @Route("/translation/{lang}", name="translator_page_list", requirements={"lang" = "^(?!submit$)[a-zA-Z]+"})
+     *
+     * @param string $lang Selected language code.
+     *
+     * @return Response Rendered page list template with available translation forms.
+     */
     public function showPageListForLanguage(string $lang): Response
     {
         $translatorDir = $this->getParameter('kernel.project_dir') . '/templates/translator/';
@@ -305,6 +413,15 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/{lang}/center', name: 'translator_center', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
+    /**
+     * Displays the main translation center dashboard for a selected language.
+     *
+     * @Route("/translation/{lang}/center", name="translator_center", requirements={"lang" = "^(?!submit$)[a-zA-Z]+"})
+     *
+     * @param string $lang Selected language code.
+     *
+     * @return Response Rendered translation center overview.
+     */
     public function showTranslationCenter(string $lang): Response
     {
         return $this->render('translation/translation_center.html.twig', [
@@ -313,6 +430,16 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/category/{lang}', name: 'category_translation_form')]
+    /**
+     * Shows the translation form for product categories.
+     *
+     * @Route("/translation/category/{lang}", name="category_translation_form")
+     *
+     * @param string $lang Target language code.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     *
+     * @return Response Rendered form for translating category names.
+     */
     public function categoryTranslationForm(string $lang, EntityManagerInterface $em): Response
     {
         $categories = $em->getRepository(Category::class)->findAll();
@@ -324,6 +451,17 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/category/{lang}/submit', name: 'category_translation_submit', methods: ['POST'])]
+    /**
+     * Handles submission of translated category names.
+     *
+     * @Route("/translation/category/{lang}/submit", name="category_translation_submit", methods={"POST"})
+     *
+     * @param Request $request Form request containing category IDs and translated names.
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param string $lang Target language code.
+     *
+     * @return Response Redirects to the translation center after saving.
+     */
     public function submitCategoryTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
     {
         $ids = $request->request->all('category_ids');
@@ -353,6 +491,16 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translator/form/{path}/{lang}', name: 'translator_form', requirements: ['path' => '.+'])]
+    /**
+     * Renders the auto-generated translation form for a BMS template.
+     *
+     * @Route("/translator/form/{path}/{lang}", name="translator_form", requirements={"path" = ".+"})
+     *
+     * @param string $path Relative path to the target template (with slashes).
+     * @param string $lang Target language code.
+     *
+     * @return Response Rendered translation form.
+     */
     public function showTranslationForm(string $path, string $lang): Response
     {
         $normalized = str_replace('/', '_', $path);
@@ -364,6 +512,16 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/frontweb/translator/form/{path}/{lang}', name: 'frontweb_translator_form', requirements: ['path' => '.+'])]
+    /**
+     * Renders the auto-generated translation form for a frontweb template.
+     *
+     * @Route("/frontweb/translator/form/{path}/{lang}", name="frontweb_translator_form", requirements={"path" = ".+"})
+     *
+     * @param string $path Relative path to the target template (with slashes).
+     * @param string $lang Target language code.
+     *
+     * @return Response Rendered frontweb translation form.
+     */
     public function showFrontwebTranslationForm(string $path, string $lang): Response
     {
         $normalized = str_replace('/', '_', $path);
@@ -375,6 +533,16 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/delete-language/{lang}', name: 'translator_delete_language', methods: ['POST'])]
+    /**
+     * Deletes a language's entire translation directory under templates/locale/{lang}.
+     *
+     * @Route("/translation/delete-language/{lang}", name="translator_delete_language", methods={"POST"})
+     *
+     * @param string $lang Language code to delete.
+     * @param KernelInterface $kernel Symfony kernel to resolve project directory path.
+     *
+     * @return Response Redirects back to language list page after deletion.
+     */
     public function deleteLanguage(string $lang, KernelInterface $kernel): Response
     {
         $dir = $kernel->getProjectDir() . '/templates/locale/' . $lang;
@@ -392,6 +560,22 @@ class TranslatorController extends AbstractController
     }
 
     #[Route('/translation/submit', name: 'translation_submit', methods: ['POST'])]
+    /**
+     * Handles the submission of a translated Twig template form.
+     * Extracts translation fields and saves a new localized template file under templates/locale/{lang}/.
+     *
+     * - Preserves Twig expressions and block structures.
+     * - Optionally replaces {% extends ... %} using base64-encoded inputs.
+     * - Automatically determines if the template is in frontweb or BMS project.
+     *
+     * @Route("/translation/submit", name="translation_submit", methods={"POST"})
+     *
+     * @param Request $request HTTP request containing translation inputs.
+     * @param KernelInterface $kernel Symfony kernel to resolve file paths.
+     * @param LoggerInterface $logger For error/debug logging.
+     *
+     * @return Response HTTP response indicating success or error.
+     */
     public function handleTranslationSubmit(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
         $language = $request->request->get('target_language');

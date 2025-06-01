@@ -17,6 +17,15 @@ class BaseController extends AbstractController
         $this->logger = $logger;
     }
 
+    /**
+     * Renders a localized template if available, otherwise falls back to the default template.
+     * Automatically injects the 'translations' array into the parameters.
+     *
+     * @param string $template
+     * @param array $parameters
+     * @param Request|null $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
     protected function renderLocalized(string $template, array $parameters = [], ?Request $request = null)
     {
         $request ??= Request::createFromGlobals();
@@ -34,6 +43,15 @@ class BaseController extends AbstractController
         return $this->render($template, $parameters);
     }
 
+    /**
+     * Renders a localized template view as a string (used for PDF, emails, etc.).
+     * Falls back to the default template if localized version doesn't exist.
+     *
+     * @param string $template
+     * @param array $parameters
+     * @param Request|null $request
+     * @return string
+     */
     protected function renderViewLocalized(string $template, array $parameters = [], ?Request $request = null): string
     {
         $request ??= Request::createFromGlobals();
@@ -50,6 +68,15 @@ class BaseController extends AbstractController
         return $this->renderView($template, $parameters);
     }
 
+    /**
+     * Redirects to a localized route by automatically injecting the '_locale' parameter.
+     *
+     * @param string $route
+     * @param array $parameters
+     * @param int $status
+     * @param Request|null $request
+     * @return \Symfony\Component\HttpFoundation\RedirectResponse
+     */
     protected function redirectToRouteLocalized(string $route, array $parameters = [], int $status = 302, ?Request $request = null): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $request ??= Request::createFromGlobals();
@@ -60,6 +87,13 @@ class BaseController extends AbstractController
         return $this->redirectToRoute($route, $parameters, $status);
     }
 
+    /**
+     * Extracts translations from a localized HTML template file.
+     * Looks for name="original__xxx" and name="field__xxx" fields and builds a translation map.
+     *
+     * @param Request $request
+     * @return array<string, string>
+     */
     protected function getTranslations(Request $request): array
     {
         $locale = $request->get('_locale') ?? $request->query->get('_locale') ?? $request->getLocale();

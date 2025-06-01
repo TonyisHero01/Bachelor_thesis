@@ -17,6 +17,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/about-us', name: 'page_about_us')]
+    /**
+     * Displays the "About Us" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function aboutUs(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
@@ -36,6 +43,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/how-to-order', name: 'page_how_to_order')]
+    /**
+     * Displays the "How To Order" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function howToOrder(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
@@ -55,6 +69,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/business-conditions', name: 'page_business_conditions')]
+    /**
+     * Displays the "Business Conditions" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function businessConditions(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
@@ -74,6 +95,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/privacy-policy', name: 'page_privacy_policy')]
+    /**
+     * Displays the "Privacy Policy" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function privacyPolicy(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
@@ -93,6 +121,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/shipping-info', name: 'page_shipping_info')]
+    /**
+     * Displays the "Shipping Info" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function shippingInfo(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
@@ -112,6 +147,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/payment', name: 'page_payment')]
+    /**
+     * Displays the "Payment" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function payment(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
@@ -131,6 +173,13 @@ class StaticPageController extends BaseController
     }
 
     #[Route('/refund', name: 'page_refund')]
+    /**
+     * Displays the "Refund" static page.
+     *
+     * @param EntityManagerInterface $em Doctrine entity manager
+     * @param Request $request Symfony HTTP request
+     * @return Response Rendered HTML response
+     */
     public function refund(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);

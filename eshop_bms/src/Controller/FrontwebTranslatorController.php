@@ -12,6 +12,12 @@ use Symfony\Component\HttpKernel\KernelInterface;
 class FrontwebTranslatorController extends AbstractController
 {
     #[Route('/translation/frontweb/{lang}', name: 'frontweb_translator_page_list', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
+    /**
+     * Displays a list of translatable frontweb pages for the given language.
+     *
+     * @param string $lang Language code (e.g., "en", "cz")
+     * @return Response
+     */
     public function showPageList(string $lang): Response
     {
         return $this->render('translation/page_list.html.twig', [
@@ -20,6 +26,13 @@ class FrontwebTranslatorController extends AbstractController
     }
 
     #[Route('/translation/frontweb/form/{path}/{lang}', name: 'frontweb_translator_form', requirements: ['path' => '.+'])]
+    /**
+     * Renders a translation form for a specific frontweb template and target language.
+     *
+     * @param string $path Relative path to template (without locale prefix)
+     * @param string $lang Target language code
+     * @return Response
+     */
     public function showTranslationForm(string $path, string $lang): Response
     {
         $normalized = str_replace('/', '_', $path);
@@ -31,6 +44,15 @@ class FrontwebTranslatorController extends AbstractController
     }
 
     #[Route('/translation/frontweb/submit', name: 'frontweb_translation_submit', methods: ['POST'])]
+    /**
+     * Handles submission of a translation form.
+     * Replaces original texts with translated values and saves to `frontweb/templates/locale/{lang}/...`.
+     *
+     * @param Request $request
+     * @param KernelInterface $kernel
+     * @param LoggerInterface $logger
+     * @return Response
+     */
     public function handleTranslationSubmit(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
         $language = $request->request->get('target_language');
@@ -66,9 +88,7 @@ class FrontwebTranslatorController extends AbstractController
         }
 
         $originalContent = file_get_contents($sourceFile);
-        $logger->info("[Frontweb Translator] 📄 原始模板内容加载完成");
 
-        // 替换 {% extends ... %}
         $encodedOriginalExtends = $request->request->get('original__template_extends');
         $encodedTranslatedExtends = $request->request->get('field__template_extends');
 
@@ -78,7 +98,6 @@ class FrontwebTranslatorController extends AbstractController
 
             if ($decodedOriginal && $decodedTranslated) {
                 $originalContent = str_replace($decodedOriginal, $decodedTranslated, $originalContent);
-                $logger->info("[Frontweb Translator] ✅ Extends replaced: $decodedOriginal → $decodedTranslated");
             }
         }
 
@@ -115,6 +134,9 @@ class FrontwebTranslatorController extends AbstractController
     }
 
     #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form')]
+    /**
+     * Auto-generates a translation form for a given frontweb template by extracting static text content.
+     */
     public function generateFrontwebForm(Request $request): Response
     {
         $sourcePath = $request->query->get('path');
@@ -173,6 +195,6 @@ class FrontwebTranslatorController extends AbstractController
         $outputPath = $basePath . 'translator/translation_' . str_replace(['/', '.html.twig'], ['_', ''], $sourcePath) . '.html.twig';
         (new \Symfony\Component\Filesystem\Filesystem())->dumpFile($outputPath, $output);
 
-        return new Response("✅ 自动翻译表单生成成功", 200);
+        return new Response("✅ Automatic translation form generated successfully.", 200);
     }
 }

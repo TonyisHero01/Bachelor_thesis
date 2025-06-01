@@ -16,13 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
             mobileSearchOverlay.style.display = 'block';
             mobileSearchInput.focus();
         } else {
-            // 电脑版：直接提交搜索
-            const query = desktopSearchInput.value.trim();
-            if (query) {
-                window.location.href = `/search/results?query=${encodeURIComponent(query)}`;
-            } else {
-                desktopSearchInput.focus();
-            }
+            performSearch(); // 桌面版：直接执行搜索
         }
     });
 
@@ -45,12 +39,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // 处理搜索
     function performSearch() {
         const searchTerm = mobileSearchInput.value.trim();
+        const spinner = document.getElementById('loadingSpinner'); // 获取 spinner
+        if (!isMobile) {
+            console.log('Performing desktop search');
+            const query = desktopSearchInput.value.trim();
+            if (query) {
+                spinner.style.display = 'block';
+        
+                // 等待下一帧 + 延迟 50ms 才跳转，让 spinner 有时间渲染
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        window.location.href = `/search/results?query=${encodeURIComponent(query)}`;
+                    }, 50);
+                });
+            }
+        }
+    
         if (!searchTerm) {
             mobileSearchResults.innerHTML = '<p class="no-results">请输入搜索关键词</p>';
             return;
         }
-
-        // 使用 fetch 发送 POST 请求
+    
+        spinner.style.display = 'block'; // 显示加载动画
+    
         fetch('{{ path("search") }}', {
             method: 'POST',
             headers: {
@@ -60,13 +71,14 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            spinner.style.display = 'none'; // 隐藏加载动画
             mobileSearchResults.innerHTML = '';
+    
             if (data.error) {
                 mobileSearchResults.innerHTML = `<p class="no-results">${data.error}</p>`;
                 return;
             }
             if (data.results && data.results.length > 0) {
-                // 重定向到搜索结果页面
                 window.location.href = '{{ path("search_results") }}';
             } else {
                 mobileSearchResults.innerHTML = '<p class="no-results">未找到相关产品</p>';
@@ -74,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
+            spinner.style.display = 'none'; // 出错也要隐藏
             mobileSearchResults.innerHTML = '<p class="error">搜索出错，请稍后重试</p>';
         });
     }

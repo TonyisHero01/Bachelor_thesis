@@ -16,7 +16,15 @@ class BaseController extends AbstractController
         $this->twig = $twig;
         $this->logger = $logger;
     }
-
+    /**
+     * Renders a localized Twig template if it exists, falling back to the default template if not found.
+     * Automatically injects `locale`, available `languages`, and `translations` into the template parameters.
+     *
+     * @param string $template Template path (relative to templates/)
+     * @param array $parameters Template parameters
+     * @param Request|null $request Optional HTTP request
+     * @return Response Rendered response
+     */
     protected function renderLocalized(string $template, array $parameters = [], ?Request $request = null)
     {
         $request ??= Request::createFromGlobals();
@@ -37,6 +45,15 @@ class BaseController extends AbstractController
         return $this->render($template, $parameters);
     }
 
+    /**
+     * Renders a localized Twig view as a string.
+     * Falls back to the default view if the localized version is missing.
+     *
+     * @param string $template Template path
+     * @param array $parameters View parameters
+     * @param Request|null $request Optional HTTP request
+     * @return string Rendered view as a string
+     */
     protected function renderViewLocalized(string $template, array $parameters = [], ?Request $request = null): string
     {
         $request ??= Request::createFromGlobals();
@@ -53,6 +70,16 @@ class BaseController extends AbstractController
         return $this->renderView($template, $parameters);
     }
 
+    /**
+     * Redirects to a localized route.
+     * Ensures `_locale` is present in the route parameters.
+     *
+     * @param string $route Route name
+     * @param array $parameters Route parameters
+     * @param int $status HTTP redirect status (default 302)
+     * @param Request|null $request Optional HTTP request
+     * @return \Symfony\Component\HttpFoundation\RedirectResponse
+     */
     protected function redirectToRouteLocalized(string $route, array $parameters = [], int $status = 302, ?Request $request = null): \Symfony\Component\HttpFoundation\RedirectResponse
     {
         $request ??= Request::createFromGlobals();
@@ -63,6 +90,13 @@ class BaseController extends AbstractController
         return $this->redirectToRoute($route, $parameters, $status);
     }
 
+    /**
+     * Extracts translated strings from a localized template file.
+     * Returns a map of translation keys and their translated values, combining original and field entries.
+     *
+     * @param Request $request HTTP request for determining the locale
+     * @return array Associative array of translations
+     */
     protected function getTranslations(Request $request): array
     {
         $locale = $request->get('_locale') ?? $request->query->get('_locale') ?? $request->getLocale();
@@ -81,6 +115,11 @@ class BaseController extends AbstractController
         return [];
     }
 
+    /**
+     * Scans the `templates/locale/` directory to find all available language subfolders.
+     *
+     * @return array List of available locale codes (e.g., ['en', 'cz'])
+     */
     protected function getAvailableLanguages(): array
     {
         $localeDir = $this->getParameter('kernel.project_dir') . '/templates/locale';

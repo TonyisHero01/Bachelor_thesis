@@ -31,6 +31,14 @@ class EshopHomeController extends BaseController
     }
 
     #[Route('/homepage', name: 'app_eshop_home')]
+    /**
+     * Homepage route.
+     * Displays the homepage with new arrivals, top-selling products, categories, shop information, and language options.
+     *
+     * @param Request $request HTTP request object
+     * @param ShopInfoRepository $shopInfoRepository Repository for accessing shop information
+     * @return Response
+     */
     public function index(Request $request, ShopInfoRepository $shopInfoRepository): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
@@ -52,6 +60,18 @@ class EshopHomeController extends BaseController
     }
 
     #[Route('/category/{id}', name: 'app_eshop_category')]
+    /**
+     * Displays all products under a given category.
+     * Only shows visible products that contain image URLs.
+     * Ensures each SKU appears only once (removes duplicates by SKU, even if different sizes exist).
+     *
+     * @param Request $request HTTP request
+     * @param Category $category The selected category entity (automatically injected from route)
+     * @param ProductRepository $productRepository Repository for accessing product data
+     * @param ColorRepository $colorRepository Repository for color options
+     * @param SizeRepository $sizeRepository Repository for size options
+     * @return Response
+     */
     public function showCategory(
         Request $request,
         Category $category,

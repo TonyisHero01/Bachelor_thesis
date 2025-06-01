@@ -29,6 +29,13 @@ class EshopProductController extends BaseController
     }
 
     #[Route('/eshop/product', name: 'app_eshop_product')]
+    /**
+     * Product overview page.
+     * Displays category list and renders a generic product entry point.
+     *
+     * @param Request $request HTTP request
+     * @return Response Rendered product index page
+     */
     public function index(Request $request): Response
     {
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
@@ -42,6 +49,17 @@ class EshopProductController extends BaseController
     }
 
     #[Route('/product/{id}', name: 'show_eshop_product')]
+    /**
+     * Product detail page.
+     * Renders the product detail view for a given product ID.
+     *
+     * @param Request $request HTTP request object
+     * @param EntityManagerInterface $entityManager Doctrine ORM manager
+     * @param int $id Product ID to fetch and display
+     * @return Response Rendered product detail page
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException If product is not found
+     */
     public function show(Request $request, EntityManagerInterface $entityManager, int $id): Response
     {
         $product = $entityManager->getRepository(Product::class)->findProductById($id);
@@ -64,6 +82,16 @@ class EshopProductController extends BaseController
     }
 
     #[Route('/cart/add', name: 'add_to_cart', methods: ['POST'])]
+    /**
+     * Adds a product to the customer's cart.
+     * If the product already exists, its quantity is increased.
+     *
+     * @param Request $request HTTP request with JSON body: {"productId": int, "quantity": int}
+     * @param EntityManagerInterface $entityManager Doctrine ORM manager
+     * @return JsonResponse JSON response indicating success and updated cart count
+     *
+     * @throws JsonResponse 403 if user not authenticated
+     */
     public function addToCart(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -119,6 +147,13 @@ class EshopProductController extends BaseController
     }
 
     #[Route('/cart/count', name: 'cart_count', methods: ['GET'])]
+    /**
+     * Returns the total number of items in the user's cart.
+     * Used to update cart icon or badge in frontend.
+     *
+     * @param EntityManagerInterface $entityManager Doctrine ORM
+     * @return JsonResponse JSON response: {"cartCount": int}
+     */
     public function getCartCount(EntityManagerInterface $entityManager): JsonResponse
     {
         if (!$this->getUser()) {

@@ -17,6 +17,17 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 class HomeController extends BaseController
 {
     #[Route('/home', name: 'home')]
+    /**
+     * Renders the dashboard homepage for authenticated users.
+     * Displays shop info, user roles, currencies, recent sales (last 30 days),
+     * top 5 best-selling products, and top 5 spending customers.
+     *
+     * @param TokenStorageInterface $tokenStorage
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param EntityManagerInterface $entityManager
+     * @param Request $request
+     * @return Response
+     */
     public function home(TokenStorageInterface $tokenStorage, AuthorizationCheckerInterface $authorizationChecker, EntityManagerInterface $entityManager, Request $request): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -68,12 +79,26 @@ class HomeController extends BaseController
     }
 
     #[Route('/not-logged', name: 'not_logged')]
+    /**
+     * Displays the "not logged in" page for unauthorized users.
+     *
+     * @param Request $request
+     * @return Response
+     */
     public function notLogged(Request $request): Response
     {
         return $this->renderLocalized('employee/employee_not_logged.html.twig', [], $request);
     }
 
     #[Route('/logo_save', name: 'save_logo', methods: ['POST'])]
+    /**
+     * Handles the upload and saving of the shop logo.
+     *
+     * @param Request $request
+     * @param ParameterBagInterface $params
+     * @param LoggerInterface $logger
+     * @return JsonResponse
+     */
     public function saveLogo(Request $request, ParameterBagInterface $params, LoggerInterface $logger): JsonResponse
     {
         $file = $request->files->get('logo');
@@ -92,6 +117,15 @@ class HomeController extends BaseController
     }
 
     #[Route('/eshop_save', name: 'save_eshop', methods: ['POST'])]
+    /**
+     * Saves general e-shop settings (name, contact info, color, logo, etc.).
+     *
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param LoggerInterface $logger
+     * @return Response
+     */
     public function saveEshop(Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -141,6 +175,15 @@ class HomeController extends BaseController
     }
 
     #[Route('/image_save', name: 'save_eshop_image')]
+    /**
+     * Handles upload of new carousel images for the homepage.
+     *
+     * @param Request $request
+     * @param EntityManagerInterface $entityManager
+     * @param AuthorizationCheckerInterface $authorizationChecker
+     * @param LoggerInterface $logger
+     * @return Response
+     */
     public function saveImage(Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
@@ -160,7 +203,6 @@ class HomeController extends BaseController
             return new JsonResponse(['status' => 'No files received'], 400);
         }
 
-        $logger->info('Files received:', ['files' => $files]);
         foreach ($files as $file) {
             $newFilename = "carousel" . $this->image_count . '.' . $file->guessExtension();
             $file->move($this->getParameter('images_directory'), $newFilename);
@@ -177,6 +219,15 @@ class HomeController extends BaseController
     }
 
     #[Route('/delete_cimage/{imageName}', name: 'delete_cimage', methods: ['POST'], requirements: ['imageName' => '.+'])]
+    /**
+     * Deletes a carousel image from disk and removes its reference in the database.
+     *
+     * @param string $imageName Name of the image file to delete
+     * @param ParameterBagInterface $params
+     * @param EntityManagerInterface $entityManager
+     * @param LoggerInterface $logger
+     * @return JsonResponse
+     */
     public function deleteCImage($imageName, ParameterBagInterface $params, EntityManagerInterface $entityManager, LoggerInterface $logger): JsonResponse
     {
         if (!$imageName) {
