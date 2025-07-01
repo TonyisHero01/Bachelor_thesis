@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}All Low Stock Products{% endblock %}
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/low_stock_all.css') }}">
+{% endblock %}
+{% block body %}
+<h2>📦 All Low Stock Products</h2>
+<p>Select products and enter a new stock value to update in batch.</p>
+
+<form method="post" action="{{ path('batch_update_product_stock') }}">
+  <table class="dashboard-table">
+    <thead>
+      <tr>
+        <th>Select</th>
+        <th>Product Name</th>
+        <th>Current Stock</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for product in lowStockProducts %}
+        <tr>
+          <td>
+            <input type="checkbox" name="selected_products[]" value="{{ product.id }}">
+          </td>
+          <td>{{ product.name }}</td>
+          <td>{{ product.numberInStock }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">No low stock products 🎉</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="batch-controls">
+    <label for="batch_stock">New stock for selected products:</label>
+    <input type="number" name="new_stock" id="batch_stock" required min="0">
+    <button type="submit">✔ Update Selected</button>
+  </div>
+</form>
+
+<p><a href="{{ path('app_warehouse') }}">⬅ Back to Dashboard</a></p>
+{% endblock %}

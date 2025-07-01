@@ -1,6 +1,10 @@
 {% extends 'base.html.twig' %}
-
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/accounting_index.css') }}">
+{% endblock %}
 {% block body %}
+
+
     <h1>Completed Orders</h1>
     <table>
         <thead>

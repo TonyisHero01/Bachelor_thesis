@@ -1,0 +1,64 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="original_path" value="code_playground/index.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group">
+        <label>PHP Web Editor</label>
+        <input type="hidden" name="original__auto_php_web_editor_0" value="PHP Web Editor">
+        <input type="text" name="field__auto_php_web_editor_0" placeholder="PHP Web Editor">
+    </div>
+    <div class="field-group">
+        <label>Saved Files</label>
+        <input type="hidden" name="original__auto_saved_files_1" value="Saved Files">
+        <input type="text" name="field__auto_saved_files_1" placeholder="Saved Files">
+    </div>
+    <div class="field-group">
+        <label>No files yet</label>
+        <input type="hidden" name="original__auto_no_files_yet_5" value="No files yet">
+        <input type="text" name="field__auto_no_files_yet_5" placeholder="No files yet">
+    </div>
+    <div class="field-group">
+        <label>➕ Add code</label>
+        <input type="hidden" name="original__auto__add_code_7" value="➕ Add code">
+        <input type="text" name="field__auto__add_code_7" placeholder="➕ Add code">
+    </div>
+    <div class="field-group">
+        <label>⚠️ Please enter the verification code provided by the super administrator before running, otherwise the code cannot be executed.</label>
+        <input type="hidden" name="original__auto__please_enter_the_verifi_8" value="⚠️ Please enter the verification code provided by the super administrator before running, otherwise the code cannot be executed.">
+        <input type="text" name="field__auto__please_enter_the_verifi_8" placeholder="⚠️ Please enter the verification code provided by the super administrator before running, otherwise the code cannot be executed.">
+    </div>
+    <div class="field-group">
+        <label>Administrator verification code:</label>
+        <input type="hidden" name="original__auto_administrator_verification_cod_13" value="Administrator verification code:">
+        <input type="text" name="field__auto_administrator_verification_cod_13" placeholder="Administrator verification code:">
+    </div>
+    <div class="field-group">
+        <label>Run</label>
+        <input type="hidden" name="original__auto_run_15" value="Run">
+        <input type="text" name="field__auto_run_15" placeholder="Run">
+    </div>
+    <div class="field-group">
+        <label>Save</label>
+        <input type="hidden" name="original__auto_save_16" value="Save">
+        <input type="text" name="field__auto_save_16" placeholder="Save">
+    </div>
+    <div class="field-group">
+        <label>✅ Trust this code forever</label>
+        <input type="hidden" name="original__auto__trust_this_code_forever_18" value="✅ Trust this code forever">
+        <input type="text" name="field__auto__trust_this_code_forever_18" placeholder="✅ Trust this code forever">
+    </div>
+    <div class="field-group">
+        <label>Output Result</label>
+        <input type="hidden" name="original__auto_output_result_20" value="Output Result">
+        <input type="text" name="field__auto_output_result_20" placeholder="Output Result">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

@@ -1,133 +1,219 @@
-textarea {
-    width: 100%;
-    font-size: 30px;
+/* Reset & base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+    font-family: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
+    background-color: #f9f9f9;
+    color: #333;
+    line-height: 1.6;
+    font-size: 16px;
+
+    /* 留出顶部 header 的空间 */
+    padding-top: 70px;
+}
+
+/* Header (base.html.twig) */
 header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
     display: flex;
     justify-content: space-between;
-    padding: 1em;
-    background-color: #f8f9fa;
+    align-items: center;
+    background-color: #ffffff;
+    padding: 0 2rem;
     border-bottom: 1px solid #ddd;
-  }
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+}
 
-input {
+header h2 a {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #222;
+    text-decoration: none;
+}
+
+.header-right form {
+    display: flex;
+    align-items: center;
+}
+
+.header-right select {
+    padding: 0.5rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border 0.2s ease-in-out;
+}
+
+.header-right select:hover,
+.header-right select:focus {
+    border-color: #888;
+}
+
+/* Main content container */
+main, .container, .content {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: #fff;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+/* Tables */
+table {
     width: 100%;
-    font-size: 30px;
-    height: 35px;
-    margin-top: 220px;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    background-color: white;
 }
 
-input[type="checkbox"] {
-    width: 5%;
+th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
 }
 
-#search {
-    width: 20%;
-    font-size: 30px;
-    height: 25px;
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 10px;
+th {
+    background-color: #f2f2f2;
+    font-weight: 600;
 }
 
-body {
-    padding: 0cm 1cm;
-    font-size: 30px;
+/* Inputs */
+input, textarea, select {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 1rem;
+}
+
+/* Centered sections */
+.text-center {
+    text-align: center;
 }
 
 .buttons {
     text-align: center;
+    margin-top: 1rem;
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-#product_list_header {
-    border-bottom: 2px solid #000;
-}
-
-td, th {
-    padding: 10px;
-    text-align: left;
-    vertical-align: middle;
-}
-
-td.article-name {
-    width: 100%;
-}
-
-td.editButton, .deleteButton {
-    width: 50px;
-    padding-left: 20px;
-    padding-right: 50px;
-}
-
-tr {
+.buttons button {
+    margin: 0 10px;
+    padding: 0.5rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    cursor: pointer;
     border: none;
 }
 
-#pageCount {
-    font-size: 20px;
-}
-
-.show-button {
-    color: deepskyblue;
-}
-
-.edit-button {
-    color: deepskyblue;
-}
-
-.delete-button {
-    color: red;
-    padding-left: 1cm;
-}
-
-#editButton {
-    background-color: dodgerblue;
-}
-
 #saveButton {
-    background-color: greenyellow;
+    background-color: #28a745;
+    color: white;
 }
 
 #backButton {
-    background-color: red;
+    background-color: #dc3545;
+    color: white;
 }
 
-html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
+#editButton {
+    background-color: #007bff;
+    color: white;
+}
+
+/* Sidebar layout (if needed) */
+.layout-container {
+    display: flex;
+    padding: 0 20px;
 }
 
 .sidebar {
-    margin-top: 200px;
-    width: 350px;
-    height: 100%;
-    position: fixed;
-    top: 0;
-    left: 0;
-    background-color: #e0e0e0;
+    width: 220px;
+    background-color: #f8f8f8;
     padding: 20px;
-    box-sizing: border-box;
+    border-right: 1px solid #ddd;
 }
 
-.content {
-    margin-left: 370px;
-    padding: 20px;
+.main {
+    flex: 1;
+    padding: 30px;
 }
 
-.category-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+/* Flash messages */
+.success {
+    color: green;
 }
-header {
-    z-index: 1000;
-    position: relative; /* 必须配合 z-index 使用 */
+
+.warning {
+    color: red;
+}
+
+.admin-label {
+    color: red;
+    font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+        height: auto;
+        padding: 1rem;
+    }
+
+    .header-right {
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .header-right form,
+    .header-right select {
+        width: 100%;
+    }
+
+    .layout-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .main {
+        padding: 20px 10px;
+    }
 }

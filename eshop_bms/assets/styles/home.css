@@ -1,0 +1,199 @@
+/* === Content block === */
+.content {
+    padding: 2rem;
+    background-color: #fff;
+    border-radius: 8px;
+    margin: 2rem auto;
+    max-width: 1000px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* === Sidebar === */
+.sidebar {
+    position: fixed;
+    top: 80px;
+    left: 20px;
+    background: #ffffff;
+    padding: 1rem 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    max-width: 220px;
+}
+
+.sidebar h3 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.sidebar li {
+    margin-bottom: 0.5rem;
+}
+
+.sidebar a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+.sidebar a:hover {
+    text-decoration: underline;
+}
+
+/* === Form and labels === */
+form label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: 600;
+}
+
+form input[type="text"],
+form input[type="number"],
+form input[type="file"],
+form textarea,
+form select {
+    width: 100%;
+    padding: 0.5rem;
+    margin-top: 0.3rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+textarea {
+    resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    margin-right: 0.5rem;
+}
+
+/* === Image upload sections === */
+.image_upload_section {
+    margin-top: 1rem;
+    border: 1px dashed #ccc;
+    padding: 1rem;
+    text-align: center;
+    border-radius: 6px;
+    position: relative;
+}
+
+.image_upload_section img {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 0.5rem;
+}
+
+.delete-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+/* === Currency section === */
+.currency-pair {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.currency-pair input[type="text"],
+.currency-pair input[type="number"] {
+    flex: 1;
+    min-width: 120px;
+}
+
+.delete-currency {
+    background-color: #dc3545;
+    border: none;
+    color: #fff;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.delete-currency:hover {
+    background-color: #c82333;
+}
+
+/* === Buttons === */
+.buttons {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+#saveButton {
+    background-color: #28a745;
+}
+
+#backButton {
+    background-color: #6c757d;
+}
+
+#saveButton, #backButton, #addCurrencyButton {
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+#addCurrencyButton {
+    background-color: #007bff;
+    margin-top: 1rem;
+}
+
+#addCurrencyButton:hover,
+#saveButton:hover,
+#backButton:hover {
+    opacity: 0.9;
+}
+
+/* === Modal style === */
+#codeModal, #modalOverlay {
+    transition: all 0.3s ease;
+}
+
+#codeModal h3 {
+    margin-top: 0;
+}
+
+#codeModal button {
+    margin-top: 1rem;
+    margin-right: 1rem;
+    padding: 0.4rem 0.8rem;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#codeModal button:hover {
+    background-color: #0056b3;
+}
+
+/* === Dashboard charts === */
+canvas {
+    width: 100% !important;
+    max-width: 900px;
+    height: auto !important;
+    margin-top: 1rem;
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    padding: 1rem;
+}

@@ -1,0 +1,66 @@
+/* === Dashboard Table 基础表格 === */
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.95rem;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.dashboard-table th {
+    background-color: #f7f7f7;
+    font-weight: 600;
+}
+
+.dashboard-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* === Batch Controls 区块样式 === */
+.batch-controls {
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #fdfdfd;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.batch-controls label {
+    font-weight: 600;
+}
+
+.batch-controls input[type="number"] {
+    width: 120px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.batch-controls button {
+    background-color: #007bff;
+    color: white;
+    padding: 0.55rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.batch-controls button:hover {
+    background-color: #0056b3;
+}

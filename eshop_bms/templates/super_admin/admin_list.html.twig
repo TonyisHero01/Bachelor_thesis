@@ -1,16 +1,11 @@
 {# templates/admin/employee_list.html.twig #}
 {% extends 'base.html.twig' %}
-
-{% block body %}
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Admin List</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/employee_list.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-</head>
-<body>
+{% endblock %}
+{% block body %}
+    
     <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
     <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
@@ -18,7 +13,7 @@
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Admin List</h1>
-    <button id="addAdmin" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Administrator</button>
+    <button id="addEmployee" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Administrator</button>
     <!--
     <form id="search">
         <label for="searchInput"></label>
@@ -52,6 +47,4 @@
     <script src="{{ asset('../assets/showPage.js') }}"></script>
     <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
     <script src="{{ asset('../assets/adminEdit.js') }}"></script>
-</body>
-</html>
 {% endblock %}

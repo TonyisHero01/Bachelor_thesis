@@ -6,15 +6,79 @@
 <style>
     .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
     .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
 </style>
 
-<div class="example-wrapper">
-    <div class="sidebar">
-        <ul>
-            <li><a href='{{ localized_path('app_order_tracking') }}' >Order Tracking</a></li>
-            <li><a href='{{ localized_path('app_return_requests') }}'>Return Requests</a></li>
-        </ul>
-    </div>
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/warehouse_index.css') }}">
+{% endblock %}
+
+
+
+<div class="sidebar">
+    <h3>Warehouse Menu</h3>
+    <ul>
+        <li><a href="{{ localized_path('app_order_management') }}">📦 Order Management</a></li>
+        <li><a href="{{ localized_path('app_return_requests') }}">🔄 Return Requests</a></li>
+    </ul>
+</div>
+<div class="content">
+<h3>🧾 Pending Orders</h3>
+<table class="dashboard-table">
+  <thead>
+    <tr>
+      <th>Order ID</th>
+      <th>Customer</th>
+      <th>Status</th>
+      <th>Created At</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for order in pendingOrders %}
+      <tr>
+        <td><a href="{{ path('order_detail', {'id': order.id}) }}">#{{ order.id }}</a></td>
+        <td>{{ order.customer.email }}</td>
+        <td>{{ order.paymentStatus }}</td>
+        <td>{{ order.orderCreatedAt|date('Y-m-d') }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan=\"4\">No pending orders 🎉</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+<h3>
+  <a href="{{ path('all_low_stock_products') }}" style="text-decoration: none; color: inherit;">
+    📉 Low Stock Products
+  </a>
+</h3>
+<table class="dashboard-table">
+  <thead>
+    <tr>
+      <th>Product Name</th>
+      <th>Current Stock</th>
+      <th>New Stock</th>
+      <th>Update</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for product in lowStockProducts %}
+      <tr>
+        <td>{{ product.name }}</td>
+        <td>{{ product.numberInStock }}</td>
+        <td>
+          <form method="post" action="{{ path('update_product_stock', { id: product.id }) }}" class="stock-form">
+            <input type="number" name="new_stock" value="{{ product.numberInStock }}" min="0" required>
+        </td>
+        <td>
+            <button type="submit">✔ Update</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">All products are sufficiently stocked 🎉</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
 </div>
 {% endblock %}

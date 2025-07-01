@@ -3,6 +3,7 @@
 {% block title %}Translate – Auto Generated{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 <form method="post" action="{{ path('translation_submit') }}">
     <input type="hidden" name="original_path" value="admin/employee_list.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
@@ -19,18 +20,18 @@
     </div>
     <div class="field-group">
         <label>Previous</label>
-        <input type="hidden" name="original__auto_previous_10" value="Previous">
-        <input type="text" name="field__auto_previous_10" placeholder="Previous">
+        <input type="hidden" name="original__auto_previous_14" value="Previous">
+        <input type="text" name="field__auto_previous_14" placeholder="Previous">
     </div>
     <div class="field-group">
         <label>Next</label>
-        <input type="hidden" name="original__auto_next_11" value="Next">
-        <input type="text" name="field__auto_next_11" placeholder="Next">
+        <input type="hidden" name="original__auto_next_15" value="Next">
+        <input type="text" name="field__auto_next_15" placeholder="Next">
     </div>
     <div class="field-group">
         <label>Page Count</label>
-        <input type="hidden" name="original__auto_page_count_12" value="Page Count">
-        <input type="text" name="field__auto_page_count_12" placeholder="Page Count">
+        <input type="hidden" name="original__auto_page_count_16" value="Page Count">
+        <input type="text" name="field__auto_page_count_16" placeholder="Page Count">
     </div>
 
     <button type="submit">Generate Translated File</button>

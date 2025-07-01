@@ -1,13 +1,16 @@
 {% extends 'base.html.twig' %}
-
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/order_detail.css') }}">
+{% endblock %}
 {% block body %}
 
 <h1>Order Details</h1>
-
-<p><strong>Order ID:</strong> {{ order.getId() }}</p>
-<p><strong>Customer:</strong> {{ order.getCustomer().getEmail() }}</p>
-<p><strong>Total Price:</strong> {{ order.getTotalPrice() }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
-<p><strong>Order Date:</strong> {{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</p>
+<div class="order-info">
+  <p><strong>Order ID:</strong> {{ order.getId() }}</p>
+  <p><strong>Customer:</strong> {{ order.getCustomer().getEmail() }}</p>
+  <p><strong>Total Price:</strong> {{ order.getTotalPrice() }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+  <p><strong>Order Date:</strong> {{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</p>
+</div>
 
 <h2>Order Items</h2>
 <table>
@@ -64,7 +67,7 @@
     <button id="markAsCompletedBtn">Mark as Completed</button>
 {% endif %}
 
-<a href="{{ localized_path('app_order_tracking') }}">Back to Orders</a>
+<a href="{{ localized_path('app_order_management') }}">Back to Orders</a>
 
 <script>
     document.getElementById("markAsCompletedBtn")?.addEventListener("click", function() {
@@ -78,7 +81,7 @@
         .then(data => {
             if (data.success) {
                 alert("Order marked as completed!");
-                window.location.href = "{{ localized_path('app_order_tracking') }}";
+                window.location.href = "{{ localized_path('app_order_management') }}";
             } else {
                 alert("Error: " + data.message);
             }

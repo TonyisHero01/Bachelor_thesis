@@ -3,6 +3,7 @@
 {% block title %}Translate – Auto Generated{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 <form method="post" action="{{ path('translation_submit') }}">
     <input type="hidden" name="original_path" value="bms_home/home.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
@@ -56,6 +57,41 @@
         <label>Your Roles</label>
         <input type="hidden" name="original__auto_your_roles_48" value="Your Roles">
         <input type="text" name="field__auto_your_roles_48" placeholder="Your Roles">
+    </div>
+    <div class="field-group">
+        <label>🔐 获取编程验证码</label>
+        <input type="hidden" name="original__auto___50" value="🔐 获取编程验证码">
+        <input type="text" name="field__auto___50" placeholder="🔐 获取编程验证码">
+    </div>
+    <div class="field-group">
+        <label>General Functions</label>
+        <input type="hidden" name="original__auto_general_functions_63" value="General Functions">
+        <input type="text" name="field__auto_general_functions_63" placeholder="General Functions">
+    </div>
+    <div class="field-group">
+        <label>Code Editor</label>
+        <input type="hidden" name="original__auto_code_editor_64" value="Code Editor">
+        <input type="text" name="field__auto_code_editor_64" placeholder="Code Editor">
+    </div>
+    <div class="field-group">
+        <label>当前验证码：</label>
+        <input type="hidden" name="original__auto___65" value="当前验证码：">
+        <input type="text" name="field__auto___65" placeholder="当前验证码：">
+    </div>
+    <div class="field-group">
+        <label>加载中...</label>
+        <input type="hidden" name="original__auto___66" value="加载中...">
+        <input type="text" name="field__auto___66" placeholder="加载中...">
+    </div>
+    <div class="field-group">
+        <label>复制</label>
+        <input type="hidden" name="original__auto___67" value="复制">
+        <input type="text" name="field__auto___67" placeholder="复制">
+    </div>
+    <div class="field-group">
+        <label>关闭</label>
+        <input type="hidden" name="original__auto___68" value="关闭">
+        <input type="text" name="field__auto___68" placeholder="关闭">
     </div>
 
     <button type="submit">Generate Translated File</button>

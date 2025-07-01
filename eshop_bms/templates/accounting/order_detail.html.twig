@@ -1,7 +1,9 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}Order Detail - #{{ order.id }}{% endblock %}
-
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/accounting_order_detail.css') }}">
+{% endblock %}
 {% block body %}
     <h1>{{ 'Order'|trans }} #{{ order.id }} {{ 'Detail'|trans }}</h1>
 

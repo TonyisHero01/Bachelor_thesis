@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Employee List</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('../assets/styles/employee_list.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
@@ -26,32 +26,61 @@
         <button type="button" id="searchButton" onclick="search_()" >Search</button>
     </form>
     -->
+    <div class="filter-container">
+        <label for="roleFilter">Filter by Role:</label>
+        <select id="roleFilter" onchange="filterByRole()">
+            <option value="">All</option>
+            <option value="ROLE_WAREHOUSEMAN">Warehouseman</option>
+            <option value="ROLE_WAREHOUSE_MANAGER">Warehouse Manager</option>
+            <option value="ROLE_TRANSLATOR">Translator</option>
+            <option value="ROLE_EVENT_MANAGER">Event Manager</option>
+            <option value="ROLE_ACCOUNTING">Accounting</option>
+            <option value="ROLE_ADMIN">Administrator</option>
+        </select>
+        <button onclick="resetRoleFilter()">Reset</button>
+    </div>
     <table>
-        {% set ids = '' %}
-        {% for employee in employees %}
-            {% set ids = ids ~ employee.id ~ ',' %}
-            <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('employee_edit', {'id': employee.id}) }}"> 
-            {#<tr>#}
-            {# <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('save_employee') }}"> #}
-                </div>
-                <td class="employee-name">{{ employee.name }}</td> 
-                <td class="employee-surname">{{ employee.surname }}</td>
-                <td class="editButton"><span class="edit-button" type="button" onclick="edit({{ employee.id }})"><i class="fa-regular fa-pen-to-square" style="color: green;"></i></span></td>
-                <td class="deleteButton"><span class="delete-button" type="button" onclick="delete_({{ employee.id }})"><i class="fas fa-trash" style="color: red;"></i></span></td>
+        <thead>
+            <tr>
+                <th>{{ translations.name ?? 'Name' }}</th>
+                <th>{{ translations.surname ?? 'Surname' }}</th>
+                <th>{{ translations.edit ?? 'Edit' }}</th>
+                <th>{{ translations.delete ?? 'Delete' }}</th>
             </tr>
-        {% endfor %}
-        <div id="ids" data-ids="{{ ids }}" style="display: none;"></div>
+        </thead>
+        <tbody>
+            {% set ids = '' %}
+            {% for employee in employees %}
+                {% set ids = ids ~ employee.id ~ ',' %}
+                <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('employee_edit', {'id': employee.id}) }}" data-roles="{{ employee.roles|join(',') }}">
+                    <td class="employee-name">{{ employee.name }}</td> 
+                    <td class="employee-surname">{{ employee.surname }}</td>
+                    <td class="editButton">
+                        <span class="edit-button" type="button" onclick="edit({{ employee.id }})">
+                            <i class="fa-regular fa-pen-to-square" style="color: green;"></i>
+                        </span>
+                    </td>
+                    <td class="deleteButton">
+                        <span class="delete-button" type="button" onclick="delete_({{ employee.id }})">
+                            <i class="fas fa-trash" style="color: red;"></i>
+                        </span>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
     </table>
+
+<div id="ids" data-ids="{{ ids }}" style="display: none;"></div>
     
     <div class="buttons">
         <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
         <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
         <span id="pageCount">Page Count </span>
     </div>
-    <script src="{{ asset('../assets/search.js') }}"></script>
     <script src="{{ asset('../assets/showPage.js') }}"></script>
     <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
     <script src="{{ asset('../assets/employeeEdit.js') }}"></script>
+    <script src="{{ asset('../assets/employeeFilter.js') }}"></script>
 </body>
 </html>
 {% endblock %}

@@ -28,11 +28,6 @@ function openColorAddForm() {
     cancelColorAddButton.removeAttribute("style");
 }
 
-function cancelCreateForm() {
-    popup.setAttribute("style", "display: none;");
-    categoryPopup.setAttribute("style", "display: none;");
-    cancelButton.setAttribute("style", "display: none;");
-}
 const nameElement = document.getElementById("name");
 const skuElement = document.getElementById("sku");
 const numberInStockElement = document.getElementById("number_in_stock");
@@ -148,9 +143,6 @@ function openModifyCategoryForm() {
     document.getElementById("myModifyCategoryPopup").style.display = "block";
 }
 
-function cancelModifyCategoryForm() {
-    document.getElementById("myModifyCategoryPopup").style.display = "none";
-}
 
 function enableModifyCategoryButton() {
     document.getElementById("modifyCategoryButton").disabled = document.getElementById("newCategoryName").value.trim() === "";
@@ -188,9 +180,6 @@ function openModifyColorForm() {
     document.getElementById("newColorHex").value = colorHex;
 }
 
-function cancelModifyColorForm() {
-    document.getElementById("myModifyColorPopup").style.display = "none";
-}
 
 function enableModifyColorButton() {
     let newColorName = document.getElementById("newColorName").value.trim();
@@ -238,11 +227,6 @@ function openSizeAddForm() {
     document.getElementById("mySizePopup").style.display = "block";
 }
 
-function cancelCreateForm() {
-    document.getElementById("mySizePopup").style.display = "none";
-    document.getElementById("myModifySizePopup").style.display = "none";
-}
-
 function enableSizeAddButton() {
     document.getElementById("addSizeButton").disabled = document.getElementById("sizeName").value.trim() === "";
 }
@@ -272,9 +256,6 @@ function openModifySizeForm() {
     document.getElementById("myModifySizePopup").style.display = "block";
 }
 
-function cancelModifySizeForm() {
-    document.getElementById("myModifySizePopup").style.display = "none";
-}
 
 function enableModifySizeButton() {
     document.getElementById("modifySizeButton").disabled = document.getElementById("newSizeName").value.trim() === "";
@@ -300,4 +281,59 @@ function modifySize() {
         }
     })
     .catch(error => console.error("Error:", error));
+}
+
+function cancelCreateProductForm() {
+    document.getElementById("myPopup").style.display = "none";
+    document.getElementById("cancelButton").style.display = "none";
+}
+
+function cancelCreateCategoryForm() {
+    document.getElementById("myCategoryPopup").style.display = "none";
+    document.getElementById("cancelCategoryAddButton").style.display = "none";
+}
+
+function cancelCreateColorForm() {
+    document.getElementById("myColorPopup").style.display = "none";
+    document.getElementById("cancelColorAddButton").style.display = "none";
+}
+
+function cancelModifyCategoryForm() {
+    document.getElementById("myModifyCategoryPopup").style.display = "none";
+}
+
+function cancelModifyColorForm() {
+    document.getElementById("myModifyColorPopup").style.display = "none";
+}
+
+function cancelCreateSizeForm() {
+    document.getElementById("mySizePopup").style.display = "none";
+}
+
+function cancelModifySizeForm() {
+    document.getElementById("myModifySizePopup").style.display = "none";
+}
+
+function applyFilters() {
+    const nameFilter = document.getElementById('filter-name').value.toLowerCase();
+    const categoryFilter = document.getElementById('filter-category').value.toLowerCase();
+    const quantityFilter = parseInt(document.getElementById('filter-quantity').value);
+    const priceFilter = parseFloat(document.getElementById('filter-price').value);
+
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const name = row.children[0].textContent.toLowerCase();
+        const category = row.children[1].textContent.toLowerCase();
+        const quantity = parseInt(row.children[2].textContent);
+        const price = parseFloat(row.children[4].textContent);
+
+        let show = true;
+
+        if (nameFilter && !name.includes(nameFilter)) show = false;
+        if (categoryFilter && category !== categoryFilter) show = false;
+        if (!isNaN(quantityFilter) && quantity < quantityFilter) show = false;
+        if (!isNaN(priceFilter) && price > priceFilter) show = false;
+
+        row.style.display = show ? '' : 'none';
+    });
 }

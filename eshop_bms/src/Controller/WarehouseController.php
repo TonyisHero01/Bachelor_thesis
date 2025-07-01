@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Order;
 use App\Entity\Currency;
 use App\Entity\ReturnRequest;
+use App\Entity\Product;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,19 +24,91 @@ class WarehouseController extends BaseController
      * @param AuthorizationCheckerInterface $authorizationChecker
      * @return Response
      */
-    public function index(AuthorizationCheckerInterface $authorizationChecker): Response
+    public function index(AuthorizationCheckerInterface $authorizationChecker, EntityManagerInterface $entityManager): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->Localized('employee/employee_not_logged.html.twig', []);
         }
+
+        // 查询未完成订单（例如状态为 "pending" 或 isCompleted = false）
+        $pendingOrders = $entityManager->getRepository(Order::class)->createQueryBuilder('o')
+            ->where('o.isCompleted = false')
+            ->orderBy('o.orderCreatedAt', 'DESC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
+        $lowStockProducts = $entityManager->getRepository(\App\Entity\Product::class)->createQueryBuilder('p')
+        ->where('p.number_in_stock < :threshold')
+        ->setParameter('threshold', 5)
+        ->orderBy('p.number_in_stock', 'ASC')
+        ->setMaxResults(10)
+        ->getQuery()
+        ->getResult();
+
         return $this->renderLocalized('warehouse/index.html.twig', [
             'controller_name' => 'WarehouseController',
+            'pendingOrders' => $pendingOrders,
+            'lowStockProducts' => $lowStockProducts,
         ]);
     }
 
-    #[Route('/warehouse/order_tracking', name: 'app_order_tracking')]
+    #[Route('/warehouse/low-stock', name: 'all_low_stock_products')]
+    public function showAllLowStockProducts(EntityManagerInterface $entityManager): Response
+    {
+        $lowStockProducts = $entityManager->getRepository(Product::class)->createQueryBuilder('p')
+            ->where('p.number_in_stock < :threshold')
+            ->setParameter('threshold', 5)
+            ->orderBy('p.number_in_stock', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $this->renderLocalized('warehouse/low_stock_all.html.twig', [
+            'lowStockProducts' => $lowStockProducts,
+        ]);
+    }
+
+    #[Route('/warehouse/update-stocks', name: 'batch_update_product_stock', methods: ['POST'])]
+    public function batchUpdateStock(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $ids = $request->request->all('selected_products');
+        $newStock = (int) $request->request->get('new_stock');
+
+        if (!$ids || $newStock < 0) {
+            $this->addFlash('error', 'Invalid selection or stock value.');
+            return $this->redirectToRoute('all_low_stock_products');
+        }
+
+        $products = $entityManager->getRepository(Product::class)->findBy(['id' => $ids]);
+
+        foreach ($products as $product) {
+            $product->setNumberInStock($newStock);
+        }
+
+        $entityManager->flush();
+
+        $this->addFlash('success', count($products) . ' products updated successfully.');
+        return $this->redirectToRoute('all_low_stock_products');
+    }
+
+    #[Route('/warehouse/product/{id}/update-stock', name: 'update_product_stock', methods: ['POST'])]
+    public function updateProductStock(int $id, Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $product = $entityManager->getRepository(Product::class)->find($id);
+        if (!$product) {
+            throw $this->createNotFoundException('Product not found.');
+        }
+
+        $newStock = (int) $request->request->get('new_stock');
+        $product->setNumberInStock($newStock);
+        $entityManager->flush();
+
+        return $this->redirectToRoute('app_warehouse');
+    }
+
+    #[Route('/warehouse/order_management', name: 'app_order_management')]
     /**
-     * Displays the order tracking page with a list of all orders and the default currency.
+     * Displays the order management page with a list of all orders and the default currency.
      *
      * @param EntityManagerInterface $entityManager
      * @param AuthorizationCheckerInterface $authorizationChecker
@@ -50,7 +123,7 @@ class WarehouseController extends BaseController
 
         $currency = $entityManager->getRepository(Currency::class)->findDefaultCurrency();
 
-        return $this->renderLocalized('warehouse/order_tracking.html.twig',[
+        return $this->renderLocalized('warehouse/order_management.html.twig',[
             'orders' => $orders,
             'currency' => $currency
         ]);

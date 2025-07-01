@@ -155,6 +155,7 @@ class TranslationAutoFormController extends AbstractController
     {% block title %}Translate Shop Info{% endblock %}
 
     {% block body %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
     <p style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404;">
         ⚠️ Please fill in the localized version of the website content for selected language.
     </p>
@@ -278,6 +279,7 @@ HTML;
 {% block title %}Translate – Auto Generated{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 <form method="post" action="{{ path('{$actionRoute}') }}">
     <input type="hidden" name="original_path" value="{$sourcePath}">
     <input type="hidden" name="target_language" value="{{ lang }}">

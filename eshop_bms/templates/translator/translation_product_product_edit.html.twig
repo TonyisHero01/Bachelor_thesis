@@ -3,6 +3,7 @@
 {% block title %}Translate – Auto Generated{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 <form method="post" action="{{ path('translation_submit') }}">
     <input type="hidden" name="original_path" value="product/product_edit.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
@@ -153,14 +154,19 @@
         <input type="text" name="field__auto_hide_product_46" placeholder="Hide Product">
     </div>
     <div class="field-group">
+        <label>Don&#039;t create new version</label>
+        <input type="hidden" name="original__auto_don_t_create_new_version_47" value="Don&#039;t create new version">
+        <input type="text" name="field__auto_don_t_create_new_version_47" placeholder="Don&#039;t create new version">
+    </div>
+    <div class="field-group">
         <label>Save</label>
-        <input type="hidden" name="original__auto_save_47" value="Save">
-        <input type="text" name="field__auto_save_47" placeholder="Save">
+        <input type="hidden" name="original__auto_save_48" value="Save">
+        <input type="text" name="field__auto_save_48" placeholder="Save">
     </div>
     <div class="field-group">
         <label>Back to products</label>
-        <input type="hidden" name="original__auto_back_to_products_48" value="Back to products">
-        <input type="text" name="field__auto_back_to_products_48" placeholder="Back to products">
+        <input type="hidden" name="original__auto_back_to_products_49" value="Back to products">
+        <input type="text" name="field__auto_back_to_products_49" placeholder="Back to products">
     </div>
 
     <button type="submit">Generate Translated File</button>

@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Twig\Environment;
 use Psr\Log\LoggerInterface;
+use App\Entity\AdminCode;
 
 class SuperAdminController extends BaseController
 {
@@ -145,5 +146,24 @@ class SuperAdminController extends BaseController
         }
         
     }
-    
+    // src/Controller/AdminCodeController.php
+
+    #[Route('/admin/get-code/api', name: 'admin_get_code_api')]
+    public function getCodeApi(EntityManagerInterface $em): JsonResponse
+    {
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
+
+        $plainCode = strtoupper(bin2hex(random_bytes(3))); // 如 F3A9BC
+
+        $hashedCode = password_hash($plainCode, PASSWORD_BCRYPT);
+
+        $adminCode = new AdminCode();
+        $adminCode->setCodeHash($hashedCode);
+        $adminCode->setCreatedAt(new \DateTimeImmutable());
+
+        $em->persist($adminCode);
+        $em->flush();
+
+        return new JsonResponse(['code' => $plainCode]); // 仅这次返回给管理员
+    }
 }

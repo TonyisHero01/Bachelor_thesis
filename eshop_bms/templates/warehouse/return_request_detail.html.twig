@@ -3,7 +3,7 @@
 {% block title %}Return Request Details{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+<link rel="stylesheet" href="{{ asset('../assets/styles/return_request_detail.css') }}">
 
 <div class="example-wrapper">
     <h2>Return Request #{{ request.getId() }}</h2>
@@ -74,70 +74,5 @@
         .catch(error => console.error("Error:", error));
     }
 </script>
-
-<style>
-    .styled-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 25px 0;
-        font-size: 18px;
-        text-align: left;
-    }
-
-    .styled-table th, .styled-table td {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-    }
-
-    .styled-table thead tr {
-        background-color: #009879;
-        color: #ffffff;
-        text-align: left;
-    }
-
-    .action-buttons {
-        margin-top: 20px;
-    }
-
-    .accept-btn, .reject-btn {
-        padding: 10px 15px;
-        color: white;
-        border: none;
-        cursor: pointer;
-        border-radius: 5px;
-        font-size: 16px;
-        margin-right: 10px;
-    }
-
-    .accept-btn {
-        background-color: #28a745;
-    }
-
-    .accept-btn:hover {
-        background-color: #218838;
-    }
-
-    .reject-btn {
-        background-color: #dc3545;
-    }
-
-    .reject-btn:hover {
-        background-color: #c82333;
-    }
-
-    .back-btn {
-        display: inline-block;
-        margin-top: 20px;
-        padding: 10px 15px;
-        background-color: #6c757d;
-        color: white;
-        text-decoration: none;
-        border-radius: 5px;
-    }
-
-    .back-btn:hover {
-        background-color: #5a6268;
-    }
-</style>
 
 {% endblock %}

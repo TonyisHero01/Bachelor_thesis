@@ -3,66 +3,82 @@
 {% block title %}{{ product.name }} - Product Details{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/styles/product-show.css') }}">
+<link rel="stylesheet" href="{{ asset('../assets/styles/product_edit.css') }}">
 
-<div class="product-container">
-    <!-- 图片展示 -->
-    <div class="product-images">
-        <div class="image-slider">
-            {% if product.imageUrls is not empty %}
-                {% for imageUrl in product.imageUrls %}
-                    <img src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" class="product-image" width="200" height="200">
-                {% endfor %}
-            {% else %}
-                <img src="{{ asset('images/no-image.png') }}" alt="No Image Available" class="product-image" width="200" height="200">
-            {% endif %}
-        </div>
-    </div>
+<div id="body">
+    <h1>Product Detail</h1>
 
-    <!-- 商品详情 -->
-    <div class="product-details">
-        <h1>{{ product.name }}</h1>
-        
-        <p class="sku"><strong>SKU:</strong> {{ product.sku }}</p>
-        <p class="category"><strong>Category:</strong> {{ product.category ?: 'No category' }}</p>
-        <p class="description"><strong>Description:</strong> {{ product.description ?: 'No description available' }}</p>
-        
-        <p class="size"><strong>Size:</strong> {{ product.size ?: 'N/A' }}</p>
-        <p class="dimensions">
-            <strong>Dimensions:</strong> 
-            {{ product.width ?: 'N/A' }} x {{ product.height ?: 'N/A' }} x {{ product.length ?: 'N/A' }} cm
-        </p>
-        <p class="weight"><strong>Weight:</strong> {{ product.weight ?: 'N/A' }} kg</p>
-        <p class="material"><strong>Material:</strong> {{ product.material ?: 'N/A' }}</p>
-        <p class="color"><strong>Color:</strong> {{ product.color ?: 'N/A' }}</p>
+    <form>
+        <label>Name</label>
+        <input type="text" value="{{ product.name }}" readonly><br>
 
-        <p class="stock">
-            <strong>Stock:</strong> 
-            {% if product.numberInStock > 0 %}
-                <span class="in-stock">{{ product.numberInStock }} Available</span>
-            {% else %}
-                <span class="out-of-stock">Out of Stock</span>
-            {% endif %}
-        </p>
+        <label>SKU</label>
+        <input type="text" value="{{ product.sku }}" readonly><br>
 
-        <p class="price">
-            <strong>Price:</strong> 
-            <span class="original-price">{{ product.price|number_format(2) }}</span> 
-            {{ product.currency.getName() }}
-        </p>
+        <label>Category</label>
+        <input type="text" value="{{ product.category ?: 'No category' }}" readonly><br>
+
+        <label>Description</label><br>
+        <textarea rows="10" readonly>{{ product.description ?: 'No description available' }}</textarea><br>
+
+        <label>Size</label>
+        <input type="text" value="{{ product.size ? product.size.name : 'N/A' }}" readonly><br>
+
+        <label>Dimensions (W x H x L)</label><br>
+        <input type="text" value="{{ product.width ?: 'N/A' }} x {{ product.height ?: 'N/A' }} x {{ product.length ?: 'N/A' }} cm" readonly><br>
+
+        <label>Weight</label>
+        <input type="text" value="{{ product.weight ?: 'N/A' }} kg" readonly><br>
+
+        <label>Material</label>
+        <input type="text" value="{{ product.material ?: 'N/A' }}" readonly><br>
+
+        <label>Color</label>
+        <input type="text" value="{{ product.color ?: 'N/A' }}" readonly><br>
+
+        <label>Stock</label>
+        <input type="text" value="{{ product.numberInStock > 0 ? product.numberInStock ~ ' Available' : 'Out of Stock' }}" readonly><br>
+
+        <label>Price</label>
+        <input type="text" value="{{ product.price|number_format(2) }} {{ product.currency.getName() }}" readonly><br>
 
         {% if product.discount < 100 %}
-            <p class="discount">
-                <strong>Discount:</strong> {{ product.discount }}%
-            </p>
-            <p class="final-price">
-                <strong>Final Price:</strong> 
-                {{ (product.price * product.discount / 100)|number_format(2) }} {{ product.currency.getName() }}
-            </p>
+            <label>Discount</label>
+            <input type="text" value="{{ product.discount }}%" readonly><br>
+
+            <label>Final Price</label>
+            <input type="text" value="{{ (product.price * product.discount / 100)|number_format(2) }} {{ product.currency.getName() }}" readonly><br>
         {% endif %}
 
-        <p class="tax-rate"><strong>Tax Rate:</strong> {{ product.taxRate }}%</p>
-    </div>
-</div>
+        <label>Tax Rate</label>
+        <input type="text" value="{{ product.taxRate }}%" readonly><br>
 
+        <label>Added Time</label>
+        <input type="text" value="{{ product.createdAt|date('Y-m-d H:i') }}" readonly><br>
+
+        <label>Images</label><br>
+        <div id="image_container">
+            {% if product.imageUrls is not empty %}
+                {% for imageUrl in product.imageUrls %}
+                    <div class="image_upload_section">
+                        <img src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" width="304" height="228"><br>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No images uploaded.</p>
+            {% endif %}
+        </div>
+
+        <label>Attributes</label><br>
+        {% if product.attributes is not empty %}
+            {% for key, value in product.attributes %}
+                <input type="text" value="{{ key }}: {{ value }}" readonly><br>
+            {% endfor %}
+        {% else %}
+            <p>No extra attributes.</p>
+        {% endif %}
+
+        <button type="button" onclick="window.history.back()">Back</button>
+    </form>
+</div>
 {% endblock %}

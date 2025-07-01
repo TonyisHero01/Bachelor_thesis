@@ -3,23 +3,42 @@
 {% block title %}Translation Languages{% endblock %}
 
 {% block body %}
-<h1>Languages</h1>
+<link rel="stylesheet" href="{{ asset('../assets/styles/translator.css') }}">
 
-<ul>
-  {% for lang in languages %}
-    <li>
-      <a href="{{ path('translator_center', {'lang': lang}) }}">{{ lang }}</a>
-      <form method="post" action="{{ localized_path('translator_delete_language', { lang: lang }) }}" style="display:inline;" onsubmit="return confirm('Delete language {{ lang }}?')">
-        <button type="submit">🗑️</button>
-      </form>
-    </li>
-  {% endfor %}
-</ul>
+<div class="translation-languages-container">
+    <h1>Translation Languages</h1>
 
-<form id="add-language-form" method="post" action="/translation/add-language">
-    <input type="text" name="language" id="language-input" placeholder="e.g. cz">
-    <button type="submit">Add</button>
-</form>
+    <div class="language-list">
+        {% if languages is empty %}
+            <p>No languages added yet.</p>
+        {% else %}
+            <ul>
+                {% for lang in languages %}
+                    <li class="language-item">
+                        <a href="{{ path('translator_center', {'lang': lang}) }}" class="lang-link">{{ lang|upper }}</a>
+
+                        <form method="post"
+                              action="{{ localized_path('translator_delete_language', { lang: lang }) }}"
+                              class="delete-form"
+                              onsubmit="return confirm('Delete language {{ lang|upper }}?')">
+                            <button type="submit" class="delete-btn" title="Delete">
+                                🗑️
+                            </button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div class="add-language-box">
+        <h2>Add New Language</h2>
+        <form id="add-language-form" method="post" action="/translation/add-language">
+            <input type="text" name="language" id="language-input" placeholder="e.g. cz" required>
+            <button type="submit">Add Language</button>
+        </form>
+    </div>
+</div>
 
 <script>
 document.getElementById('add-language-form').addEventListener('submit', function(e) {
@@ -37,9 +56,9 @@ document.getElementById('add-language-form').addEventListener('submit', function
     })
     .then(response => {
         if (response.ok) {
-            window.location.reload(); // 成功后刷新语言列表页
+            window.location.reload();
         } else {
-            alert("Failed to add language");
+            alert("Failed to add language.");
         }
     });
 });

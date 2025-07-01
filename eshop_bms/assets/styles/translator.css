@@ -1,0 +1,74 @@
+.translation-languages-container {
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+.language-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.language-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid #ccc;
+}
+
+.lang-link {
+    font-weight: bold;
+    text-decoration: none;
+    color: #2a4e8a;
+}
+
+.lang-link:hover {
+    text-decoration: underline;
+}
+
+.delete-form {
+    margin: 0;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    color: red;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.add-language-box {
+    text-align: center;
+    margin-top: 30px;
+}
+
+#language-input {
+    padding: 8px;
+    width: 150px;
+    border: 1px solid #aaa;
+    border-radius: 5px;
+    margin-right: 10px;
+}
+
+button[type="submit"] {
+    padding: 8px 14px;
+    background-color: #5793fc;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button[type="submit"]:hover {
+    background-color: #1f3a66;
+}

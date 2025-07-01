@@ -1,15 +1,10 @@
 {# templates/admin/admin_edit.html.twig #}
 {% extends 'base.html.twig' %}
-
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/admin_edit.css') }}">
+{% endblock %}
 {% block body %}
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Admin Edit</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
-</head>
-<body>
+
     <h1>Admin Edit</h1>
     <div id=adminId admin-id-data={{ admin.id }}></div>
     <div id="routeData" data-admin_list-route="{{ localized_path('show_All_admins') }}"></div>
@@ -71,6 +66,4 @@
         <script src="{{ asset('../assets/adminEdit.js') }}"></script>
     </form>
     </div>
-</body>
-</html>
 {% endblock %}

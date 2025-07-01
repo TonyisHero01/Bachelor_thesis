@@ -3,6 +3,7 @@
 {% block title %}Translate – Auto Generated{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 <form method="post" action="{{ path('translation_submit') }}">
     <input type="hidden" name="original_path" value="event_manager/discounts.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">

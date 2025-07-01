@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="original_path" value="warehouse/low_stock_all.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+    <div class="field-group">
+        <label>📦 All Low Stock Products</label>
+        <input type="hidden" name="original__auto__all_low_stock_products_1" value="📦 All Low Stock Products">
+        <input type="text" name="field__auto__all_low_stock_products_1" placeholder="📦 All Low Stock Products">
+    </div>
+    <div class="field-group">
+        <label>Select products and enter a new stock value to update in batch.</label>
+        <input type="hidden" name="original__auto_select_products_and_enter_a_ne_2" value="Select products and enter a new stock value to update in batch.">
+        <input type="text" name="field__auto_select_products_and_enter_a_ne_2" placeholder="Select products and enter a new stock value to update in batch.">
+    </div>
+    <div class="field-group">
+        <label>Select</label>
+        <input type="hidden" name="original__auto_select_3" value="Select">
+        <input type="text" name="field__auto_select_3" placeholder="Select">
+    </div>
+    <div class="field-group">
+        <label>Product Name</label>
+        <input type="hidden" name="original__auto_product_name_4" value="Product Name">
+        <input type="text" name="field__auto_product_name_4" placeholder="Product Name">
+    </div>
+    <div class="field-group">
+        <label>Current Stock</label>
+        <input type="hidden" name="original__auto_current_stock_5" value="Current Stock">
+        <input type="text" name="field__auto_current_stock_5" placeholder="Current Stock">
+    </div>
+    <div class="field-group">
+        <label>No low stock products 🎉</label>
+        <input type="hidden" name="original__auto_no_low_stock_products__10" value="No low stock products 🎉">
+        <input type="text" name="field__auto_no_low_stock_products__10" placeholder="No low stock products 🎉">
+    </div>
+    <div class="field-group">
+        <label>New stock for selected products:</label>
+        <input type="hidden" name="original__auto_new_stock_for_selected_product_12" value="New stock for selected products:">
+        <input type="text" name="field__auto_new_stock_for_selected_product_12" placeholder="New stock for selected products:">
+    </div>
+    <div class="field-group">
+        <label>✔ Update Selected</label>
+        <input type="hidden" name="original__auto__update_selected_13" value="✔ Update Selected">
+        <input type="text" name="field__auto__update_selected_13" placeholder="✔ Update Selected">
+    </div>
+    <div class="field-group">
+        <label>⬅ Back to Dashboard</label>
+        <input type="hidden" name="original__auto__back_to_dashboard_14" value="⬅ Back to Dashboard">
+        <input type="text" name="field__auto__back_to_dashboard_14" placeholder="⬅ Back to Dashboard">
+    </div>
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

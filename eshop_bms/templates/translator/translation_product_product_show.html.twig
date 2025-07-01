@@ -3,99 +3,120 @@
 {% block title %}Translate – Auto Generated{% endblock %}
 
 {% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 <form method="post" action="{{ path('translation_submit') }}">
     <input type="hidden" name="original_path" value="product/product_show.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
     <div class="field-group">
-        <label>kg</label>
-        <input type="hidden" name="original__auto_kg_1" value="kg">
-        <input type="text" name="field__auto_kg_1" placeholder="kg">
+        <label>Product Detail</label>
+        <input type="hidden" name="original__auto_product_detail_0" value="Product Detail">
+        <input type="text" name="field__auto_product_detail_0" placeholder="Product Detail">
     </div>
     <div class="field-group">
-        <label>Available</label>
-        <input type="hidden" name="original__auto_available_2" value="Available">
-        <input type="text" name="field__auto_available_2" placeholder="Available">
+        <label>Name</label>
+        <input type="hidden" name="original__auto_name_1" value="Name">
+        <input type="text" name="field__auto_name_1" placeholder="Name">
     </div>
     <div class="field-group">
-        <label>%</label>
-        <input type="hidden" name="original__auto___3" value="%">
-        <input type="text" name="field__auto___3" placeholder="%">
+        <label>SKU</label>
+        <input type="hidden" name="original__auto_sku_2" value="SKU">
+        <input type="text" name="field__auto_sku_2" placeholder="SKU">
     </div>
     <div class="field-group">
-        <label>%</label>
-        <input type="hidden" name="original__auto___5" value="%">
-        <input type="text" name="field__auto___5" placeholder="%">
+        <label>Category</label>
+        <input type="hidden" name="original__auto_category_3" value="Category">
+        <input type="text" name="field__auto_category_3" placeholder="Category">
     </div>
     <div class="field-group">
-        <label>SKU:</label>
-        <input type="hidden" name="original__auto_sku__10" value="SKU:">
-        <input type="text" name="field__auto_sku__10" placeholder="SKU:">
+        <label>Description</label>
+        <input type="hidden" name="original__auto_description_4" value="Description">
+        <input type="text" name="field__auto_description_4" placeholder="Description">
     </div>
     <div class="field-group">
-        <label>Category:</label>
-        <input type="hidden" name="original__auto_category__12" value="Category:">
-        <input type="text" name="field__auto_category__12" placeholder="Category:">
+        <label>Size</label>
+        <input type="hidden" name="original__auto_size_6" value="Size">
+        <input type="text" name="field__auto_size_6" placeholder="Size">
     </div>
     <div class="field-group">
-        <label>Description:</label>
-        <input type="hidden" name="original__auto_description__14" value="Description:">
-        <input type="text" name="field__auto_description__14" placeholder="Description:">
+        <label>Dimensions (W x H x L)</label>
+        <input type="hidden" name="original__auto_dimensions_w_x_h_x_l__7" value="Dimensions (W x H x L)">
+        <input type="text" name="field__auto_dimensions_w_x_h_x_l__7" placeholder="Dimensions (W x H x L)">
     </div>
     <div class="field-group">
-        <label>Size:</label>
-        <input type="hidden" name="original__auto_size__16" value="Size:">
-        <input type="text" name="field__auto_size__16" placeholder="Size:">
+        <label>Weight</label>
+        <input type="hidden" name="original__auto_weight_8" value="Weight">
+        <input type="text" name="field__auto_weight_8" placeholder="Weight">
     </div>
     <div class="field-group">
-        <label>Dimensions:</label>
-        <input type="hidden" name="original__auto_dimensions__18" value="Dimensions:">
-        <input type="text" name="field__auto_dimensions__18" placeholder="Dimensions:">
+        <label>Material</label>
+        <input type="hidden" name="original__auto_material_9" value="Material">
+        <input type="text" name="field__auto_material_9" placeholder="Material">
     </div>
     <div class="field-group">
-        <label>Weight:</label>
-        <input type="hidden" name="original__auto_weight__20" value="Weight:">
-        <input type="text" name="field__auto_weight__20" placeholder="Weight:">
+        <label>Color</label>
+        <input type="hidden" name="original__auto_color_10" value="Color">
+        <input type="text" name="field__auto_color_10" placeholder="Color">
     </div>
     <div class="field-group">
-        <label>Material:</label>
-        <input type="hidden" name="original__auto_material__22" value="Material:">
-        <input type="text" name="field__auto_material__22" placeholder="Material:">
+        <label>Stock</label>
+        <input type="hidden" name="original__auto_stock_11" value="Stock">
+        <input type="text" name="field__auto_stock_11" placeholder="Stock">
     </div>
     <div class="field-group">
-        <label>Color:</label>
-        <input type="hidden" name="original__auto_color__24" value="Color:">
-        <input type="text" name="field__auto_color__24" placeholder="Color:">
+        <label>0 ? product.numberInStock ~ &#039; Available&#039; : &#039;Out of Stock&#039; }}&quot; readonly&gt;</label>
+        <input type="hidden" name="original__auto_0_product_numberinstock__12" value="0 ? product.numberInStock ~ &#039; Available&#039; : &#039;Out of Stock&#039; }}&quot; readonly&gt;">
+        <input type="text" name="field__auto_0_product_numberinstock__12" placeholder="0 ? product.numberInStock ~ &#039; Available&#039; : &#039;Out of Stock&#039; }}&quot; readonly&gt;">
     </div>
     <div class="field-group">
-        <label>Stock:</label>
-        <input type="hidden" name="original__auto_stock__26" value="Stock:">
-        <input type="text" name="field__auto_stock__26" placeholder="Stock:">
+        <label>Price</label>
+        <input type="hidden" name="original__auto_price_13" value="Price">
+        <input type="text" name="field__auto_price_13" placeholder="Price">
     </div>
     <div class="field-group">
-        <label>Out of Stock</label>
-        <input type="hidden" name="original__auto_out_of_stock_30" value="Out of Stock">
-        <input type="text" name="field__auto_out_of_stock_30" placeholder="Out of Stock">
+        <label>Discount</label>
+        <input type="hidden" name="original__auto_discount_15" value="Discount">
+        <input type="text" name="field__auto_discount_15" placeholder="Discount">
     </div>
     <div class="field-group">
-        <label>Price:</label>
-        <input type="hidden" name="original__auto_price__31" value="Price:">
-        <input type="text" name="field__auto_price__31" placeholder="Price:">
+        <label>Final Price</label>
+        <input type="hidden" name="original__auto_final_price_16" value="Final Price">
+        <input type="text" name="field__auto_final_price_16" placeholder="Final Price">
     </div>
     <div class="field-group">
-        <label>Discount:</label>
-        <input type="hidden" name="original__auto_discount__34" value="Discount:">
-        <input type="text" name="field__auto_discount__34" placeholder="Discount:">
+        <label>Tax Rate</label>
+        <input type="hidden" name="original__auto_tax_rate_18" value="Tax Rate">
+        <input type="text" name="field__auto_tax_rate_18" placeholder="Tax Rate">
     </div>
     <div class="field-group">
-        <label>Final Price:</label>
-        <input type="hidden" name="original__auto_final_price__36" value="Final Price:">
-        <input type="text" name="field__auto_final_price__36" placeholder="Final Price:">
+        <label>Added Time</label>
+        <input type="hidden" name="original__auto_added_time_19" value="Added Time">
+        <input type="text" name="field__auto_added_time_19" placeholder="Added Time">
     </div>
     <div class="field-group">
-        <label>Tax Rate:</label>
-        <input type="hidden" name="original__auto_tax_rate__38" value="Tax Rate:">
-        <input type="text" name="field__auto_tax_rate__38" placeholder="Tax Rate:">
+        <label>Images</label>
+        <input type="hidden" name="original__auto_images_20" value="Images">
+        <input type="text" name="field__auto_images_20" placeholder="Images">
+    </div>
+    <div class="field-group">
+        <label>No images uploaded.</label>
+        <input type="hidden" name="original__auto_no_images_uploaded__23" value="No images uploaded.">
+        <input type="text" name="field__auto_no_images_uploaded__23" placeholder="No images uploaded.">
+    </div>
+    <div class="field-group">
+        <label>Attributes</label>
+        <input type="hidden" name="original__auto_attributes_24" value="Attributes">
+        <input type="text" name="field__auto_attributes_24" placeholder="Attributes">
+    </div>
+    <div class="field-group">
+        <label>No extra attributes.</label>
+        <input type="hidden" name="original__auto_no_extra_attributes__27" value="No extra attributes.">
+        <input type="text" name="field__auto_no_extra_attributes__27" placeholder="No extra attributes.">
+    </div>
+    <div class="field-group">
+        <label>Back</label>
+        <input type="hidden" name="original__auto_back_28" value="Back">
+        <input type="text" name="field__auto_back_28" placeholder="Back">
     </div>
 
     <button type="submit">Generate Translated File</button>

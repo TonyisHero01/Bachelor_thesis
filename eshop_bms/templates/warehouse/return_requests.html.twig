@@ -3,7 +3,7 @@
 {% block title %}Return Requests{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+<link rel="stylesheet" href="{{ asset('../assets/styles/return_requests.css') }}">
 
 <div class="example-wrapper">
     <h2>Return Requests</h2>
@@ -47,58 +47,5 @@
         </table>
     {% endif %}
 </div>
-
-<style>
-    .styled-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 25px 0;
-        font-size: 18px;
-        text-align: left;
-    }
-
-    .styled-table thead tr {
-        background-color: #009879;
-        color: #ffffff;
-        text-align: left;
-    }
-
-    .styled-table th, .styled-table td {
-        padding: 12px 15px;
-        border: 1px solid #ddd;
-    }
-
-    .styled-table tbody tr:nth-child(even) {
-        background-color: #f3f3f3;
-    }
-
-    /* ✅ 状态颜色 */
-    .status-pending {
-        background-color: white; /* 白色 */
-    }
-
-    .status-accepted {
-        background-color: #c3e6cb; /* 绿色 */
-    }
-
-    .status-rejected {
-        background-color: #f5c6cb; /* 红色 */
-    }
-
-    /* ✅ 详情按钮 */
-    .view-btn {
-        display: inline-block;
-        padding: 5px 10px;
-        background-color: #007bff;
-        color: white;
-        text-decoration: none;
-        border-radius: 5px;
-        font-size: 14px;
-    }
-
-    .view-btn:hover {
-        background-color: #0056b3;
-    }
-</style>
 
 {% endblock %}

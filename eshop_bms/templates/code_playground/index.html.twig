@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('../assets/styles/php_web_editor.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="layout-container">
+    <div class="sidebar">
+        <h3>Saved Files</h3>
+        <ul>
+            {% for file in files %}
+                <li style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                   {% if file in trustedFilenames %}background-color:rgb(101, 253, 136);{% endif %}">
+                    <a href="{{ path('code_playground', {file: file}) }}"
+                       title="{{ file }}"
+                       style="display: inline-block; max-width: 100%; text-decoration: none;
+                              {% if file == selectedFile %}font-weight:bold;{% endif %}">
+                        {{ file }}
+                    </a>
+                </li>
+            {% else %}
+                <li><em>No files yet</em></li>
+            {% endfor %}
+        </ul>
+        <form method="get" action="{{ path('code_playground') }}">
+            <button type="submit" style="margin-top: 10px;">➕ Add code</button>
+        </form>
+    </div>
+
+    <div class="main">
+        <h1>PHP Web Editor</h1>
+        <p class="warning">
+            ⚠️ Please enter the verification code provided by the super administrator before running, otherwise the code cannot be executed.
+        </p>
+
+        {% for msg in app.flashes('success') %}
+            <p class="success">{{ msg }}</p>
+        {% endfor %}
+
+        <form method="post">
+            <textarea name="code" placeholder="Please enter PHP code...">{{ code|e }}</textarea><br>
+
+            {% if not isTrusted %}
+                <label class="admin-label">Administrator verification code:</label>
+                <input type="text" name="admin_code" required style="width: 200px;"><br><br>
+            {% else %}
+                <input type="hidden" name="admin_code" value="TRUSTED">
+            {% endif %}
+
+            <input type="text" name="filename" value="{{ selectedFile ?: 'snippet_' ~ "now"|date('Ymd_His') ~ '.php' }}" style="width:300px;"><br><br>
+
+            <button type="submit" name="action" value="run">Run</button>
+            <button type="submit" name="action" value="save">Save</button>
+        </form>
+
+        {% if is_granted('ROLE_SUPER_ADMIN') and selectedFile and not isTrusted %}
+            <br><br>
+            <form method="post">
+                <input type="hidden" name="action" value="trust">
+                <input type="hidden" name="filename" value="{{ selectedFile }}">
+                <button type="submit">✅ Trust this code forever</button>
+            </form>
+        {% endif %}
+
+        {% if output %}
+            <h2>Output Result</h2>
+            <pre>{{ output }}</pre>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

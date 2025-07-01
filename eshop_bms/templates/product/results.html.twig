@@ -9,7 +9,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Products List</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('../assets/styles/product_list.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     {# 当前语言 hidden input，供 JS 读取 _locale #}
@@ -22,20 +23,35 @@
     <h1><a href="{{ localized_path('show_All_products') }}">Product List</a></h1>
 
     <table>
-        {% set productIds = '' %}
-        {% for product in products %}
-            {% set productIds = productIds ~ product.id ~ ',' %}
-            <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}">
-                <td class="product-name">{{ product.name }}</td> 
-                <td class="number-in-stock">{{ product.numberInStock }}</td> 
-                <td class="add-time">{{ product.createdAt|date('Y-m-d H:i') }}</td> 
-                <td class="price">{{ product.price }}</td> 
-                <td class="button"><span class="edit-button" type="button" onclick="edit({{ product.id }})">Edit</span></td>
-                <td class="button"><span class="delete-button" type="button" onclick="delete_({{ product.id }})">Delete</span></td>
+        <thead>
+            <tr id="product_list_header">
+                <th>Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Add Time</th>
+                <th>Price</th>
+                <th>Edit</th>
+                <th>Delete</th>
             </tr>
-        {% endfor %}
-        <div id="ids" data-ids="{{ productIds|trim(',') }}" style="display: none;"></div>
+        </thead>
+        <tbody>
+            {% set ids = '' %}
+            {% for product in products %}
+                {% set ids = ids ~ product.id ~ ',' %}
+                <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}"
+                    {% if product.hidden %}style="background-color: #f0f0f0;"{% endif %}>
+                    <td>{{ product.name }}</td> 
+                    <td>{{ product.category }}</td>
+                    <td>{{ product.numberInStock }}</td> 
+                    <td>{{ product.createdAt|date('Y-m-d H:i') }}</td> 
+                    <td>{{ product.price }}</td> 
+                    <td><span class="edit-button" onclick="edit({{ product.id }})"><i class="fa-regular fa-pen-to-square" style="color: green;"></i></span></td>
+                    <td><span class="delete-button" onclick="delete_({{ product.id }})"><i class="fas fa-trash" style="color: red;"></i></span></td>
+                </tr>
+            {% endfor %}
+        </tbody>
     </table>
+    <div id="ids" data-ids="{{ ids|trim(',') }}" style="display: none;"></div>
     
     <div class="buttons">
         <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
