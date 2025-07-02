@@ -10,3 +10,5 @@
 \i DB/order_items.sql
 \i DB/return_requests.sql
 \i DB/shopInfo.sql
+\i DB/admin_code.sql
+\i DB/trusted_code.sql
