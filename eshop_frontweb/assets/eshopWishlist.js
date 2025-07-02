@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-    // **Remove product from wishlist**
     document.querySelectorAll(".remove-from-wishlist").forEach(button => {
         button.addEventListener("click", function () {
             let productId = this.getAttribute("data-product-id");
@@ -19,7 +18,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // **Add to cart and update cart count**
     document.querySelectorAll(".add-to-cart").forEach(button => {
         button.addEventListener("click", function () {
             let productId = this.getAttribute("data-product-id");
@@ -34,7 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(data => {
                 if (data.success) {
                     alert("Added to cart successfully!");
-                    updateCartCount(data.cartCount); // ✅ Update cart icon count
+                    updateCartCount(data.cartCount);
                 } else {
                     alert("Failed to add: " + data.message);
                 }
@@ -44,18 +42,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-// **Update quantity**
 function updateQuantity(productId, change) {
     let quantityElement = document.getElementById("wishlist-quantity-" + productId);
     let currentQuantity = parseInt(quantityElement.textContent);
     let newQuantity = currentQuantity + change;
 
-    if (newQuantity < 1) return; // Don't allow less than 1
+    if (newQuantity < 1) return;
     
     quantityElement.textContent = newQuantity;
 }
 
-// **Update cart count**
 function updateCartCount(count) {
     const cartCountElements = document.querySelectorAll('.cart-count-bubble');
     cartCountElements.forEach(el => {

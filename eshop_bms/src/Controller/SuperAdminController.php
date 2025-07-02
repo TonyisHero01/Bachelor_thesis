@@ -146,14 +146,28 @@ class SuperAdminController extends BaseController
         }
         
     }
-    // src/Controller/AdminCodeController.php
 
     #[Route('/admin/get-code/api', name: 'admin_get_code_api')]
+    /**
+     * Generates a one-time admin code and returns it in plain text for secure operations.
+     *
+     * Access restricted to users with ROLE_SUPER_ADMIN.
+     * The generated code is:
+     * - 6 hexadecimal uppercase characters (e.g., "F3A9BC")
+     * - Hashed using BCRYPT before storage
+     * - Stored in the `admin_code` table with a timestamp
+     *
+     * The plain code is returned only once in the API response and never persisted in plain text.
+     * Can be used as a temporary verification token (e.g., for executing untrusted code).
+     *
+     * @param EntityManagerInterface $em Used to persist the generated AdminCode entity.
+     * @return JsonResponse Contains the one-time plaintext code for display to the super admin.
+     */
     public function getCodeApi(EntityManagerInterface $em): JsonResponse
     {
         $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
 
-        $plainCode = strtoupper(bin2hex(random_bytes(3))); // 如 F3A9BC
+        $plainCode = strtoupper(bin2hex(random_bytes(3)));
 
         $hashedCode = password_hash($plainCode, PASSWORD_BCRYPT);
 
@@ -164,6 +178,6 @@ class SuperAdminController extends BaseController
         $em->persist($adminCode);
         $em->flush();
 
-        return new JsonResponse(['code' => $plainCode]); // 仅这次返回给管理员
+        return new JsonResponse(['code' => $plainCode]);
     }
 }

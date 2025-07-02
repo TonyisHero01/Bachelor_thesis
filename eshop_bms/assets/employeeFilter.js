@@ -14,5 +14,5 @@ function filterByRole() {
 
 function resetRoleFilter() {
     document.getElementById('roleFilter').value = '';
-    filterByRole(); // Reset view
+    filterByRole();
 }

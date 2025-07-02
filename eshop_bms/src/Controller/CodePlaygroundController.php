@@ -24,6 +24,26 @@ class CodePlaygroundController extends AbstractController
     }
 
     #[Route('/code-playground', name: 'code_playground')]
+    /**
+     * Displays the code playground interface for writing, saving, trusting, and running PHP snippets.
+     *
+     * Features:
+     * - Load and edit saved PHP snippets from the local filesystem.
+     * - Save snippets as files under /var/code_snippets.
+     * - Execute code securely with admin code verification (for untrusted files).
+     * - Trust a file to allow future executions without requiring a code.
+     * - Only users with ROLE_SUPER_ADMIN can mark a file as trusted.
+     *
+     * Behavior depends on the `action` POST field:
+     * - `run`: Executes the current code. Requires valid admin code if file is not trusted.
+     * - `save`: Saves current code to file.
+     * - `trust`: Marks a file as trusted (ROLE_SUPER_ADMIN only).
+     *
+     * @param Request $request
+     * @param EntityManagerInterface $em Used for persisting trusted files and retrieving admin codes.
+     * @param TrustedCodeRepository $trustedRepo Repository for managing trusted files.
+     * @return Response Renders the Twig page with code editor, file list, and execution result.
+     */
     public function index(
         Request $request,
         EntityManagerInterface $em,
@@ -33,15 +53,12 @@ class CodePlaygroundController extends AbstractController
         $code = '';
         $selectedFile = $request->query->get('file', '');
 
-        // 加载指定文件
         if ($selectedFile && file_exists($this->codeDir . '/' . $selectedFile)) {
             $code = file_get_contents($this->codeDir . '/' . $selectedFile);
         }
 
-        // 是否信任此文件
         $isTrusted = $selectedFile && $trustedRepo->findOneBy(['filename' => $selectedFile]);
 
-        // 执行代码
         if ($request->isMethod('POST') && $request->request->get('action') === 'run') {
             $code = $request->request->get('code', '');
             $adminCodeInput = $request->request->get('admin_code', '');
@@ -56,7 +73,7 @@ class CodePlaygroundController extends AbstractController
                 ->getOneOrNullResult();
         
             if (!$isTrusted && (!$latestValidCode || !password_verify($adminCodeInput, $latestValidCode->getCodeHash()))) {
-                $output = '❌ 无效或过期的验证码，运行失败。';
+                $output = '❌ Invalid or expired verification code, the operation fails.';
             } else {
                 ob_start();
                 try {
@@ -68,16 +85,14 @@ class CodePlaygroundController extends AbstractController
             }
         }
 
-        // 保存代码
         if ($request->isMethod('POST') && $request->request->get('action') === 'save') {
             $code = $request->request->get('code', '');
             $filename = basename($request->request->get('filename', 'snippet_' . time() . '.php'));
             file_put_contents($this->codeDir . '/' . $filename, $code);
-            $this->addFlash('success', "已保存为 $filename");
+            $this->addFlash('success', "Saved As $filename");
             return $this->redirectToRoute('code_playground', ['file' => $filename]);
         }
 
-        // 信任代码
         if ($request->isMethod('POST') && $request->request->get('action') === 'trust') {
             if (!$this->isGranted('ROLE_SUPER_ADMIN')) {
                 throw $this->createAccessDeniedException();
@@ -91,13 +106,12 @@ class CodePlaygroundController extends AbstractController
                 $trusted->setCreatedBy($this->getUser()?->getUserIdentifier() ?? 'unknown');
                 $em->persist($trusted);
                 $em->flush();
-                $this->addFlash('success', "文件 $filename 已被永久信任。");
+                $this->addFlash('success', "The file $filename has been permanently trusted.");
             }
 
             return $this->redirectToRoute('code_playground', ['file' => $filename]);
         }
 
-        // 获取所有保存的文件列表
         $files = array_filter(scandir($this->codeDir), fn($f) => pathinfo($f, PATHINFO_EXTENSION) === 'php');
         $trustedFilenames = array_map(
             fn($tc) => $tc->getFilename(),

@@ -23,7 +23,7 @@ function submitReturnRequest(orderId) {
         name: document.getElementById("name").value,
         reason: reasonSelect.value,
         message: document.getElementById("returnMessage").value,
-        items: selectedItems // 这里的 SKU 已经附加了 x数量
+        items: selectedItems
     };
 
     fetch(`/order/${orderId}/submit-return`, {

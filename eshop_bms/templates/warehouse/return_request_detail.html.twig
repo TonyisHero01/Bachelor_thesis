@@ -51,28 +51,6 @@
     <a href="{{ localized_path('app_return_requests') }}" class="back-btn">Back to Return Requests</a>
 </div>
 
-<script>
-    function processReturnRequest(requestId, status) {
-        if (!confirm(`Are you sure you want to ${status} this return request?`)) {
-            return;
-        }
-
-        fetch(`/warehouse/return-request/${requestId}/process`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: status })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(`Return request has been ${status}.`);
-                window.location.reload();
-            } else {
-                alert("Error: " + data.message);
-            }
-        })
-        .catch(error => console.error("Error:", error));
-    }
-</script>
+<script src="{{ asset('../assets/returnRequestDetail.js') }}"></script>
 
 {% endblock %}

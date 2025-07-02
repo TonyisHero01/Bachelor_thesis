@@ -1,4 +1,3 @@
-/* === Admin Edit Page === */
 h1 {
     font-size: 2rem;
     margin-bottom: 1.5rem;
@@ -6,7 +5,6 @@ h1 {
     color: #222;
 }
 
-/* 表单容器 */
 #body {
     background-color: #fff;
     padding: 2rem;
@@ -16,7 +14,6 @@ h1 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* 表单标签与输入框 */
 form label {
     display: block;
     font-weight: 600;
@@ -41,7 +38,6 @@ form input:focus {
     outline: none;
 }
 
-/* Fieldset：角色勾选区域 */
 fieldset {
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -67,7 +63,6 @@ input[type="checkbox"] {
     transform: scale(1.2);
 }
 
-/* 按钮区域 */
 .buttons {
     margin-top: 2rem;
     display: flex;
@@ -102,7 +97,6 @@ input[type="checkbox"] {
     background-color: #5a6268;
 }
 
-/* 响应式布局 */
 @media (max-width: 768px) {
     #body {
         padding: 1.5rem;

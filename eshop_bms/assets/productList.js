@@ -315,7 +315,6 @@ function cancelModifySizeForm() {
 }
 
 function applyFilters() {
-    const nameFilter = document.getElementById('filter-name').value.toLowerCase();
     const categoryFilter = document.getElementById('filter-category').value.toLowerCase();
     const quantityFilter = parseInt(document.getElementById('filter-quantity').value);
     const priceFilter = parseFloat(document.getElementById('filter-price').value);
@@ -329,11 +328,31 @@ function applyFilters() {
 
         let show = true;
 
-        if (nameFilter && !name.includes(nameFilter)) show = false;
         if (categoryFilter && category !== categoryFilter) show = false;
         if (!isNaN(quantityFilter) && quantity < quantityFilter) show = false;
         if (!isNaN(priceFilter) && price > priceFilter) show = false;
 
         row.style.display = show ? '' : 'none';
+    });
+}
+
+function resetFilters() {
+    const categorySelect = document.getElementById('filter-category');
+    const quantityInput = document.getElementById('filter-quantity');
+    const priceInput = document.getElementById('filter-price');
+
+    if (categorySelect) categorySelect.value = '';
+    if (quantityInput) quantityInput.value = '';
+    if (priceInput) priceInput.value = '';
+
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.style.display = '';
+
+        if (row.dataset.hidden === 'true') {
+            row.classList.add('hidden-product');
+        } else {
+            row.classList.remove('hidden-product');
+        }
     });
 }

@@ -15,7 +15,7 @@
     <body>
         <header>
             <div class="header-left">
-                <h2><a href="{{ path('home') }}" style="text-decoration: none; color: inherit;">{{ shopName }}</a></h2>
+                <h2 class="logo"><a href="{{ path('home') }}" style="text-decoration: none; color: inherit;">{{ shopName }}</a></h2>
             </div>
             <div class="header-right">
                 {% set route = app.request.attributes.get('_route') %}

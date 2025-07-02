@@ -14,13 +14,6 @@
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Admin List</h1>
     <button id="addEmployee" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Administrator</button>
-    <!--
-    <form id="search">
-        <label for="searchInput"></label>
-        <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search employee">
-        <button type="button" id="searchButton" onclick="search_()" >Search</button>
-    </form>
-    -->
     <table>
         {% set ids = '' %}
         {% for employee in employees %}

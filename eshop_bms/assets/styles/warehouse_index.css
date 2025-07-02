@@ -49,7 +49,7 @@ body {
 }
 
 .example-wrapper {
-    margin-left: 220px; /* 留出 sidebar 的空间 */
+    margin-left: 220px;
     padding: 2em;
 }
 

@@ -1,4 +1,3 @@
-/* === Content block === */
 .content {
     padding: 2rem;
     background-color: #fff;
@@ -8,7 +7,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-/* === Sidebar === */
 .sidebar {
     position: fixed;
     top: 80px;
@@ -44,7 +42,6 @@
     text-decoration: underline;
 }
 
-/* === Form and labels === */
 form label {
     display: block;
     margin-top: 1rem;
@@ -72,7 +69,6 @@ input[type="radio"] {
     margin-right: 0.5rem;
 }
 
-/* === Image upload sections === */
 .image_upload_section {
     margin-top: 1rem;
     border: 1px dashed #ccc;
@@ -98,7 +94,6 @@ input[type="radio"] {
     cursor: pointer;
 }
 
-/* === Currency section === */
 .currency-pair {
     display: flex;
     align-items: center;
@@ -126,7 +121,6 @@ input[type="radio"] {
     background-color: #c82333;
 }
 
-/* === Buttons === */
 .buttons {
     margin-top: 2rem;
     display: flex;
@@ -162,7 +156,6 @@ input[type="radio"] {
     opacity: 0.9;
 }
 
-/* === Modal style === */
 #codeModal, #modalOverlay {
     transition: all 0.3s ease;
 }
@@ -186,7 +179,6 @@ input[type="radio"] {
     background-color: #0056b3;
 }
 
-/* === Dashboard charts === */
 canvas {
     width: 100% !important;
     max-width: 900px;

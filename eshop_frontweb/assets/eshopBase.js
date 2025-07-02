@@ -1,4 +1,3 @@
-// 全局函数
 function backToHomePage() {
     window.location.href = '/homepage';
 }
@@ -47,39 +46,26 @@ function applyFilters() {
     window.location.href = newUrl;
 }
 
-// 主函数：所有初始化代码
 document.addEventListener("DOMContentLoaded", function() {
-    console.log('DOM Content Loaded - Starting initialization');
-
-    // 1. 移动端菜单处理
     const menuToggle = document.querySelector('.menu-toggle');
     const mobileCategories = document.querySelector('.mobile-categories');
     const overlay = document.querySelector('.overlay');
     const closeCategories = document.querySelector('.close-categories');
     const body = document.body;
 
-    console.log('Menu Toggle:', menuToggle);
-    console.log('Mobile Categories:', mobileCategories);
-    console.log('Overlay:', overlay);
-    console.log('Close Categories:', closeCategories);
-
     function toggleCategories() {
-        console.log('Toggle Categories called');
         if (mobileCategories && overlay) {
             mobileCategories.classList.toggle('active');
             overlay.classList.toggle('active');
             body.style.overflow = mobileCategories.classList.contains('active') ? 'hidden' : '';
-            // 控制汉堡菜单按钮的显示/隐藏
             if (menuToggle) {
                 menuToggle.style.display = mobileCategories.classList.contains('active') ? 'none' : 'block';
             }
-            console.log('Categories toggled:', mobileCategories.classList.contains('active'));
         }
     }
 
     if (menuToggle) {
         menuToggle.addEventListener('click', function(e) {
-            console.log('Menu Toggle clicked');
             e.preventDefault();
             e.stopPropagation();
             toggleCategories();
@@ -88,7 +74,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (closeCategories) {
         closeCategories.addEventListener('click', function(e) {
-            console.log('Close Categories clicked');
             e.preventDefault();
             e.stopPropagation();
             toggleCategories();
@@ -97,14 +82,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (overlay) {
         overlay.addEventListener('click', function(e) {
-            console.log('Overlay clicked');
             e.preventDefault();
             e.stopPropagation();
             toggleCategories();
         });
     }
 
-    // 2. 购物车数量更新
     fetch('/cart/count')
         .then(response => response.json())
         .then(data => {
@@ -112,7 +95,6 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .catch(error => console.error('Error fetching cart count:', error));
 
-    // 3. 搜索功能
     const searchButton = document.querySelector('.header_right .search__button');
     const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
     const closeSearchButton = document.querySelector('.close-search');
@@ -121,15 +103,12 @@ document.addEventListener("DOMContentLoaded", function() {
     const mobileSearchResults = document.getElementById('mobile-search-results');
     const desktopSearchInput = document.querySelector('.header_right .search__input');
 
-    // 打开搜索
     searchButton.addEventListener('click', function(e) {
         e.preventDefault();
         if (window.innerWidth <= 768) {
-            // 移动端：显示搜索弹窗
             mobileSearchOverlay.style.display = 'block';
             mobileSearchInput.focus();
         } else {
-            // 电脑端：直接搜索
             const query = desktopSearchInput.value.trim();
             if (query) {
                 window.location.href = `/search/results?query=${encodeURIComponent(query)}`;
@@ -139,14 +118,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 关闭搜索弹窗
     closeSearchButton.addEventListener('click', function() {
         mobileSearchOverlay.style.display = 'none';
         mobileSearchInput.value = '';
         mobileSearchResults.innerHTML = '';
     });
 
-    // 点击遮罩层关闭弹窗
     mobileSearchOverlay.addEventListener('click', function(e) {
         if (e.target === mobileSearchOverlay) {
             mobileSearchOverlay.style.display = 'none';
@@ -155,11 +132,10 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 执行搜索
     function performSearch() {
         const searchTerm = mobileSearchInput.value.trim();
         if (!searchTerm) {
-            mobileSearchResults.innerHTML = '<p class="no-results">请输入搜索关键词</p>';
+            mobileSearchResults.innerHTML = '<p class="no-results">Please enter your search keywords</p>';
             return;
         }
 
@@ -176,19 +152,17 @@ document.addEventListener("DOMContentLoaded", function() {
             if (data.results && data.results.length > 0) {
                 window.location.href = `/search/results?query=${encodeURIComponent(searchTerm)}`;
             } else {
-                mobileSearchResults.innerHTML = '<p class="no-results">未找到相关产品</p>';
+                mobileSearchResults.innerHTML = '<p class="no-results">No related products found</p>';
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            mobileSearchResults.innerHTML = '<p class="error">搜索出错，请稍后重试</p>';
+            mobileSearchResults.innerHTML = '<p class="error">Search error, please try again later</p>';
         });
     }
 
-    // 点击移动端搜索按钮执行搜索
     mobileSearchButton.addEventListener('click', performSearch);
 
-    // 移动端回车搜索
     mobileSearchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -196,7 +170,6 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 电脑端回车搜索
     desktopSearchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && window.innerWidth > 768) {
             e.preventDefault();
@@ -207,7 +180,6 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 4. 颜色选择器处理
     document.querySelectorAll(".checkmark").forEach((checkmark) => {
         const bgColor = window.getComputedStyle(checkmark).backgroundColor;
         if (bgColor) {
@@ -221,15 +193,17 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // 5. 价格滑块处理
     const priceSelectedMin = document.getElementById("price-selected-min");
     const priceSelectedMax = document.getElementById("price-selected-max");
     const priceSlider = document.getElementById("price-slider");
 
     if (priceSlider && priceSelectedMin && priceSelectedMax) {
+        const productPrices = Array.from(document.querySelectorAll(".product-item"))
+            .map(p => parseFloat(p.dataset.price))
+            .filter(p => !isNaN(p));
         const minPrice = 0;
-        const maxPrice = 1000;
-
+        const maxPrice = Math.max(...productPrices, 1000);
+    
         noUiSlider.create(priceSlider, {
             start: [minPrice, maxPrice],
             connect: true,
@@ -244,14 +218,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 from: value => Number(value)
             }
         });
-
+    
         priceSlider.noUiSlider.on("update", function(values) {
             priceSelectedMin.textContent = Math.round(values[0]);
             priceSelectedMax.textContent = Math.round(values[1]);
         });
     }
 
-    // 6. 过滤器按钮处理
     const resetFilters = document.getElementById("reset-filters");
     const applyFiltersBtn = document.getElementById("apply-filters");
 
@@ -262,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function() {
             });
 
             if (typeof priceSlider !== "undefined") {
-                priceSlider.set([0, 1000]);
+                priceSlider.noUiSlider.set([0, 1000]);
             }
 
             document.getElementById("price-selected-min").textContent = "0";
@@ -279,8 +252,6 @@ document.addEventListener("DOMContentLoaded", function() {
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener("click", function() {
     const selectedColors = Array.from(document.querySelectorAll('input[name="color"]:checked')).map(el => el.value);
-    console.log("🟡 selectedColors: ", selectedColors);
-    console.log("🟢 productColor: ", productColor);
     const selectedSizes = Array.from(document.querySelectorAll('input[name="size"]:checked')).map(el => el.value);
     const minPrice = parseFloat(document.getElementById("price-selected-min").textContent);
     const maxPrice = parseFloat(document.getElementById("price-selected-max").textContent);
@@ -298,10 +269,6 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
     }
-
-    
-
-    // 7. 窗口大小改变处理
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768) {
             if (mobileCategories && overlay) {
@@ -317,10 +284,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.footer-links a.static-link').forEach(function (link) {
         link.addEventListener('click', function (e) {
             e.preventDefault();
-            const label = link.innerText.trim(); // ❗️去掉 encodeURIComponent
+            const label = link.innerText.trim();
             const url = new URL(link.href, window.location.origin);
             url.searchParams.set('title', label);
-            window.location.href = url.toString(); // 自动编码 title
+            window.location.href = url.toString();
         });
     });
 });

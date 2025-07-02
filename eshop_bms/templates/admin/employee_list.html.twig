@@ -19,13 +19,6 @@
     {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
     <h1>Employee List</h1>
     <button id="addEmployee" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Employee</button>
-    <!--
-    <form id="search">
-        <label for="searchInput"></label>
-        <input type="text" id="searchInput" name="searchInput" class= "searchInput" placeholder="Search employee">
-        <button type="button" id="searchButton" onclick="search_()" >Search</button>
-    </form>
-    -->
     <div class="filter-container">
         <label for="roleFilter">Filter by Role:</label>
         <select id="roleFilter" onchange="filterByRole()">

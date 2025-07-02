@@ -71,8 +71,8 @@
             {% set ids = '' %}
             {% for product in products %}
                 {% set ids = ids ~ product.id ~ ',' %}
-                <tr id="{{ product.id }}" data-edit-route="{{ localized_path('product_edit', {'id': product.id}) }}"
-                    {% if product.hidden %}style="background-color: #f0f0f0;"{% endif %}>
+                <tr id="{{ product.id }}" data-edit-route="..."
+    class="{% if product.hidden %}hidden-product{% endif %}" data-hidden="{{ product.hidden ? 'true' : 'false' }}">
                     <td>{{ product.name }}</td> 
                     <td>{{ product.category }}</td>
                     <td>{{ product.numberInStock }}</td> 
@@ -148,15 +148,12 @@
     
     <div class="popuptext" id="myColorPopup" style="display: none;">
         <form action="#" oninput="enableColorAddButton()">
-            <!-- 颜色名称输入框 -->
             <label for="colorName">Color Name</label>
             <input type="text" id="colorName" name="colorName" required maxlength="50"><br>
 
-            <!-- 颜色代码选择器 -->
             <label for="colorHex">Color Hex</label>
             <input type="color" id="colorHex" name="colorHex" value="#FFFFFF" required><br>
 
-            <!-- 创建按钮 -->
             <button type="button" id="addColorButton" onclick="createColor()" disabled>Create</button>
             <button id="cancelColorAddButton" type="button" onclick="cancelCreateColorForm()" style="display: none;">Cancel</button>
         </form>
@@ -192,7 +189,6 @@
         </form>
     </div>
 
-    <!-- 修改 Size 的弹窗 -->
     <div class="popuptext" id="myModifySizePopup" style="display: none;">
         <form action="#" oninput="enableModifySizeButton()">
             <label for="modifySizeSelect">Select Size</label>

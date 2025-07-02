@@ -1,5 +1,4 @@
 
-/* === Product List Table === */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -18,7 +17,6 @@ table td, table th {
     font-weight: bold;
 }
 
-/* === Search Form === */
 form#search {
     display: flex;
     justify-content: start;
@@ -48,7 +46,6 @@ form#search {
     background-color: #0056b3;
 }
 
-/* === Buttons & Controls === */
 .buttons {
     margin-top: 2rem;
     display: flex;
@@ -71,7 +68,6 @@ button:hover {
     background-color: #218838;
 }
 
-/* === Category, Color, Size Buttons === */
 .category-buttons, .color-buttons, .size-buttons {
     display: flex;
     gap: 0.75rem;
@@ -79,7 +75,6 @@ button:hover {
     justify-content: center;
 }
 
-/* === Popup Styling === */
 .popuptext {
     position: fixed;
     top: 50%;
@@ -104,7 +99,6 @@ button:hover {
     border-radius: 4px;
 }
 
-/* === Loading Spinner === */
 #loadingSpinner {
     display: none;
     position: fixed;
@@ -114,14 +108,12 @@ button:hover {
     z-index: 9999;
 }
 
-/* === Icons === */
 .edit-button i,
 .delete-button i {
     font-size: 1.2em;
     cursor: pointer;
 }
 
-/* === Highlight Hidden Products === */
 tr[style*="background-color: #f0f0f0"] {
     opacity: 0.6;
 }
@@ -146,4 +138,9 @@ tr[style*="background-color: #f0f0f0"] {
 
 .filter-row button:hover {
     background-color: #0056b3;
+}
+
+.hidden-product {
+    background-color: rgba(240, 240, 240, 0.5);
+    opacity: 0.6;
 }

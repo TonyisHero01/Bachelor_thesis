@@ -22,14 +22,13 @@ function increaseQuantity() {
 }
 
 function decreaseQuantity() {
-    if (quantity > 1) { // 避免数量小于 1
+    if (quantity > 1) {
         quantity--;
         document.getElementById("quantity-value").innerText = quantity;
     }
 }
 
 async function toggleWishlist(button) {
-    console.log("Wishlist button clicked!");
     
     const productId = document.getElementById("product_id").getAttribute("product-id");
     const icon = button.querySelector(".wishlist-icon");
@@ -42,16 +41,11 @@ async function toggleWishlist(button) {
         });
 
         let data = await response.json();
-        console.log("Response data:", data);
-
         if (data.status === "success") {
-            // 关键：检查返回的 wishlist 里是否还有 productId
             if (data.wishlist.includes(parseInt(productId))) {
-                console.log("Adding wishlist-active class");
-                icon.classList.add("wishlist-active"); // 被添加到 wishlist
+                icon.classList.add("wishlist-active");
             } else {
-                console.log("Removing wishlist-active class");
-                icon.classList.remove("wishlist-active"); // 被移除
+                icon.classList.remove("wishlist-active");
             }
         } else {
             alert("Failed to update wishlist: " + data.message);
@@ -61,7 +55,6 @@ async function toggleWishlist(button) {
     }
 }
 
-// **改进 `toggleWishlistAlert`**
 function toggleWishlistAlert() {
     alert('You are not logged in. Please log in to add items to your wishlist.');
 }
@@ -90,7 +83,6 @@ function addToCart() {
     .catch(error => console.error('Error:', error));
 }
 
-// 更新购物车数量
 function updateCartCount(count) {
     const cartCountElements = document.querySelectorAll('.cart-count-bubble');
     cartCountElements.forEach(el => {

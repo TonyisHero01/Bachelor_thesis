@@ -30,7 +30,6 @@ class WarehouseController extends BaseController
             return $this->Localized('employee/employee_not_logged.html.twig', []);
         }
 
-        // 查询未完成订单（例如状态为 "pending" 或 isCompleted = false）
         $pendingOrders = $entityManager->getRepository(Order::class)->createQueryBuilder('o')
             ->where('o.isCompleted = false')
             ->orderBy('o.orderCreatedAt', 'DESC')

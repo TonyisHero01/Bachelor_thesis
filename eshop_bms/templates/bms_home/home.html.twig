@@ -204,38 +204,18 @@
         <li style="margin-left: 40px;"><a href='{{ localized_path('code_playground') }}'>Code Editor</a></li>
     </ul>
   </div>
-  <!-- ✅ 编程验证码模态窗口 -->
   <div id="codeModal" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%);
       background:white; border:1px solid #ccc; padding:20px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index:1000;">
-      <h3>当前验证码：</h3>
+      <h3>Current verification code: </h3>
       <p id="adminCodeDisplay" style="font-size:1.5em; color:red;">加载中...</p>
-      <button onclick="copyCode()">复制</button>
-      <button onclick="closeModal()">关闭</button>
+      <button onclick="copyCode()">Copy</button>
+      <button onclick="closeModal()">Close</button>
   </div>
   <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
       background:rgba(0,0,0,0.5); z-index:999;" onclick="closeModal()"></div>
-  <script>
-  function getAdminCode() {
-          fetch('{{ path('admin_get_code_api') }}')
-              .then(response => response.json())
-              .then(data => {
-                  document.getElementById('adminCodeDisplay').innerText = data.code;
-                  document.getElementById('codeModal').style.display = 'block';
-                  document.getElementById('modalOverlay').style.display = 'block';
-              });
-      }
-
-      function closeModal() {
-          document.getElementById('codeModal').style.display = 'none';
-          document.getElementById('modalOverlay').style.display = 'none';
-      }
-
-      function copyCode() {
-          const code = document.getElementById('adminCodeDisplay').innerText;
-          navigator.clipboard.writeText(code);
-          alert("已复制：" + code);
-      }
-  </script>
+  <div class="admin-code" data-api="{{ path('admin_get_code_api') }}"></div>
+  <button id="adminCodeBtn">Get Admin Code</button>
+  <script src="{{ asset('../assets/adminCode.js') }}"></script>
 </body>
 </html>
 {% endblock %}

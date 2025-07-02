@@ -11,7 +11,7 @@ function updateCart(cartItemId, newQuantity) {
         if (data.success) {
             document.getElementById('cart-quantity-' + cartItemId).textContent = newQuantity;
             updateCartCount(data.cartCount);
-            location.reload(); // 刷新购物车页面
+            location.reload();
         } else {
             alert('Error updating cart: ' + data.message);
         }
@@ -28,7 +28,7 @@ function removeFromCart(cartItemId) {
     .then(data => {
         if (data.success) {
             updateCartCount(data.cartCount);
-            location.reload(); // 刷新购物车页面
+            location.reload();
         } else {
             alert('Error removing item: ' + data.message);
         }

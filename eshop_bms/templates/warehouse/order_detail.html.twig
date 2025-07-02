@@ -1,5 +1,6 @@
 {% extends 'base.html.twig' %}
 {% block stylesheets %}
+    {{ parent() }}
     <link rel="stylesheet" href="{{ asset('../assets/styles/order_detail.css') }}">
 {% endblock %}
 {% block body %}
@@ -40,7 +41,6 @@
     {% endfor %}
 </table>
 
-<!-- 📌 显示配送方式 -->
 <h2>Delivery Method</h2>
 <p><strong>Selected Method:</strong> 
     {% if order.getDeliveryMethod() == "pickup" %}
@@ -50,44 +50,26 @@
     {% endif %}
 </p>
 
-<!-- 📌 显示客户填写的配送信息，每个 ; 后换行 -->
 <h2>Delivery Information</h2>
 <p style="white-space: pre-line;">
     {{ order.getAddress()|default('No address provided')|replace({'; ': "\n"}) }}
 </p>
 
-<!-- 📝 显示客户留言 -->
 <h2>Customer Note</h2>
 <p style="white-space: pre-line;">
     {{ order.getNotes()|default('No additional notes') }}
 </p>
 
-<!-- 按钮: 标记为已完成 -->
 {% if not order.getIsCompleted() %}
-    <button id="markAsCompletedBtn">Mark as Completed</button>
+    <button id="markAsCompletedBtn"
+            data-api="{{ localized_path('mark_order_completed', {'id': order.getId()}) }}"
+            data-redirect-url="{{ localized_path('app_order_management') }}">
+        Mark as Completed
+    </button>
 {% endif %}
 
 <a href="{{ localized_path('app_order_management') }}">Back to Orders</a>
 
-<script>
-    document.getElementById("markAsCompletedBtn")?.addEventListener("click", function() {
-        if (!confirm("Are you sure you want to mark this order as completed?")) return;
-
-        fetch("{{ localized_path('mark_order_completed', {'id': order.getId()}) }}", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert("Order marked as completed!");
-                window.location.href = "{{ localized_path('app_order_management') }}";
-            } else {
-                alert("Error: " + data.message);
-            }
-        })
-        .catch(error => console.error("Error:", error));
-    });
-</script>
+<script src="{{ asset('../assets/markAsCompleted.js') }}"></script>
 
 {% endblock %}
