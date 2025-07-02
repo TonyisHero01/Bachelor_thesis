@@ -128,14 +128,17 @@ class FrontwebTranslatorController extends AbstractController
 
         $translatedContent = implode('', $tokens);
         file_put_contents($translatedFile, $translatedContent);
-        $logger->info("[Frontweb Translator] ✅ Translation written to $translatedFile");
 
         return new Response("✅ Translation saved to: <code>frontweb/templates/locale/{$language}/{$relativePath}</code>");
     }
 
     #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form')]
     /**
-     * Auto-generates a translation form for a given frontweb template by extracting static text content.
+     * Automatically generates a translation form for a given frontweb template file
+     * by extracting all visible static text and creating editable fields.
+     *
+     * @param Request $request
+     * @return Response
      */
     public function generateFrontwebForm(Request $request): Response
     {

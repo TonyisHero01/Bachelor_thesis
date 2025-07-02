@@ -9,6 +9,15 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 class SecurityController extends BaseController
 {
     #[Route(path: '/login', name: 'app_login')]
+    /**
+     * Displays the login form and handles authentication errors.
+     *
+     * If the user is already logged in as an Employee, they are redirected to the home page.
+     *
+     * @param AuthenticationUtils $authenticationUtils Utility to retrieve the last authentication error and username.
+     *
+     * @return Response Rendered login form or redirect if already logged in.
+     */
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
         if ($this->getUser() instanceof App\Entity\Employee) {

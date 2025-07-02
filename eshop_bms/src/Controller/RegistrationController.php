@@ -14,6 +14,18 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 class RegistrationController extends BaseController
 {
     #[Route('/register', name: 'app_register')]
+    /**
+     * Displays and processes the employee registration form.
+     *
+     * Only authenticated users can register new employees (e.g., admin creating sub-accounts).
+     *
+     * @param Request $request The current HTTP request.
+     * @param UserPasswordHasherInterface $passwordHasher Password hashing service.
+     * @param EntityManagerInterface $entityManager Doctrine EntityManager for persisting employee data.
+     * @param AuthorizationCheckerInterface $authorizationChecker Security checker for user authentication.
+     *
+     * @return Response Rendered registration form or redirect to success page.
+     */
     public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
