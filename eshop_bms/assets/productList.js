@@ -316,6 +316,8 @@ function cancelModifySizeForm() {
 
 function applyFilters() {
     const categoryFilter = document.getElementById('filter-category').value.toLowerCase();
+    const colorFilter = document.getElementById('filter-color').value.toLowerCase();
+    const sizeFilter = document.getElementById('filter-size').value.toLowerCase();
     const quantityFilter = parseInt(document.getElementById('filter-quantity').value);
     const priceFilter = parseFloat(document.getElementById('filter-price').value);
 
@@ -323,12 +325,16 @@ function applyFilters() {
     rows.forEach(row => {
         const name = row.children[0].textContent.toLowerCase();
         const category = row.children[1].textContent.toLowerCase();
-        const quantity = parseInt(row.children[2].textContent);
-        const price = parseFloat(row.children[4].textContent);
+        const color = row.children[2].textContent.toLowerCase();
+        const size = row.children[3].textContent.toLowerCase();
+        const quantity = parseInt(row.children[4].textContent);
+        const price = parseFloat(row.children[6].textContent);
 
         let show = true;
 
         if (categoryFilter && category !== categoryFilter) show = false;
+        if (colorFilter && color !== colorFilter) show = false;
+        if (sizeFilter && size !== sizeFilter) show = false;
         if (!isNaN(quantityFilter) && quantity < quantityFilter) show = false;
         if (!isNaN(priceFilter) && price > priceFilter) show = false;
 
@@ -338,10 +344,14 @@ function applyFilters() {
 
 function resetFilters() {
     const categorySelect = document.getElementById('filter-category');
+    const colorSelect = document.getElementById('filter-color');
+    const sizeSelect = document.getElementById('filter-size');
     const quantityInput = document.getElementById('filter-quantity');
     const priceInput = document.getElementById('filter-price');
 
     if (categorySelect) categorySelect.value = '';
+    if (colorSelect) colorSelect.value = '';
+    if (sizeSelect) sizeSelect.value = '';
     if (quantityInput) quantityInput.value = '';
     if (priceInput) priceInput.value = '';
 

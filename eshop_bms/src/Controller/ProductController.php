@@ -143,7 +143,12 @@ class ProductController extends BaseController
      * @param LoggerInterface $logger
      * @return Response
      */
-    public function showAllProducts(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
+    public function showAllProducts(
+        EntityManagerInterface $entityManager,
+        AuthorizationCheckerInterface $authorizationChecker,
+        LoggerInterface $logger,
+        Request $request
+    ): Response
     {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
@@ -172,8 +177,22 @@ class ProductController extends BaseController
         $colors = $entityManager->getRepository(Color::class)->findAll();
         $sizes = $entityManager->getRepository(Size::class)->findAll();
         $categories = $entityManager->getRepository(Category::class)->findAll();
+        $locale = $request->getLocale();
+        $productsForView = array_map(function (Product $product) use ($locale) {
+            return [
+                'id' => $product->getId(),
+                'name' => $product->getTranslatedName($locale),
+                'category' => $product->getCategory()?->getName() ?? '',
+                'colorName' => $product->getColor()?->getTranslatedName($locale) ?? '',
+                'sizeName' => $product->getSize()?->getName() ?? '',
+                'numberInStock' => $product->getNumberInStock(),
+                'createdAt' => $product->getCreatedAt(),
+                'price' => $product->getPrice(),
+                'hidden' => $product->getHidden(),
+            ];
+        }, $products);
         return $this->renderLocalized('product/product_list.html.twig', [
-            'products' => $products,
+            'products' => $productsForView,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
