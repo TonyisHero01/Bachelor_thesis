@@ -56,7 +56,6 @@ class CreateSuperAdminCommand extends Command
         $employee = new Employee();
         $employee->setSurname('Super');
         $employee->setName('Admin');
-        $employee->setUsername('super_admin');
         $employee->setPhoneNumber('111111111111111');
         $employee->setEmail($email);
         

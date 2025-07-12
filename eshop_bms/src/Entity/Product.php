@@ -74,7 +74,7 @@ class Product
     #[ORM\JoinColumn(name: 'currency_id', referencedColumnName: 'id', nullable: false)]
     private ?Currency $currency = null;
 
-    #[ORM\Column(type: 'json', nullable: true, options: ['default' => '{}'])]
+    #[ORM\Column(type: 'json', nullable: true)]
     private ?array $attributes = [];
 
     #[ORM\Column(type: 'integer', options: ['default' => 1])]
@@ -83,7 +83,7 @@ class Product
     #[ORM\Column(type: 'string', length: 255, nullable: false, options: ['default' => 'UNKNOWN'])]
     private ?string $sku = 'UNKNOWN';
 
-    #[ORM\Column(type: 'float', options: ['default' => 21])]
+    #[ORM\Column(type: 'float')]
     private float $taxRate = 21.0;
 
     #[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductTranslation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]

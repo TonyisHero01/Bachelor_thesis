@@ -49,9 +49,6 @@ class ShopInfo
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $refund = null;
 
-    #[ORM\Column(length: 20, nullable: true)]
-    private ?string $colorCode = null;
-
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $logo = null;
 
@@ -98,8 +95,6 @@ class ShopInfo
     public function setPayment(?string $payment): static { $this->payment = $payment; return $this; }
     public function getRefund(): ?string { return $this->refund; }
     public function setRefund(?string $refund): static { $this->refund = $refund; return $this; }
-    public function getColorCode(): ?string { return $this->colorCode; }
-    public function setColorCode(?string $colorCode): static { $this->colorCode = $colorCode; return $this; }
     public function getLogo(): ?string { return $this->logo; }
     public function setLogo(?string $logo): static { $this->logo = $logo; return $this; }
     public function getCarouselPictures(): ?array { return $this->carouselPictures; }

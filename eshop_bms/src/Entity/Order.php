@@ -21,7 +21,7 @@ class Order
     private Customer $customer;
 
     #[ORM\Column(type: "decimal", precision: 10, scale: 2)]
-    private float $totalPrice;
+    private string $totalPrice;
 
     #[ORM\Column(type: "text")]
     private ?string $address = null;
@@ -47,8 +47,8 @@ class Order
     #[ORM\Column(type: "text", nullable: true)]
     private ?string $notes = null;
 
-    #[ORM\Column(type: "decimal", precision: 10, scale: 2, options: ["default" => 0.00])]
-    private float $discount = 0.00;
+    #[ORM\Column(type: "decimal", precision: 10, scale: 2, options: ["default" => "0.00"])]
+    private string $discount;
 
     #[ORM\OneToMany(mappedBy: "order", targetEntity: OrderItem::class, cascade: ["persist", "remove"])]
     private Collection $orderItems;
@@ -78,12 +78,12 @@ class Order
         return $this;
     }
 
-    public function getTotalPrice(): float
+    public function getTotalPrice(): string
     {
         return $this->totalPrice;
     }
 
-    public function setTotalPrice(float $totalPrice): self
+    public function setTotalPrice(string $totalPrice): self
     {
         $this->totalPrice = $totalPrice;
         return $this;
@@ -183,12 +183,12 @@ class Order
         return $this;
     }
 
-    public function getDiscount(): float
+    public function getDiscount(): string
     {
         return $this->discount;
     }
 
-    public function setDiscount(float $discount): self
+    public function setDiscount(string $discount): self
     {
         $this->discount = $discount;
         return $this;

@@ -11,7 +11,6 @@ function edit(id) {
 const idElement = document.getElementById("employeeId").getAttribute("employee-id-data");
 const surnameElement = document.getElementById("surname");
 const nameElement = document.getElementById("name");
-const usernameElement = document.getElementById("username");
 const phoneNumberElement = document.getElementById("phoneNumber");
 const emailElement = document.getElementById("email");
 const roleCheckboxes = document.querySelectorAll("input[name='roles[]']");
@@ -32,7 +31,6 @@ async function save_() {
         body: JSON.stringify({
             "surname" : surnameElement.value, 
             "name" : nameElement.value, 
-            "username" : usernameElement.value, 
             "phoneNumber" : phoneNumberElement.value, 
             "email" : emailElement.value,
             "roles": selectedRoles

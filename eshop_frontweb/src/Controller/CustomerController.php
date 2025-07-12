@@ -128,7 +128,7 @@ class CustomerController extends BaseController
                     $form->get('password_hash')->getData()
                 )
             );
-
+            $customer->setIsVerified(false);
             $entityManager->persist($customer);
             $entityManager->flush();
 

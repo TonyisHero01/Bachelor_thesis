@@ -107,7 +107,6 @@ class HomeController extends BaseController
         }
 
         $newFilename = 'logo_' . '.' . $file->guessExtension();
-        $logger->info($newFilename);
         try {
             $file->move($params->get('images_directory'), $newFilename);
             return new JsonResponse(['filePath' => $newFilename]);
@@ -154,7 +153,35 @@ class HomeController extends BaseController
             $shopInfo->setShippingInfo($input["shipping"] ?? null);
             $shopInfo->setPayment($input["payment"] ?? null);
             $shopInfo->setRefund($input["refund"] ?? null);
-            $shopInfo->setColorCode($input["color"] ?? null);
+
+            if (isset($input["currencies"])) {
+                $currencyRepo = $entityManager->getRepository(Currency::class);
+                $existingCurrencies = $currencyRepo->findAll();
+                $existingMap = [];
+                foreach ($existingCurrencies as $currency) {
+                    $existingMap[$currency->getName()] = $currency;
+                }
+            
+                foreach ($input["currencies"] as $data) {
+                    $name = $data["name"] ?? null;
+                    $value = $data["value"] ?? null;
+                    $isDefault = $data["isDefault"] ?? false;
+            
+                    if (!$name || $value === null) continue;
+            
+                    if (isset($existingMap[$name])) {
+                        $currency = $existingMap[$name];
+                        $currency->setValue((float) $value);
+                        $currency->setIsDefault((bool) $isDefault);
+                    } else {
+                        $currency = new Currency();
+                        $currency->setName($name);
+                        $currency->setValue((float) $value);
+                        $currency->setIsDefault((bool) $isDefault);
+                        $entityManager->persist($currency);
+                    }
+                }
+            }
 
             if (!empty($input["logo_url"])) {
                 $originalFilename = preg_replace('/^C:\\fakepath\\/', '', $input["logo_url"]);
@@ -199,7 +226,6 @@ class HomeController extends BaseController
         $newImageUrls = [];
 
         if (!$files) {
-            $logger->info('No files received');
             return new JsonResponse(['status' => 'No files received'], 400);
         }
 
@@ -246,7 +272,6 @@ class HomeController extends BaseController
             $fullFilePath = $params->get('images_directory') . '/' . $imageName;
             if (file_exists($fullFilePath)) {
                 unlink($fullFilePath);
-                $logger->info("Deleted file: " . $fullFilePath);
             } else {
                 $logger->error("File not found on disk");
                 return new JsonResponse(['status' => 'Error', 'message' => 'File not found on disk']);

@@ -353,7 +353,6 @@ class TranslatorController extends AbstractController
     public function addLanguage(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
         $language = $request->request->get('language');
-        $logger->info('Language input received: ' . $language);
 
         if (!$language) {
             return new Response('Missing language', 400);

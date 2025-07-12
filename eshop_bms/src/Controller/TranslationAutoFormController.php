@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Finder\Finder;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Filesystem\Path;
 
 class TranslationAutoFormController extends AbstractController
 {
@@ -51,12 +52,21 @@ class TranslationAutoFormController extends AbstractController
     public function generateAll(Request $request, LoggerInterface $logger): Response
     {
         $projectDir = $this->getParameter('kernel.project_dir');
-        $bmsTemplates = $projectDir . '/templates';
-        $frontwebTemplates = realpath($projectDir . '/../eshop_frontweb/templates');
+        $bmsTemplatesRaw = $projectDir . '/templates';
+        $frontwebTemplatesRaw = '/var/www/eshop_frontweb_templates';
+
+        $bmsTemplates = realpath($bmsTemplatesRaw);
+        $frontwebTemplates = realpath($frontwebTemplatesRaw);
+
+        if (!$bmsTemplates && !$frontwebTemplates) {
+            return new Response("❌ Both BMS and Frontweb template paths are invalid.", 500);
+        }
+
+        $scanDirs = array_filter([$bmsTemplates, $frontwebTemplates], fn($path) => $path && is_dir($path));
 
         $finder = new Finder();
         $finder->files()
-            ->in([$bmsTemplates, $frontwebTemplates])
+            ->in($scanDirs)
             ->name('*.html.twig')
             ->filter(function (\SplFileInfo $file) {
                 $path = $file->getRealPath();
@@ -72,16 +82,19 @@ class TranslationAutoFormController extends AbstractController
             $isFrontweb = str_starts_with($realPath, $frontwebTemplates);
 
             if (str_contains($realPath, '_form')) {
-                $logger->info("\u{1F6AB} Skipped _form partial: $realPath");
                 continue;
             }
             
             if (!$isFrontweb && str_ends_with($realPath, 'base.html.twig')) {
-                $logger->info("\u{1F6AB} Skipped BMS base template: $realPath");
                 continue;
             }
 
-            $sourcePath = str_replace(($isFrontweb ? $frontwebTemplates : $bmsTemplates) . '/', '', $realPath);
+            $filesystem = new Filesystem();
+            $basePath = $isFrontweb ? $frontwebTemplates : $bmsTemplates;
+            if (!$basePath || !$realPath || strpos($realPath, $basePath) !== 0) {
+                continue;
+            }
+            $sourcePath = Path::makeRelative($realPath, $basePath);
             $scanned[] = $sourcePath;
             $subRequest = clone $request;
             $subRequest->query->set('path', $sourcePath);
@@ -171,7 +184,6 @@ class TranslationAutoFormController extends AbstractController
 
         $outputPath = "$projectDir/templates/translator/translation_shop_info.html.twig";
         (new Filesystem())->dumpFile($outputPath, $output);
-        $logger->info("✅ Generated shop_info form");
     }
 
     /**
@@ -197,16 +209,13 @@ class TranslationAutoFormController extends AbstractController
             }
         }
 
-        $logger->info("🌐 target_language resolved as: $targetLang");
-        $logger->info("🔍 Requested template path: $sourcePath with target_language: $targetLang");
-
         if (!$sourcePath) {
             return new Response("Missing 'path' parameter.", 400);
         }
 
         $projectDir = $this->getParameter('kernel.project_dir');
         $bmsPath = $projectDir . '/templates/' . $sourcePath;
-        $frontwebPath = $projectDir . '/../eshop_frontweb/templates/' . $sourcePath;
+        $frontwebPath = '/var/www/eshop_frontweb_templates/' . $sourcePath;
 
         $fullPath = null;
         $isFrontweb = false;

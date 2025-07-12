@@ -102,7 +102,6 @@ async function save_() {
     const shippingElement = document.getElementById("shipping");
     const paymentElement = document.getElementById("payment");
     const refundElement = document.getElementById("refund");
-    const colorElement = document.getElementById("color");
     const logoUrlElement = document.getElementById("logo_url");
     const companyName = document.getElementById("company_name");
     const cin = document.getElementById("cin");
@@ -135,7 +134,6 @@ async function save_() {
         "shipping": shippingElement.value,
         "payment": paymentElement.value,
         "refund": refundElement.value,
-        "color": colorElement.value,
         "companyName": companyName.value,
         "cin": cin.value,
         "hidePrices": hidePricesElement.checked,

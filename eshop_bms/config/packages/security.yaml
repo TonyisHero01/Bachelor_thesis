@@ -9,15 +9,12 @@ security:
                 property: email
 
     access_control:
-        # ✅ 第一步：放行登录、登出、未登录提示页、静态资源
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/logout, roles: PUBLIC_ACCESS }
         - { path: ^/not-logged, roles: PUBLIC_ACCESS }
         - { path: ^/assets, roles: PUBLIC_ACCESS }
         - { path: ^/css, roles: PUBLIC_ACCESS }
         - { path: ^/js, roles: PUBLIC_ACCESS }
-
-        # ✅ 第二步：所有其他页面，要求具备以下任意角色
         - {
             path: ^/,
             roles: [

@@ -60,9 +60,7 @@ class SearchController extends BaseController
         $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
         $command = "$pythonPath $scriptPath $escapedQuery 2>&1";
 
-        $logger->info("Executing search command: " . $command);
         $output = shell_exec($command);
-
         if ($output === null) {
             $logger->error("Python script execution failed with no output");
             return new JsonResponse(['error' => 'Search command failed'], 500);
@@ -183,7 +181,6 @@ class SearchController extends BaseController
                 }
             }
         }
-
         if (empty($searchResults)) {
             $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
             return $this->renderLocalized('search/results.html.twig', [
@@ -198,11 +195,12 @@ class SearchController extends BaseController
 
         $productIds = array_column($searchResults, 'id');
         $productsRaw = $this->entityManager->getRepository(Product::class)->findBy(['id' => $productIds]);
-
+        
         $productMap = [];
         foreach ($productsRaw as $product) {
             if (!empty($product->getImageUrls())) {
                 $productMap[$product->getId()] = $product;
+                
             }
         }
 
@@ -215,7 +213,6 @@ class SearchController extends BaseController
                 $products[] = $product;
             }
         }
-
         $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
         return $this->renderLocalized('search/results.html.twig', [
             'products' => $products,

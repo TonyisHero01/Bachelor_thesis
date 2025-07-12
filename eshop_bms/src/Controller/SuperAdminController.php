@@ -124,7 +124,6 @@ class SuperAdminController extends BaseController
             $input = json_decode($inputJSON, TRUE);
             $surname = $input["surname"];
             $name = $input["name"];
-            $username = $input["username"];
             $phoneNumber = $input["phoneNumber"];
             $email = $input["email"];
             $roles = $input["roles"];
@@ -132,7 +131,6 @@ class SuperAdminController extends BaseController
 
             $admin->setSurname($surname);
             $admin->setName($name);
-            $admin->setUsername($username);
             $admin->setEmail($email);
             $admin->setRoles($roles);
             $entityManager->persist($admin);

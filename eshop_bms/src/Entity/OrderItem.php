@@ -28,10 +28,13 @@ class OrderItem
     private int $quantity;
 
     #[ORM\Column(type: "decimal", precision: 10, scale: 2)]
-    private float $unitPrice;
+    private string $unitPrice;
 
     #[ORM\Column(type: "decimal", precision: 10, scale: 2)]
-    private float $subtotal;
+    private string $subtotal;
+
+    #[ORM\Column(type: 'string', length: 255)]
+    private string $sku;
 
     public function getId(): int
     {
@@ -82,29 +85,49 @@ class OrderItem
         return $this;
     }
 
-    public function getUnitPrice(): float
+    public function getUnitPrice(): string
     {
         return $this->unitPrice;
     }
 
-    public function setUnitPrice(float $unitPrice): self
+    public function setUnitPrice(string $unitPrice): self
     {
         $this->unitPrice = $unitPrice;
         return $this;
     }
 
-    public function getSubtotal(): float
+    public function getSubtotal(): string
     {
         return $this->subtotal;
     }
 
-    public function setSubtotal(float $subtotal): self
+    public function setSubtotal(string $subtotal): self
     {
         $this->subtotal = $subtotal;
         return $this;
     }
+
+    public function getSku(): string
+    {
+        return $this->sku;
+    }
+    public function setSku(string $sku): self
+    {
+        $this->sku = $sku;
+        return $this;
+    }
+
     public function getSubtotalWithTax(): float
     {
         return round($this->getUnitPrice() * $this->getQuantity(), 2);
+    }
+
+    public function getTaxAmount(): float
+    {
+        $taxRate = $this->product->getTaxRate() / 100;
+
+        $taxAmount = ($this->unitPrice * $this->quantity) - $this->subtotal;
+
+        return round($taxAmount, 2);
     }
 }

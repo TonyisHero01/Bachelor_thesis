@@ -263,6 +263,7 @@ class OrderController extends BaseController
         $order->setDeliveryMethod($deliveryMethod);
         $order->setAddress($address);
         $order->setNotes($orderNote);
+        $order->setDiscount(0.0);
 
         $this->entityManager->persist($order);
 

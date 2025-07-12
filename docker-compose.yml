@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   db:
@@ -6,53 +6,40 @@ services:
     environment:
       POSTGRES_DB: app
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: password 
     volumes:
       - db-data:/var/lib/postgresql/data
     networks:
       - backend
 
-  php-frontweb:
+  bms:
     build:
-      context: ./docker/php-frontweb
-    volumes:
-      - ./frontweb:/var/www/html
-    networks:
-      - backend
-
-  php-bms:
-    build:
-      context: ./docker/php-bms
-    volumes:
-      - ./bms:/var/www/html
-    networks:
-      - backend
-
-  apache-frontweb:
-    image: php:8.2-apache
-    ports:
-      - "8082:80"
-    volumes:
-      - ./frontweb:/var/www/html
-      - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
-    depends_on:
-      - php-frontweb
-    networks:
-      - backend
-    command: bash -c "a2enmod rewrite && apache2-foreground"
-
-  apache-bms:
-    image: php:8.2-apache
+      context: .
+      dockerfile: docker/bms/Dockerfile
     ports:
       - "8083:80"
     volumes:
-      - ./bms:/var/www/html
+      - ./eshop_bms:/var/www/html
+      - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
       - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
-      - php-bms
+      - db
     networks:
       - backend
-    command: bash -c "a2enmod rewrite && apache2-foreground"
+
+  frontweb:
+    build:
+      context: .
+      dockerfile: docker/frontweb/Dockerfile
+    ports:
+      - "8082:80"
+    volumes:
+      - ./eshop_frontweb:/var/www/html
+      - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
+    depends_on:
+      - db
+    networks:
+      - backend
 
 volumes:
   db-data:

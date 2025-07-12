@@ -4,7 +4,11 @@ framework:
     #csrf_protection: true
 
     # Note that the session will be started ONLY if you read or write from it.
-    session: true
+    session:
+        handler_id: null
+        cookie_lifetime: 86400
+        gc_maxlifetime: 86400
+        save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
 
     #esi: true
     #fragments: true

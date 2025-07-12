@@ -61,11 +61,6 @@
       <label for="hide_prices">{{ translations.hide_prices ?? 'Hide Prices' }}</label>
       <input type="checkbox" id="hide_prices" name="hide_prices" {% if shopInfo.hidePrices %}checked{% endif %}>
 
-      <h2>{{ translations.eshop_styles ?? 'ESHOP STYLES' }}</h2>
-
-      <label for="color">{{ translations.color_code ?? 'Color Code' }}</label>
-      <input type="text" id="color" name="color" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ shopInfo.colorCode }}"><br>
-
       <label for="logo_url">LOGO</label><br>
       <img id="logo_preview" src="{{ shopInfo.logo ? asset('images/' ~ shopInfo.logo) : '' }}" alt="Logo" width="304" height="228"><br>
       <input id="logo_url" type="file" accept="image/*" onchange="handleLogoUpload(event)">
@@ -214,7 +209,7 @@
   <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
       background:rgba(0,0,0,0.5); z-index:999;" onclick="closeModal()"></div>
   <div class="admin-code" data-api="{{ path('admin_get_code_api') }}"></div>
-  <button id="adminCodeBtn">Get Admin Code</button>
+
   <script src="{{ asset('../assets/adminCode.js') }}"></script>
 </body>
 </html>

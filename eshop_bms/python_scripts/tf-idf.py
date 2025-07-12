@@ -9,22 +9,18 @@ import sys
 import json
 import re
 
-# 加载 .env 变量
 dotenv_path = '../.env'
 load_dotenv()
 
-# 读取数据库连接信息
 database_url = os.getenv("DATABASE_URL")
 if not database_url:
-    raise ValueError("DATABASE_URL 为空，请检查 .env 文件")
+    raise ValueError("DATABASE_URL is null, please check .env file")
 
-# 解析 DATABASE_URL
 db_info = database_url.split("//")[1].split("@")
 username, password = db_info[0].split(":")
 host, rest = db_info[1].split(":")
 port, dbname = rest.split("/")
 
-# 连接数据库
 connection = psycopg2.connect(
     host=host,
     user=username,
@@ -34,14 +30,12 @@ connection = psycopg2.connect(
     cursor_factory=DictCursor
 )
 
-# 文本预处理
 def custom_preprocessor(text):
     text = text.lower()
     text = re.sub(r'\d+', '', text)
     text = re.sub(r'[^\w\s]', '', text)
     return text.strip()
 
-# 将每个产品信息转换为字符串
 def row_to_string(row, weight_factor=20):
     sku = row.get('sku', '') or ''
     name = row.get('name', '') or ''
@@ -61,7 +55,6 @@ def row_to_string(row, weight_factor=20):
     product_info_document = f"{sku} {name_weighted} {category} {description_weighted}"
     return product_info_document
 
-# 获取产品文档
 def get_documents(cursor):
     sql = """
         SELECT p.*, c.name AS category
@@ -71,17 +64,23 @@ def get_documents(cursor):
     cursor.execute(sql)
     products = cursor.fetchall()
 
-    cursor.execute("DROP TABLE IF EXISTS Product_Document_Vector;")
+    cursor.execute("DROP TABLE IF EXISTS product_document_vector;")
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS Product_Document_Vector (
+        CREATE TABLE IF NOT EXISTS product_document_vector (
             sku TEXT PRIMARY KEY,
             document TEXT,
             vector TEXT
         );
     """)
 
+    # ✅ 强制提交表结构更改
+    connection.commit()
+
     documents = {}
     seen_skus = set()
+
+    print(f"Fetched {len(products)} products.")
+    print("Sample product row:", products[0] if products else "None")
 
     for row in products:
         if row['sku'] not in seen_skus:
@@ -92,7 +91,6 @@ def get_documents(cursor):
 
     return documents, products
 
-# 更新向量表
 def update_product_vectors(documents, products, cursor):
     if not documents:
         return
@@ -120,7 +118,6 @@ def update_product_vectors(documents, products, cursor):
 
     connection.commit()
 
-# 获取向量
 def fetch_product_vectors(cursor):
     cursor.execute("SELECT sku, document, vector FROM Product_Document_Vector")
     result = cursor.fetchall()
@@ -137,7 +134,6 @@ def fetch_product_vectors(cursor):
 
     return product_skus, documents, np.array(vectors)
 
-# 搜索查询
 def search_products(query, product_skus, documents, vectors):
     vectorizer = TfidfVectorizer(
         preprocessor=custom_preprocessor,
@@ -160,22 +156,22 @@ def search_products(query, product_skus, documents, vectors):
 
     return sorted_product_skus, sorted_similarities
 
-# 主程序
 if __name__ == "__main__":
     try:
         with connection.cursor() as cursor:
-            documents_, products = get_documents(cursor)
-            update_product_vectors(documents_, products, cursor)
+            if len(sys.argv) > 1 and sys.argv[1] == "__TRAIN__":
+                documents_, products = get_documents(cursor)
+                update_product_vectors(documents_, products, cursor)
+                print("✅ TF-IDF vectors updated.")
+            else:
+                query = sys.argv[1] if len(sys.argv) > 1 else ""
+                product_skus, documents, vectors = fetch_product_vectors(cursor)
+                sorted_product_skus, sorted_similarities = search_products(query, product_skus, documents, vectors)
 
-            query = sys.argv[1]
-            product_skus, documents, vectors = fetch_product_vectors(cursor)
-            sorted_product_skus, sorted_similarities = search_products(query, product_skus, documents, vectors)
-
-            results = [
-                {"product_sku": sku, "similarity": sim}
-                for sku, sim in zip(sorted_product_skus, sorted_similarities)
-            ]
-
-            print(json.dumps(results))
+                results = [
+                    {"product_sku": sku, "similarity": sim}
+                    for sku, sim in zip(sorted_product_skus, sorted_similarities)
+                ]
+                print(json.dumps(results))
     finally:
         connection.close()

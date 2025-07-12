@@ -5,8 +5,12 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: "color_translation")]
-#[ORM\UniqueConstraint(columns: ["color_id", "locale"])]
+#[ORM\Table(
+    name: "color_translation",
+    uniqueConstraints: [
+        new ORM\UniqueConstraint(name: "uniq_color_locale", columns: ["color_id", "locale"])
+    ]
+)]
 class ColorTranslation
 {
     #[ORM\Id]

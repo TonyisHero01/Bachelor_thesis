@@ -14,7 +14,7 @@ class ShopInfoTranslation
     #[ORM\Column(type: Types::INTEGER)]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: ShopInfo::class)]
+    #[ORM\ManyToOne(targetEntity: ShopInfo::class, inversedBy: "translations")]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ShopInfo $shopInfo;
 

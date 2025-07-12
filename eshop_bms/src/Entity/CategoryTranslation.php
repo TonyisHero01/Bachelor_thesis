@@ -5,8 +5,12 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: "category_translation")]
-#[ORM\UniqueConstraint(columns: ["category_id", "locale"])]
+#[ORM\Table(
+    name: "category_translation",
+    uniqueConstraints: [
+        new ORM\UniqueConstraint(name: "uniq_category_locale", columns: ["category_id", "locale"])
+    ]
+)]
 class CategoryTranslation
 {
     #[ORM\Id]

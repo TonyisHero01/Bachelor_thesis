@@ -117,7 +117,6 @@ class FrontwebTranslatorController extends AbstractController
                     foreach ($tokens as $i => $token) {
                         if (!str_starts_with(trim($token), '{%') && !str_starts_with(trim($token), '{{')) {
                             $tokens[$i] = preg_replace_callback($pattern, function ($match) use ($translatedText, $logger) {
-                                $logger->info("✅ 正则命中片段：{$match[0]} → $translatedText");
                                 return $translatedText;
                             }, $token, 1);
                         }

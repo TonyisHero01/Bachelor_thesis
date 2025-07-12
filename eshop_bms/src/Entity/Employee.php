@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Doctrine\DBAL\Types\Types;
 
 #[ORM\Entity(repositoryClass: EmployeeRepository::class)]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
@@ -17,19 +18,16 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 180, unique: true)]
+    #[ORM\Column(length: 180)]
     private ?string $surname = null;
 
-    #[ORM\Column(length: 180, unique: true)]
+    #[ORM\Column(length: 180)]
     private ?string $name = null;
-
-    #[ORM\Column(length: 180, unique: true)]
-    private ?string $username = null;
 
     /**
      * @var list<string> The user roles
      */
-    #[ORM\Column]
+    #[ORM\Column(type: Types::JSON, columnDefinition: 'jsonb')]
     private array $roles = [];
 
     /**
@@ -41,13 +39,13 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var string Contact e-mail
      */
-    #[ORM\Column]
+    #[ORM\Column(length: 255, unique: true)]
     private ?string $email = null;
 
     /**
      * @var string The mobile phone
      */
-    #[ORM\Column]
+    #[ORM\Column(length: 20, nullable: true)]
     private ?string $phoneNumber = null;
 
     #[ORM\Column(type: 'datetime')]
@@ -103,18 +101,6 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    public function getUsername(): ?string
-    {
-        return $this->username;
-    }
-
-    public function setUsername(string $username): static
-    {
-        $this->username = $username;
-
-        return $this;
-    }
-
     /**
      * A visual identifier that represents this user.
      *
@@ -122,7 +108,7 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getUserIdentifier(): string
     {
-        return (string) $this->username;
+        return (string) $this->name;
     }
 
     /**

@@ -9,6 +9,7 @@ use App\Entity\Color;
 use App\Entity\Currency;
 use App\Entity\Size;
 use App\Form\ProductType;
+use App\Service\TfidfTrainer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -159,8 +160,6 @@ class ProductController extends BaseController
         }
         if ($user) {
             $roles = $user->getRoles();
-            
-            $logger->info(json_encode($roles));
         } else {
             dump('User not logged in');
         }
@@ -173,7 +172,6 @@ class ProductController extends BaseController
         {
             $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getCreatedAt()->format('Y-m-d H:i:s') . ' ' . $product->getPrice() . '</div>' . '<br>';
         }
-        $logger->info(json_encode($product_list));
         $colors = $entityManager->getRepository(Color::class)->findAll();
         $sizes = $entityManager->getRepository(Size::class)->findAll();
         $categories = $entityManager->getRepository(Category::class)->findAll();
@@ -211,7 +209,7 @@ class ProductController extends BaseController
      * @param EntityManagerInterface $em Doctrine EntityManager for DB operations.
      * @return JsonResponse Success or error message.
      */
-    public function modifyCategory(Request $request, EntityManagerInterface $em): JsonResponse
+    public function modifyCategory(Request $request, EntityManagerInterface $em, TfidfTrainer $trainer): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $id = $data['id'] ?? null;
@@ -228,7 +226,7 @@ class ProductController extends BaseController
 
         $category->setName($newName);
         $em->flush();
-
+        $trainer->retrain();
         return new JsonResponse(['success' => true]);
     }
 
@@ -296,7 +294,8 @@ class ProductController extends BaseController
         EntityManagerInterface $entityManager,
         $id,
         LoggerInterface $logger,
-        AuthorizationCheckerInterface $authorizationChecker
+        AuthorizationCheckerInterface $authorizationChecker,
+        TfidfTrainer $trainer
     ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
@@ -431,7 +430,7 @@ class ProductController extends BaseController
 
             $entityManager->persist($newProduct);
             $entityManager->flush();
-
+            $trainer->retrain();
             return new JsonResponse(["status" => "Success", "new_product_id" => $newProduct->getId()]);
         } catch (\Exception $e) {
             $logger->error('❌ Error in saveProduct: ' . $e->getMessage());
@@ -450,7 +449,8 @@ class ProductController extends BaseController
     public function deleteProduct(
         $id,  
         EntityManagerInterface $entityManager, 
-        AuthorizationCheckerInterface $authorizationChecker
+        AuthorizationCheckerInterface $authorizationChecker,
+        TfidfTrainer $trainer
     ): Response {
         if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
             return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
@@ -469,7 +469,7 @@ class ProductController extends BaseController
             }
 
             $entityManager->flush();
-
+            $trainer->retrain();
             return new JsonResponse(['success' => true]);
         } else {
             return new JsonResponse(['success' => false, 'message' => 'Product not found'], 404);
@@ -506,11 +506,9 @@ class ProductController extends BaseController
         $newImageUrls = [];
 
         if (!$files) {
-            $logger->info('No files received');
             return new JsonResponse(['status' => 'No files received'], 400);
         }
 
-        $logger->info('Files received:', ['files' => $files]);
         foreach ($files as $file) {
             $newFilename = $name . $this->image_count . '.' . $file->guessExtension();
             $file->move($this->getParameter('images_directory'), $newFilename);
@@ -608,7 +606,6 @@ class ProductController extends BaseController
         $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
         $command = "$pythonPath $scriptPath $escapedQuery 2>&1";
 
-        $logger->info("Executing search command: $command");
         $output = shell_exec($command);
 
         if ($output === null) {

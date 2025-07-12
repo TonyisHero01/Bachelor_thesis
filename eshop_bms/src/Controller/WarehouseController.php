@@ -186,9 +186,6 @@ class WarehouseController extends BaseController
     ): Response {
         $locale = $request->get('_locale') ?? $request->query->get('_locale') ?? $request->getLocale();
 
-        $logger->info("🧭 Requested locale: " . $locale);
-        $logger->info("📄 Will try localized template: templates/locale/{$locale}/warehouse/return_requests.html.twig");
-
         $returnRequests = $entityManager->getRepository(ReturnRequest::class)->findAll();
 
         return $this->renderLocalized('warehouse/return_requests.html.twig', [

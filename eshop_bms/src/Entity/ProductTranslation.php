@@ -5,9 +5,10 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\ProductTranslationRepository;
 
-#[ORM\Entity]
-#[ORM\Table(name: 'product_translation')]
-#[ORM\UniqueConstraint(columns: ['product_id', 'locale'])]
+#[ORM\Entity(repositoryClass: ProductTranslationRepository::class)]
+#[ORM\Table(name: 'product_translation', uniqueConstraints: [
+    new ORM\UniqueConstraint(name: 'uniq_product_translation_locale', columns: ['product_id', 'locale'])
+])]
 class ProductTranslation
 {
     #[ORM\Id]
@@ -15,7 +16,7 @@ class ProductTranslation
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Product::class)]
+    #[ORM\ManyToOne(targetEntity: Product::class, inversedBy: "translations")]
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private ?Product $product = null;
 
@@ -32,7 +33,12 @@ class ProductTranslation
     private ?string $material = null;
 
     #[ORM\Column(type: 'json', nullable: true)]
-    private ?array $attributes = [];
+    private ?array $attributes = null;
+
+    public function __construct()
+    {
+        $this->attributes = [];
+    }
 
     public function getId(): ?int
     {
