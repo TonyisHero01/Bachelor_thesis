@@ -19,3 +19,14 @@
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+# Custom ignores
+/templates/locale/
+/templates/translation/*
+
+# But keep these specific files
+!/templates/translation/languages.html.twig
+!/templates/translation/page_list.html.twig
+!/templates/translation/translation_center.html.twig
+
+/templates/translator/*.html.twig

@@ -25,8 +25,8 @@ class OrderAccessControlTest extends WebTestCase
 
     private int $customerAId;
     private int $customerBId;
-    private int $orderAId; // owned by A
-    private int $orderBId; // owned by B
+    private int $orderAId;
+    private int $orderBId;
 
     protected function setUp(): void
     {
@@ -50,7 +50,7 @@ class OrderAccessControlTest extends WebTestCase
         $customerB->setIsVerified(true);
         $this->em->persist($customerB);
 
-        $this->em->flush(); // ensure customer IDs exist
+        $this->em->flush();
 
         $orderA = new Order();
         $orderA->setCustomer($customerA);
@@ -59,7 +59,7 @@ class OrderAccessControlTest extends WebTestCase
         $orderA->setIsCompleted(false);
         $orderA->setPaymentStatus('PENDING');
         $orderA->setDeliveryStatus('PENDING');
-        $orderA->setDeliveryMethod('pickup'); // must be pickup|delivery
+        $orderA->setDeliveryMethod('pickup');
         $orderA->setAddress('Test address A');
         $orderA->setNotes(null);
         $orderA->setDiscount('0.00');
@@ -78,14 +78,13 @@ class OrderAccessControlTest extends WebTestCase
         $orderB->setDiscount('0.00');
         $this->em->persist($orderB);
 
-        $this->em->flush(); // ensure order IDs exist
+        $this->em->flush();
 
         $this->customerAId = $customerA->getId();
         $this->customerBId = $customerB->getId();
         $this->orderAId = $orderA->getId();
         $this->orderBId = $orderB->getId();
 
-        // Important: clear EM to avoid detached/proxy issues across requests
         $this->em->clear();
     }
 
@@ -95,17 +94,12 @@ class OrderAccessControlTest extends WebTestCase
         self::ensureKernelShutdown();
     }
 
-    // -----------------------
-    // Helpers
-    // -----------------------
-
     private function loginCustomer(int $customerId): void
     {
         /** @var Customer $customer */
         $customer = $this->em->getRepository(Customer::class)->find($customerId);
         self::assertNotNull($customer, 'Test customer must exist in DB.');
 
-        // firewall name: "customer" (from your security.yaml)
         $this->client->loginUser($customer, 'customer');
     }
 
@@ -117,11 +111,6 @@ class OrderAccessControlTest extends WebTestCase
         $this->assertStringContainsString('/customer/login', $loc);
     }
 
-    // -----------------------
-    // READ access (GET)
-    // -----------------------
-
-    /** Guest must not access customer order list (redirect to login). */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testGuestCannotAccessCustomerOrders(): void
@@ -130,7 +119,6 @@ class OrderAccessControlTest extends WebTestCase
         $this->assertRedirectsToLogin();
     }
 
-    /** Customer can access own order list (should be 200). */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testCustomerCanAccessOwnOrders(): void
@@ -142,7 +130,6 @@ class OrderAccessControlTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_OK);
     }
 
-    /** Guest must not access order confirmation page (redirect to login). */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testGuestCannotAccessOrderConfirmation(): void
@@ -151,7 +138,6 @@ class OrderAccessControlTest extends WebTestCase
         $this->assertRedirectsToLogin();
     }
 
-    /** Customer can access confirmation page of own order (should be 200). */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testCustomerCanAccessOwnOrderConfirmation(): void
@@ -177,11 +163,6 @@ class OrderAccessControlTest extends WebTestCase
         $this->assertResponseStatusCodeSame(Response::HTTP_NOT_FOUND);
     }
 
-    // -----------------------
-    // WRITE access (POST)
-    // -----------------------
-
-    /** Guest must NOT be able to cancel orders (should be 403). */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testGuestCannotCancelOrder(): void

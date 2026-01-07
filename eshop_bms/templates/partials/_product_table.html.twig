@@ -69,7 +69,6 @@
         <td>{{ product.numberInStock }}</td>
         <td>{{ product.createdAt|date('Y-m-d H:i') }}</td>
 
-        {# ✅ 使用 money + data-base 以便切换货币 #}
         <td>
           <span class="money" data-base="{{ product.price }}">
             {{ money(product.price) }}
@@ -91,5 +90,4 @@
   </tbody>
 </table>
 
-{# 供前端脚本使用的 id 集合 #}
 <div id="ids" data-ids="{{ ids|trim(',') }}" style="display: none;"></div>

@@ -22,11 +22,9 @@ class WarehousemanAccessTest extends WebTestCase
     {
         $client = static::createClient();
 
-        // 关键：不落库，直接构造一个带 ROLE_WAREHOUSEMAN 的用户并 login
         $user = $this->makeWarehousemanUser();
         $client->loginUser($user);
 
-        // ✅ 这些页面：仓库员应该能进（至少不是 403/404）
         $allowedPaths = [
             '/warehouse',
             '/warehouse/order_management',
@@ -42,20 +40,15 @@ class WarehousemanAccessTest extends WebTestCase
             $this->assertNotSame(Response::HTTP_FORBIDDEN, $status, "Warehouseman should NOT be forbidden for $path");
             $this->assertNotSame(Response::HTTP_NOT_FOUND, $status, "Route not found: $path");
         }
-
-        // ❌ 员工管理页：仓库员不应有权限
         $client->request('GET', '/employee_list');
         $status = $client->getResponse()->getStatusCode();
 
-        // 注意：你这里 assertContains 参数顺序写反了（needle, haystack）
-        // 下面是正确用法：assertContains(needle, haystack)
         $this->assertContains(
             $status,
             [Response::HTTP_FORBIDDEN, Response::HTTP_FOUND, Response::HTTP_SEE_OTHER],
             'Warehouseman must not access /employee_list'
         );
 
-        // 如果是跳转，进一步确认不是“正常页面跳转”，而是去登录/无权限页
         if (in_array($status, [Response::HTTP_FOUND, Response::HTTP_SEE_OTHER], true)) {
             $location = $client->getResponse()->headers->get('Location') ?? '';
             $this->assertTrue(

@@ -51,7 +51,6 @@
 
             <div class="filter-content">
 
-                {# Price（沿用原来的 id + 结构，方便 noUiSlider 复用） #}
                 {% if shopInfo is defined and (not shopInfo.getHidePrices()) %}
                     <div class="filter-section">
                         <h3>Price</h3>
@@ -64,7 +63,6 @@
                     </div>
                 {% endif %}
 
-                {# Color #}
                 <div class="filter-section">
                     <h3>Color</h3>
                     <div class="filter-options color-options">
@@ -83,7 +81,6 @@
                     </div>
                 </div>
 
-                {# Size #}
                 <div class="filter-section">
                     <h3>Size</h3>
                     <div class="filter-options size-options">
@@ -110,7 +107,6 @@
             </div>
         </aside>
 
-        {# 右侧商品列表区域 #}
         <div class="category-main">
             {% if products is empty %}
                 <p class="no-products">No products found for this category.</p>
@@ -213,7 +209,7 @@
             {% endif %}
         </div>
 
-    </div> {# /.category-content #}
+    </div>
 
 </div>
 {% endblock %}

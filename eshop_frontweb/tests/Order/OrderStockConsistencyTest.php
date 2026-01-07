@@ -23,13 +23,9 @@ final class OrderStockConsistencyTest extends WebTestCase
     {
         self::ensureKernelShutdown();
 
-        // ✅ 只能在这里创建一次 client（它会 boot kernel）
         $this->client = static::createClient();
-
-        // ✅ 从 client 拿 container（不会触发二次 boot）
         $this->em = $this->client->getContainer()->get(EntityManagerInterface::class);
 
-        // 清理订单/购物车，避免互相污染
         $this->purgeCartsAndOrders();
     }
 
@@ -52,10 +48,8 @@ final class OrderStockConsistencyTest extends WebTestCase
         $customer = $this->createCustomer('buyer1@example.com', 'Password123!');
         $product  = $this->createProduct('TEST-SKU-A', 10, 100.0);
 
-        // ✅ 你的 firewall 叫 customer
         $this->client->loginUser($customer, 'customer');
 
-        // add_to_cart (JSON)
         $this->jsonRequest('POST', '/cart/add', [
             'productId' => $product->getId(),
             'quantity'  => 3,
@@ -64,7 +58,6 @@ final class OrderStockConsistencyTest extends WebTestCase
         $add = json_decode($this->client->getResponse()->getContent(), true);
         self::assertTrue($add['success'] ?? false);
 
-        // order_create (JSON)
         $this->jsonRequest('POST', '/order/create', [
             'deliveryMethod' => 'pickup',
             'address'        => 'Test Address',
@@ -76,12 +69,10 @@ final class OrderStockConsistencyTest extends WebTestCase
         $orderId = (int) ($orderResp['orderId'] ?? 0);
         self::assertGreaterThan(0, $orderId);
 
-        // 刷新后断言库存
         $this->em->clear();
         $freshProduct = $this->em->getRepository(Product::class)->find($product->getId());
         self::assertSame(7, $freshProduct->getNumberInStock());
 
-        // 断言订单项
         $order = $this->em->getRepository(Order::class)->find($orderId);
         self::assertNotNull($order);
 
@@ -112,20 +103,15 @@ final class OrderStockConsistencyTest extends WebTestCase
             'notes'          => 'Should fail',
         ]);
 
-        // 你的 createOrder() 库存不足时返回 400
         $this->assertResponseStatusCodeSame(400);
 
-        // 库存不变
         $this->em->clear();
         $freshProduct = $this->em->getRepository(Product::class)->find($product->getId());
         self::assertSame(1, $freshProduct->getNumberInStock());
 
-        // 订单不应落库（你代码在 flush 之前 return）
         $orders = $this->em->getRepository(Order::class)->findBy(['customer' => $customer]);
         self::assertCount(0, $orders);
     }
-
-    // ---------------- helpers ----------------
 
     private function jsonRequest(string $method, string $uri, array $data): void
     {
@@ -155,7 +141,6 @@ final class OrderStockConsistencyTest extends WebTestCase
 
     private function createProduct(string $sku, int $stock, float $price): Product
     {
-        // currency 不可为 null：找一个现成的 currency
         $currency = $this->em->getRepository(Currency::class)->findOneBy([]);
         if (!$currency) {
             self::fail('No Currency found in DB. Seed at least one Currency row for tests, or send me Currency entity and I will create one here.');

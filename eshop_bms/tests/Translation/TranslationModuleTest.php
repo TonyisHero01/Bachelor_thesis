@@ -35,13 +35,11 @@ use App\\Kernel;
 use App\\Entity\\Employee;
 use Symfony\\Bundle\\FrameworkBundle\\KernelBrowser;
 
-// ============ BOOT ============
 \$kernel = new Kernel('test', true);
 \$kernel->boot();
 \$container = \$kernel->getContainer();
 \$em = \$container->get('doctrine')->getManager();
 
-// ============ USER ============
 \$user = new Employee();
 if (method_exists(\$user, 'setEmail')) \$user->setEmail('accounting_test_' . uniqid() . '@example.com');
 if (method_exists(\$user, 'setRoles')) \$user->setRoles(['ROLE_ACCOUNTING']);
@@ -55,7 +53,6 @@ if (method_exists(\$user, 'setPhone')) \$user->setPhone('000000000');
 \$em->persist(\$user);
 \$em->flush();
 
-// ============ TEMPLATE (ZZ) ============
 \$projectDir = \$kernel->getProjectDir();
 \$marker = '<<<LOCALE_ZZ_MARKER>>>';
 
@@ -66,11 +63,9 @@ if (method_exists(\$user, 'setPhone')) \$user->setPhone('000000000');
 @mkdir(\$tplDir, 0777, true);
 file_put_contents(\$tplPath, "<html><body>{\$marker}</body></html>");
 
-// ============ CLIENT ============
 \$client = new KernelBrowser(\$kernel);
 \$client->loginUser(\$user);
 
-// ============ MODES ============
 \$mode = '{$mode}';
 
 if (\$mode === 'PREFERRED') {
@@ -113,7 +108,6 @@ else {
     exit(99);
 }
 
-// ============ CLEANUP ============
 @unlink(\$tplPath);
 @rmdir(\$tplDir);
 @rmdir(\$langDir);

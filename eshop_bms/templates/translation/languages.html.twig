@@ -18,12 +18,13 @@
                         <a href="{{ path('translator_center', {'lang': lang}) }}" class="lang-link">{{ lang|upper }}</a>
 
                         <form method="post"
-                              action="{{ localized_path('translator_delete_language', { lang: lang }) }}"
-                              class="delete-form"
-                              onsubmit="return confirm('Delete language {{ lang|upper }}?')">
-                            <button type="submit" class="delete-btn" title="Delete">
-                                🗑️
-                            </button>
+                            action="{{ localized_path('translator_delete_language', { lang: lang }) }}"
+                            class="delete-form"
+                            onsubmit="return confirm('Delete language {{ lang|upper }}?')">
+
+                            <input type="hidden" name="_token" value="{{ csrf_lang_mgmt }}">
+
+                            <button type="submit" class="delete-btn" title="Delete">🗑️</button>
                         </form>
                     </li>
                 {% endfor %}
@@ -35,10 +36,18 @@
         <h2>Add New Language</h2>
         <form id="add-language-form" method="post" action="/translation/add-language">
             <input type="text" name="language" id="language-input" placeholder="e.g. cz" required>
+
+            <input
+                type="hidden"
+                id="csrf-token"
+                name="_token"
+                value="{{ csrf_lang_mgmt }}"
+            >
+
             <button type="submit">Add Language</button>
         </form>
     </div>
 </div>
 
-<script src="{{ asset('../assets/languages.js') }}"></script>
+<script src="{{ asset('assets/languages.js') }}"></script>
 {% endblock %}

@@ -20,15 +20,12 @@ use App\Kernel;
 use App\Entity\Employee;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-// 1) boot kernel
 \$kernel = new Kernel('test', true);
 \$kernel->boot();
 \$container = \$kernel->getContainer();
 
-// 2) doctrine EM (public service)
 \$em = \$container->get('doctrine')->getManager();
 
-// 3) create ROLE_ACCOUNTING user (fill required fields)
 \$user = new Employee();
 if (method_exists(\$user, 'setEmail')) \$user->setEmail('accounting_test_' . uniqid() . '@example.com');
 if (method_exists(\$user, 'setRoles')) \$user->setRoles(['ROLE_ACCOUNTING']);
@@ -41,7 +38,6 @@ if (method_exists(\$user, 'setPhone')) \$user->setPhone('000000000');
 \$em->persist(\$user);
 \$em->flush();
 
-// 4) create localized template templates/locale/ZZ/accounting/index.html.twig with marker
 \$projectDir = \$kernel->getProjectDir();
 \$marker = '<<<LOCALE_ZZ_MARKER>>>';
 
@@ -52,11 +48,8 @@ if (method_exists(\$user, 'setPhone')) \$user->setPhone('000000000');
 @mkdir(\$tplDir, 0777, true);
 file_put_contents(\$tplPath, "<html><body>{\$marker}</body></html>");
 
-// 5) Browser (internal HTTP, no web server needed)
 \$client = new KernelBrowser(\$kernel);
 \$client->loginUser(\$user);
-
-// --- request with existing locale template ---
 \$client->request('GET', '/bms/accounting?_locale=ZZ');
 \$resp1 = \$client->getResponse();
 
@@ -69,8 +62,6 @@ if (strpos(\$body1, \$marker) === false) {
     fwrite(STDERR, "Marker not found -> localized template not used\\n");
     exit(11);
 }
-
-// --- request with missing locale template (fallback expected) ---
 \$client->request('GET', '/bms/accounting?_locale=YY');
 \$resp2 = \$client->getResponse();
 
@@ -84,7 +75,6 @@ if (strpos(\$body2, \$marker) !== false) {
     exit(13);
 }
 
-// cleanup template
 @unlink(\$tplPath);
 // remove empty dirs best-effort
 @rmdir(\$tplDir);

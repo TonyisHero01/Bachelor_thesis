@@ -10,7 +10,6 @@
     {% block stylesheets %}
       <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css">
-      {# 使用你原本的相对路径 #}
       <link rel="stylesheet" href="{{ asset('assets/eshop_styles/base.css') }}">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
     {% endblock %}
@@ -23,7 +22,6 @@
   </head>
 
   <body class="eshop-root">
-    {# ---------------- 兜底变量（body 外层的共同区域，但不在 block body 内） ---------------- #}
     {% set languages = (languages is defined) ? languages : (availableLanguages is defined ? availableLanguages : []) %}
     {% set currentLocale = (locale is defined and locale) ? locale : (app.request.get('_locale') ?? 'en') %}
 
@@ -41,7 +39,6 @@
     {% endif %}
 
     <div class="page-container">
-      {# ---------------- Header（不在 block body 内） ---------------- #}
       <header class="header_container">
         <button class="menu-toggle" aria-label="Toggle Menu">
           <span></span><span></span><span></span>
@@ -57,7 +54,6 @@
         </div>
 
         <div class="header_right">
-          {# 搜索 #}
           <div class="field">
             <input type="text" id="searchInput" class="search__input" placeholder="Search...">
             <button class="search__button" type="button">
@@ -67,14 +63,12 @@
             </button>
           </div>
 
-          {# 心愿单 #}
           <a href="{{ path('customer_wishlist', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Wishlist">
             <svg viewBox="0 0 512 512" class="icon icon-wishlist">
               <path d="M474.644,74.27C449.391,45.616,414.358,29.836,376,29.836c-53.948,0-88.103,32.22-107.255,59.25c-4.969,7.014-9.196,14.047-12.745,20.665c-3.549-6.618-7.775-13.651-12.745-20.665c-19.152-27.03-53.307-59.25-107.255-59.25c-38.358,0-73.391,15.781-98.645,44.435C13.267,101.605,0,138.213,0,177.351c0,42.603,16.633,82.228,52.345,124.7c31.917,37.96,77.834,77.088,131.005,122.397c19.813,16.884,40.302,34.344,62.115,53.429l0.655,0.574c2.828,2.476,6.354,3.713,9.88,3.713s7.052-1.238,9.88-3.713l0.655-0.574c21.813-19.085,42.302-36.544,62.118-53.431c53.168-45.306,99.085-84.434,131.002-122.395C495.367,259.578,512,219.954,512,177.351C512,138.213,498.733,101.605,474.644,74.27z"></path>
             </svg>
           </a>
 
-          {# 购物车 #}
           <a href="{{ path('customer_cart', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Cart">
             <svg viewBox="0 0 1024 1024" class="icon icon-cart" xmlns="http://www.w3.org/2000/svg">
               <path class="path1" d="M409.6 1024c-56.464 0-102.4-45.936-102.4-102.4s45.936-102.4 102.4-102.4S512 865.136 512 921.6 466.064 1024 409.6 1024zm0-153.6c-28.232 0-51.2 22.968-51.2 51.2s22.968 51.2 51.2 51.2 51.2-22.968 51.2-51.2-22.968-51.2-51.2-51.2z"></path>
@@ -86,7 +80,6 @@
             {% endif %}
           </a>
 
-          {# 账户 #}
           <a href="{{ app.user ? path('customer_home', {'_locale': currentLocale}) : path('customer_login', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Account">
             {% if app.user and app.user.email is not empty %}
               <div class="user-initial-circle">{{ app.user.email|first|upper }}</div>
@@ -99,7 +92,6 @@
             {% endif %}
           </a>
 
-          {# 语言切换：保留原路由的简单实现 #}
           <form id="locale-switcher" method="get">
             <select name="_locale" class="picker-select lang-select" onchange="this.form.submit()">
               <option value="en" {% if currentLocale == 'en' %}selected{% endif %}>EN</option>
@@ -111,7 +103,6 @@
             </select>
           </form>
 
-          {# 货币切换 #}
           <select id="currency-select" class="picker-select" data-set-url="{{ path('set_currency') }}">
             {% if __currs is not empty %}
               {% for c in __currs %}
@@ -124,7 +115,6 @@
         </div>
       </header>
 
-      {# 遮罩/移动端分类菜单（该区域不进入 block body） #}
       <div class="overlay"></div>
 
       <div class="mobile-categories">
@@ -158,8 +148,6 @@
         </div>
       </div>
 
-      {# ---------------- 主体区：仅 block body 放子页面内容 ---------------- #}
-      {# ✨ 这里是关键修改：根据 show_sidebar 决定 has-sidebar / no-sidebar ✨ #}
       <div class="main-body {{ (show_sidebar is defined and show_sidebar) ? 'has-sidebar' : 'no-sidebar' }}">
         {% if show_sidebar is defined and show_sidebar %}
           <aside class="eshop-sidebar">
@@ -210,7 +198,6 @@
         </main>
       </div>
 
-      {# ---------------- Footer（不在 block body 内） ---------------- #}
       <footer class="footer">
         <div class="footer-content">
           <div class="footer-left">
@@ -237,7 +224,6 @@
         </div>
       </footer>
 
-      {# ---------------- 移动端搜索弹层（不在 block body 内） ---------------- #}
       <div class="mobile-search-overlay" id="mobile-search-overlay">
         <div class="mobile-search-container">
           <div class="mobile-search-header">
@@ -260,15 +246,12 @@
       </div>
     </div>
 
-    {# 全局 loading #}
     <div id="loadingSpinner" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999;">
       <i class="fas fa-spinner fa-spin fa-3x"></i>
     </div>
 
-    {# 你的搜索脚本 #}
     <script src="{{ asset('assets/eshopSearch.js') }}"></script>
 
-    {# ---------------- 多货币前端逻辑（读取 .money 的 data-amount/base/raw） ---------------- #}
     <script>
       (function(){
         const sel = document.getElementById('currency-select');

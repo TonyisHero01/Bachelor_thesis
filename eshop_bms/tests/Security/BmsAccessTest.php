@@ -8,10 +8,6 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class BmsAccessTest extends WebTestCase
 {
-    /**
-     * 匿名用户访问 BMS 页面应被重定向到登录页
-     * （你路由表里确实存在 /login -> app_login）
-     */
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testAnonymousUserIsRedirectedToLoginPageForBmsPages(): void

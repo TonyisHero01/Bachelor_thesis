@@ -75,7 +75,6 @@
   </div>
 </div>
 
-{# 给前端脚本一个实时汇率表（防止写死），如果 base 里没注入，这里兜底注入一次 #}
 <script>
   window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
 </script>

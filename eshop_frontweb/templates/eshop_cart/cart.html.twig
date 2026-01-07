@@ -82,7 +82,6 @@
   </table>
 
   {% if not shopInfo.hidePrices %}
-    {# 计算购物车总计（以数据库基准价相加；显示时 money() 会自动换算） #}
     {% set total = 0 %}
     {% for item in cartItems %}
       {% set p = item.getProduct().getPrice() %}

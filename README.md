@@ -23,12 +23,9 @@ All future development assumes Docker-based environments.
 
 ---
 
-### Clone Repository
-```sh
-https://github.com/TonyisHero01/Bachelor_thesis.git
-```
-
 ### 🐳 Run with Docker
+
+#### Start with Docker
 
 Ensure Docker & Docker Compose are installed:
 
@@ -45,7 +42,7 @@ docker compose up --build
 
 This will start two Apache containers on ports 8082 and 8083.
 
-### Inside container
+### Inside container: install Symfony dependencies
 
 ```sh
 # Backend:
@@ -61,30 +58,42 @@ exit
 
 ## ⚙️ Setup
 
-### 1. Configure environment variables
+### 1. Clone the repository
+
+```sh
+https://github.com/TonyisHero01/Bachelor_thesis.git
+```
+
+### 2. Configure environment variables
 
 Edit `.env` in both `eshop_bms` and `eshop_frontweb`:
 
 ```dotenv
 DATABASE_URL="postgresql://your_username:your_password@host.docker.internal:5432/eshop_cms?serverVersion=14&charset=utf8"
 ```
-Edit eshop_frontweb/.env (You can keep the existing value if you didn’t change it in docker-compose.yaml):
-```dotenv
-BMS_URL="http://localhost:8083/"
-```
 
-### 2. Set up the super administrator
+### 3. Set up the super administrator
 
 ```sh
 docker exec -it bachelor_thesis-symfony_version-apache-bms-1 bash
 php bin/console app:create-super-admin
 ```
 
-### 3. Initialize Shop Info
+### 4. Initialize Shop Info
 ```sh
 docker exec -it bachelor_thesis-symfony_version-apache-bms-1 bash
 php bin/console app:init-shopinfo
 ```
+
+#### ⚠️ Important Notes on Test Data:
+
+If you're loading `DB/test_data_insertion.sql`, please note:
+
+1. **Employees**: You must first create a super admin and add employees via the BMS web UI.
+2. **Customers**: Same reason (password hashing), create them via UI.
+3. **Orders**: Require valid customers first.
+4. **Product Images**: Add image files manually to `eshop_bms/public/images/` and match filenames used in test data.
+
 ---
 
 ## 🌐 Access the Application
@@ -103,3 +112,5 @@ php bin/console app:init-shopinfo
 ---
 
 Feel free to open issues or pull requests on GitHub if you encounter any problems.
+
+pk_8c09e2adb753b25f.28e00280097d70fcf1a89f0ce5320043415bbdf3ee64bf35

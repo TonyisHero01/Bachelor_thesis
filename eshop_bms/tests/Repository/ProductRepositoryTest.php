@@ -30,7 +30,6 @@ class ProductRepositoryTest extends KernelTestCase
         try {
             $schemaTool->dropSchema($classes);
         } catch (\Throwable $e) {
-            // 第一次可能不存在，忽略
         }
         $schemaTool->createSchema($classes);
     }

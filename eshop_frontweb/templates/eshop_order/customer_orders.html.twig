@@ -34,7 +34,6 @@
 
           {% if not shopInfo.hidePrices %}
             <td data-label="Total Price">
-              {# ✅ 用 money()：金额随 active_currency 自动换算并输出 .money 元素 #}
               {{ money(order.getTotalPrice()) }}
             </td>
           {% endif %}

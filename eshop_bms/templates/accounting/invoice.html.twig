@@ -113,13 +113,11 @@
     </table>
 
     <div class="totals">
-        {# 小计：所有行小计求和 #}
         {% set subtotal = 0 %}
         {% for item in order.orderItems %}
             {% set subtotal = subtotal + item.subtotal %}
         {% endfor %}
 
-        {# 折扣、税额、合计 #}
         {% set discount = order.discount %}
         {% set totalAfterDiscount = order.totalPrice - discount %}
         {% set taxAmount = totalAfterDiscount - subtotal %}

@@ -21,6 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 
 #[IsGranted('ROLE_TRANSLATOR')]
 class TranslatorController extends AbstractController
@@ -37,7 +38,7 @@ class TranslatorController extends AbstractController
      * Lists available languages based on templates/locale/<lang> folders.
      */
     #[Route('/translation', name: 'translator_languages', methods: ['GET'])]
-    public function showLanguages(KernelInterface $kernel): Response
+    public function showLanguages(KernelInterface $kernel, CsrfTokenManagerInterface $csrfTokenManager): Response
     {
         $localeRoot = $kernel->getProjectDir() . '/templates/locale';
         $languages = [];
@@ -57,7 +58,7 @@ class TranslatorController extends AbstractController
 
         return $this->render('translation/languages.html.twig', [
             'languages' => $languages,
-            'csrf_token' => $this->generateCsrfToken(self::CSRF_LANG_MGMT),
+            'csrf_lang_mgmt' => $csrfTokenManager->getToken(self::CSRF_LANG_MGMT)->getValue(),
         ]);
     }
 

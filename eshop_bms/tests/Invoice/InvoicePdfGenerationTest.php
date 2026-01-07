@@ -21,16 +21,13 @@ use App\Entity\Order;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
-// boot kernel
 \$kernel = new Kernel('test', true);
 \$kernel->boot();
 
-// ✅ 正确方式：通过 doctrine 服务拿 EntityManager
 \$container = \$kernel->getContainer();
 \$doctrine = \$container->get('doctrine');
 \$em = \$doctrine->getManager();
 
-// 找一条已完成订单
 \$order = \$em->getRepository(Order::class)->findOneBy(['isCompleted' => true]);
 
 if (!\$order) {
@@ -38,7 +35,6 @@ if (!\$order) {
     exit(2);
 }
 
-// ===== 模拟 AccountingController 中的 PDF 生成逻辑 =====
 \$options = new Options();
 \$options->set('defaultFont', 'DejaVu Sans');
 \$options->set('isRemoteEnabled', false);
@@ -76,7 +72,6 @@ PHP;
             $script
         ]);
 
-        // 🔥 关键：硬超时，永不卡死
         $process->setTimeout(15);
         $process->run();
 
