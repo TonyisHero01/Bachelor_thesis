@@ -25,8 +25,6 @@ All future development assumes Docker-based environments.
 
 ### 🐳 Run with Docker
 
-#### Start with Docker
-
 Ensure Docker & Docker Compose are installed:
 
 ```sh
@@ -42,7 +40,7 @@ docker compose up --build
 
 This will start two Apache containers on ports 8082 and 8083.
 
-### Inside container: install Symfony dependencies
+### Inside container
 
 ```sh
 # Backend:
