@@ -1,4 +1,3 @@
-
 {% block body %}
 <!DOCTYPE html>
 <html>
@@ -72,7 +71,6 @@
 </head>
 <body>
     <header>
-        {# 如果你有 logo，可以这样插入 #}
         {# <img src="{{ absolute_url(asset('images/logo.png')) }}" alt="Logo" class="logo"> #}
         <h1>INVOICE #{{ order.id }}</h1>
     </header>
@@ -107,29 +105,33 @@
                     <td>{{ loop.index }}</td>
                     <td>{{ item.productName }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>{{ item.unitPrice|number_format(2, '.', ',') }}</td>
-                    <td>{{ item.subtotal|number_format(2, '.', ',') }}</td>
+                    <td>{{ money(item.unitPrice) }}</td>
+                    <td>{{ money(item.subtotal) }}</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="totals">
+        {# 小计：所有行小计求和 #}
         {% set subtotal = 0 %}
         {% for item in order.orderItems %}
             {% set subtotal = subtotal + item.subtotal %}
         {% endfor %}
 
+        {# 折扣、税额、合计 #}
         {% set discount = order.discount %}
         {% set totalAfterDiscount = order.totalPrice - discount %}
         {% set taxAmount = totalAfterDiscount - subtotal %}
 
-        <p>Subtotal (without tax): {{ subtotal|number_format(2, '.', ',') }} {{ order.customer.preferredCurrency ?? 'CZK' }}</p>
+        <p>Subtotal (without tax): {{ money(subtotal) }}</p>
+
         {% if discount > 0 %}
-            <p>Discount: -{{ discount|number_format(2, '.', ',') }} {{ order.customer.preferredCurrency ?? 'CZK' }}</p>
+            <p>Discount: -{{ money(discount) }}</p>
         {% endif %}
-        <p>Tax: {{ taxAmount|number_format(2, '.', ',') }} {{ order.customer.preferredCurrency ?? 'CZK' }}</p>
-        <p><strong>Total (incl. tax): {{ totalAfterDiscount|number_format(2, '.', ',') }} {{ order.customer.preferredCurrency ?? 'CZK' }}</strong></p>
+
+        <p>Tax: {{ money(taxAmount) }}</p>
+        <p><strong>Total (incl. tax): {{ money(totalAfterDiscount) }}</strong></p>
     </div>
 
     <footer>

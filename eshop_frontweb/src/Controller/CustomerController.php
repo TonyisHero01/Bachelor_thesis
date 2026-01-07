@@ -1,179 +1,177 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-use App\Security\CustomerLoginFormAuthenticator;
-use App\Entity\ShopInfo;
-use App\Entity\Customer;
-use App\Entity\Product;
 use App\Entity\Cart;
+use App\Entity\Category;
+use App\Entity\Customer;
 use App\Entity\Order;
 use App\Entity\OrderItem;
+use App\Entity\Product;
 use App\Entity\ReturnRequest;
-use App\Entity\Category;
+use App\Entity\ShopInfo;
 use App\Form\CustomerRegistrationFormType;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
+use Doctrine\Persistence\ManagerRegistry;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Session\SessionInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Twig\Environment;
 
 class CustomerController extends BaseController
 {
+    private ShopInfo $shopInfo;
+
     public function __construct(
-        EntityManagerInterface $entityManager,
+        private readonly EntityManagerInterface $entityManager,
         Environment $twig,
         LoggerInterface $logger,
-        private TokenStorageInterface $tokenStorage,
-        private RequestStack $requestStack
+        ManagerRegistry $doctrine,
+        private readonly TokenStorageInterface $tokenStorage,
+        private readonly RequestStack $requestStack,
     ) {
-        parent::__construct($twig, $logger);
-        $this->entityManager = $entityManager;
-        $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+        parent::__construct($twig, $logger, $doctrine);
+
+        $this->shopInfo = $entityManager
+            ->getRepository(ShopInfo::class)
+            ->findOneBy([], ['id' => 'DESC']);
     }
 
-    #[Route('/customer/login', name: 'customer_login')]
     /**
-     * Displays the customer login form.
-     * Redirects to the customer home page if the user is already authenticated.
-     * Stores the referrer for post-login redirection.
-     *
-     * @param AuthenticationUtils $authenticationUtils
-     * @param Request $request
-     * @param SessionInterface $session
-     * @return Response
+     * Displays the customer login page.
+     * Redirects authenticated customers to the customer home page.
+     * Stores the referrer as a target path when available.
      */
-    public function login(AuthenticationUtils $authenticationUtils, Request $request, SessionInterface $session): Response
-    {
+    #[Route('/customer/login', name: 'customer_login', methods: ['GET', 'POST'])]
+    public function login(
+        AuthenticationUtils $authenticationUtils,
+        Request $request,
+        SessionInterface $session,
+    ): Response {
         if ($this->getUser() instanceof Customer) {
             return $this->redirectToRoute('customer_home');
         }
 
-        $targetPath = $request->headers->get('referer');
-        if ($targetPath && !$session->get('_security.customer.target_path')) {
+        $targetPath = (string) ($request->headers->get('referer') ?? '');
+        if ($targetPath !== '' && !$session->has('_security.customer.target_path')) {
             $session->set('_security.customer.target_path', $targetPath);
         }
 
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
 
-        return $this->renderLocalized('customer/login.html.twig', [
-            'last_username' => $lastUsername,
-            'error' => $error,
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'customer/login.html.twig',
+            [
+                'last_username' => $lastUsername,
+                'error' => $error,
+                'shopInfo' => $this->shopInfo,
+                'show_sidebar' => false,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/customer/home', name: 'customer_home')]
-    #[IsGranted('ROLE_CUSTOMER')]
     /**
      * Displays the customer home page.
-     * Requires the user to be authenticated.
-     *
-     * @param Request $request
-     * @return Response
      */
+    #[Route('/customer/home', name: 'customer_home', methods: ['GET'])]
+    #[IsGranted('ROLE_CUSTOMER')]
     public function home(Request $request): Response
     {
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('customer/home.html.twig', [
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'customer/home.html.twig',
+            [
+                'shopInfo' => $this->shopInfo,
+                'show_sidebar' => false,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
     /**
-     * Handles customer registration.
-     * Automatically logs in the customer and redirects to the home page on success.
-     *
-     * @param Request $request
-     * @param UserPasswordHasherInterface $passwordHasher
-     * @param EntityManagerInterface $entityManager
-     * @return Response
+     * Handles customer registration and logs the customer in on success.
      */
-    #[Route('/customer/register', name: 'customer_register')]
+    #[Route('/customer/register', name: 'customer_register', methods: ['GET', 'POST'])]
     public function register(
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
-        EntityManagerInterface $entityManager
+        SessionInterface $session,
     ): Response {
         $customer = new Customer();
         $form = $this->createForm(CustomerRegistrationFormType::class, $customer);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $customer->setPasswordHash(
-                $passwordHasher->hashPassword(
-                    $customer,
-                    $form->get('password_hash')->getData()
-                )
-            );
+            $plainPassword = (string) $form->get('plainPassword')->getData();
+
+            $customer->setPasswordHash($passwordHasher->hashPassword($customer, $plainPassword));
             $customer->setIsVerified(false);
-            $entityManager->persist($customer);
-            $entityManager->flush();
+
+            $this->entityManager->persist($customer);
+            $this->entityManager->flush();
 
             $token = new UsernamePasswordToken($customer, 'customer', $customer->getRoles());
             $this->tokenStorage->setToken($token);
-
-            $session = $this->requestStack->getSession();
             $session->set('_security_customer', serialize($token));
 
             return $this->redirectToRoute('customer_home');
         }
 
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('customer/register.html.twig', [
-            'registrationForm' => $form->createView(),
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'customer/register.html.twig',
+            [
+                'registrationForm' => $form->createView(),
+                'shopInfo' => $this->shopInfo,
+                'show_sidebar' => false,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route(path: '/logout', name: 'app_logout')]
-   /**
-     * Customer logout route.
-     * This method will never be executed directly; it is intercepted by Symfony firewall.
-     *
-     * @return void
+    /**
+     * Logout route handled by Symfony security firewall.
      */
+    #[Route(path: '/logout', name: 'app_logout', methods: ['GET'])]
     public function logout(): void
     {
-        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+        throw new \LogicException('This method is intercepted by the logout firewall configuration.');
     }
 
-    #[Route('/customer/wishlist', name: 'customer_wishlist')]
     /**
      * Displays the wishlist for the currently logged-in customer.
-     * Redirects to login if unauthenticated.
-     *
-     * @param Request $request
-     * @param EntityManagerInterface $entityManager
-     * @return Response
      */
-    public function showWishlist(Request $request, EntityManagerInterface $entityManager): Response
+    #[Route('/customer/wishlist', name: 'customer_wishlist', methods: ['GET'])]
+    public function showWishlist(Request $request): Response
     {
         $customer = $this->getUser();
 
@@ -183,174 +181,179 @@ class CustomerController extends BaseController
 
         $wishlistProductIds = $customer->getWishlist();
         $products = [];
-        if (!empty($wishlistProductIds)) {
-            $products = $entityManager->getRepository(Product::class)->findBy(['id' => $wishlistProductIds]);
+
+        if ($wishlistProductIds !== []) {
+            $products = $this->entityManager
+                ->getRepository(Product::class)
+                ->findBy(['id' => $wishlistProductIds]);
         }
 
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('customer/wishlist.html.twig', [
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'products' => $products,
-            'categories' => $categories
-        ]);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'customer/wishlist.html.twig',
+            [
+                'shopInfo' => $this->shopInfo,
+                'show_sidebar' => false,
+                'products' => $products,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/wishlist/check/{productId}', name: 'check_wishlist', methods: ['GET'])]
     /**
-     * Checks if the specified product is in the customer's wishlist.
-     *
-     * @param int $productId
-     * @param EntityManagerInterface $entityManager
-     * @return JsonResponse
+     * Checks whether a product is in the authenticated customer's wishlist.
      */
-    public function checkWishlist(int $productId, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/wishlist/check/{productId}', name: 'check_wishlist', methods: ['GET'])]
+    public function checkWishlist(int $productId): JsonResponse
     {
         $user = $this->getUser();
 
-        if (!$user || !$user instanceof Customer) {
+        if (!$user instanceof Customer) {
             return new JsonResponse(['inWishlist' => false], 403);
         }
 
-        $wishlist = $user->getWishlist();
-
-        return new JsonResponse(['inWishlist' => in_array($productId, $wishlist)]);
+        return new JsonResponse(['inWishlist' => in_array($productId, $user->getWishlist(), true)]);
     }
 
-    #[Route(path: '/add_to_wishlist', name: 'wishlist_adding', methods: ['POST'])]
     /**
-     * Adds or removes a product from the customer's wishlist.
-     * Toggles wishlist state and returns updated wishlist as JSON.
-     *
-     * @param Request $request
-     * @param EntityManagerInterface $entityManager
-     * @return JsonResponse
+     * Toggles a product in the authenticated customer's wishlist.
      */
-    public function addToWishlist(Request $request, EntityManagerInterface $entityManager): JsonResponse {
+    #[Route(path: '/add_to_wishlist', name: 'wishlist_adding', methods: ['POST'])]
+    public function addToWishlist(Request $request): JsonResponse
+    {
         $user = $this->getUser();
 
         if (!$user instanceof Customer) {
             return new JsonResponse(['status' => 'error', 'message' => 'User not authenticated'], 403);
         }
 
-        $input = json_decode($request->getContent(), true);
-        $productId = $input['product_id'] ?? null;
+        $input = json_decode((string) $request->getContent(), true);
+        if (!is_array($input)) {
+            return new JsonResponse(['status' => 'error', 'message' => 'Invalid JSON body'], 400);
+        }
 
-        if (!$productId) {
+        $productId = $input['product_id'] ?? null;
+        if (!is_numeric($productId)) {
             return new JsonResponse(['status' => 'error', 'message' => 'Product ID not provided'], 400);
         }
 
+        $pid = (int) $productId;
+
         $wishlist = $user->getWishlist();
 
-        if (in_array($productId, $wishlist)) {
-            $wishlist = array_filter($wishlist, fn($id) => $id != $productId);
+        if (in_array($pid, $wishlist, true)) {
+            $wishlist = array_values(array_filter(
+                $wishlist,
+                static fn (int $id): bool => $id !== $pid,
+            ));
         } else {
-            $wishlist[] = (int) $productId;
+            $wishlist[] = $pid;
+            $wishlist = array_values(array_unique($wishlist));
         }
 
-        $user->setWishlist(array_values($wishlist));
-        $entityManager->persist($user);
-        $entityManager->flush();
+        $user->setWishlist($wishlist);
+        $this->entityManager->flush();
 
         return new JsonResponse(['status' => 'success', 'wishlist' => $wishlist]);
     }
 
-    #[Route('/wishlist/remove/{id}', name: 'remove_from_wishlist', methods: ['POST'])]
     /**
-     * Removes a product from the customer's wishlist.
-     *
-     * @param int $id Product ID
-     * @param EntityManagerInterface $entityManager
-     * @return JsonResponse
+     * Removes a product from the authenticated customer's wishlist.
      */
-    public function removeFromWishlist(int $id, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/wishlist/remove/{id}', name: 'remove_from_wishlist', methods: ['POST'])]
+    public function removeFromWishlist(int $id): JsonResponse
     {
         $user = $this->getUser();
-        if (!$user) {
+
+        if (!$user instanceof Customer) {
             return new JsonResponse(['success' => false, 'message' => 'User not logged in'], 403);
         }
 
         $wishlist = $user->getWishlist();
-        if (!in_array($id, $wishlist)) {
+
+        if (!in_array($id, $wishlist, true)) {
             return new JsonResponse(['success' => false, 'message' => 'The product is not in the wishlist.'], 400);
         }
 
-        $wishlist = array_diff($wishlist, [$id]);
-        $user->setWishlist(array_values($wishlist));
-        $entityManager->flush();
+        $user->setWishlist(array_values(array_diff($wishlist, [$id])));
+        $this->entityManager->flush();
 
         return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/cart', name: 'customer_cart')]
     /**
-     * Displays the customer's shopping cart.
-     * Redirects to login if not authenticated.
-     *
-     * @param EntityManagerInterface $entityManager
-     * @param Request $request
-     * @return Response
+     * Displays the authenticated customer's cart.
      */
-    public function showCart(EntityManagerInterface $entityManager, Request $request): Response
+    #[Route('/cart', name: 'customer_cart', methods: ['GET'])]
+    public function showCart(Request $request): Response
     {
-        if (!$this->getUser()) {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
             return $this->redirectToRoute('customer_login');
         }
 
-        $customer = $entityManager->getRepository(Customer::class)->find($this->getUser()->getId());
-        $cartItems = $entityManager->getRepository(Cart::class)->findBy(
+        $customer = $this->entityManager->getRepository(Customer::class)->find($user->getId());
+        $cartItems = $this->entityManager->getRepository(Cart::class)->findBy(
             ['customer' => $customer],
-            ['addedAt' => 'ASC']
+            ['addedAt' => 'ASC'],
         );
 
-        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+        $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
 
-        return $this->renderLocalized('eshop_cart/cart.html.twig', [
-            'shopInfo' => $shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'cartItems' => $cartItems,
-            'categories' => $categories
-        ], $request);
+        return $this->renderLocalized(
+            'eshop_cart/cart.html.twig',
+            [
+                'shopInfo' => $shopInfo,
+                'show_sidebar' => false,
+                'cartItems' => $cartItems,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/cart/update/{id}', name: 'update_cart', methods: ['POST'])]
     /**
-     * Updates the quantity of an item in the cart.
-     *
-     * @param int $id Cart item ID
-     * @param Request $request
-     * @param EntityManagerInterface $entityManager
-     * @return JsonResponse
+     * Updates the quantity of a cart item owned by the authenticated customer.
      */
-    public function updateCart(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/cart/update/{id}', name: 'update_cart', methods: ['POST'])]
+    public function updateCart(int $id, Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $newQuantity = (int) ($data['quantity'] ?? 1);
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON body'], 400);
+        }
 
+        $newQuantity = (int) ($data['quantity'] ?? 1);
         if ($newQuantity < 1) {
             return new JsonResponse(['success' => false, 'message' => 'Invalid quantity'], 400);
         }
 
-        if (!$this->getUser()) {
+        $user = $this->getUser();
+        if (!$user instanceof Customer) {
             return new JsonResponse(['success' => false, 'message' => 'User not authenticated'], 403);
         }
 
-        $customer = $entityManager->getRepository(Customer::class)->find($this->getUser()->getId());
-        $cartItem = $entityManager->getRepository(Cart::class)->find($id);
+        $customer = $this->entityManager->getRepository(Customer::class)->find($user->getId());
+        $cartItem = $this->entityManager->getRepository(Cart::class)->find($id);
 
         if (!$cartItem || $cartItem->getCustomer() !== $customer) {
             return new JsonResponse(['success' => false, 'message' => 'Cart item not found'], 404);
         }
 
         $cartItem->setQuantity($newQuantity);
-        $entityManager->flush();
+        $this->entityManager->flush();
 
-        $cartTotalQuantity = $entityManager->createQueryBuilder()
+        $cartTotalQuantity = $this->entityManager->createQueryBuilder()
             ->select('SUM(c.quantity)')
             ->from(Cart::class, 'c')
             ->where('c.customer = :customer')
@@ -361,35 +364,32 @@ class CustomerController extends BaseController
         return new JsonResponse([
             'success' => true,
             'message' => 'Cart updated successfully',
-            'cartCount' => $cartTotalQuantity ?? 0
+            'cartCount' => $cartTotalQuantity ? (int) $cartTotalQuantity : 0,
         ]);
     }
 
-    #[Route('/cart/remove/{id}', name: 'remove_from_cart', methods: ['POST'])]
     /**
-     * Removes an item from the customer's cart.
-     *
-     * @param int $id Cart item ID
-     * @param EntityManagerInterface $entityManager
-     * @return JsonResponse
+     * Removes a cart item owned by the authenticated customer.
      */
-    public function removeFromCart(int $id, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/cart/remove/{id}', name: 'remove_from_cart', methods: ['POST'])]
+    public function removeFromCart(int $id): JsonResponse
     {
-        if (!$this->getUser()) {
+        $user = $this->getUser();
+        if (!$user instanceof Customer) {
             return new JsonResponse(['success' => false, 'message' => 'User not authenticated'], 403);
         }
 
-        $customer = $entityManager->getRepository(Customer::class)->find($this->getUser()->getId());
-        $cartItem = $entityManager->getRepository(Cart::class)->find($id);
+        $customer = $this->entityManager->getRepository(Customer::class)->find($user->getId());
+        $cartItem = $this->entityManager->getRepository(Cart::class)->find($id);
 
         if (!$cartItem || $cartItem->getCustomer() !== $customer) {
             return new JsonResponse(['success' => false, 'message' => 'Cart item not found'], 404);
         }
 
-        $entityManager->remove($cartItem);
-        $entityManager->flush();
+        $this->entityManager->remove($cartItem);
+        $this->entityManager->flush();
 
-        $cartTotalQuantity = $entityManager->createQueryBuilder()
+        $cartTotalQuantity = $this->entityManager->createQueryBuilder()
             ->select('SUM(c.quantity)')
             ->from(Cart::class, 'c')
             ->where('c.customer = :customer')
@@ -400,144 +400,153 @@ class CustomerController extends BaseController
         return new JsonResponse([
             'success' => true,
             'message' => 'Item removed from cart',
-            'cartCount' => $cartTotalQuantity ?? 0
+            'cartCount' => $cartTotalQuantity ? (int) $cartTotalQuantity : 0,
         ]);
     }
 
+    /**
+     * Displays an order confirmation page for an order owned by the authenticated customer.
+     */
     #[Route('/order-confirmation/{id}', name: 'order_confirmation', methods: ['GET'])]
-    /**
-     * Displays the order confirmation page.
-     * Ensures the order belongs to the logged-in customer.
-     *
-     * @param int $id Order ID
-     * @param EntityManagerInterface $entityManager
-     * @param Request $request
-     * @return Response
-     */
-    public function orderConfirmation(int $id, EntityManagerInterface $entityManager, Request $request): Response
-    {
-        if (!$this->getUser()) {
-            return $this->redirectToRoute('customer_login');
-        }
-
-        $order = $entityManager->getRepository(Order::class)->find($id);
-        if (!$order || $order->getCustomer() !== $this->getUser()) {
-            throw $this->createNotFoundException('Order not found.');
-        }
-
-        $orderItems = $entityManager->getRepository(OrderItem::class)->findBy(['order' => $order]);
-        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-
-        return $this->renderLocalized('eshop_order/order_confirmation.html.twig', [
-            'shopInfo' => $shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'order' => $order,
-            'orderItems' => $orderItems,
-            'categories' => $categories
-        ], $request);
-    }
-
-    #[Route('/order-confirmation2/{id}', name: 'order_confirmation2', methods: ['GET'])]
-    /**
-     * Displays an alternative order confirmation page.
-     * Ensures the order belongs to the logged-in customer.
-     *
-     * @param int $id Order ID
-     * @param EntityManagerInterface $entityManager
-     * @param Request $request
-     * @return Response
-     */
-    public function orderConfirmation2(int $id, EntityManagerInterface $entityManager, Request $request): Response
-    {
-        if (!$this->getUser()) {
-            return $this->redirectToRoute('customer_login');
-        }
-
-        $order = $entityManager->getRepository(Order::class)->find($id);
-        if (!$order || $order->getCustomer() !== $this->getUser()) {
-            throw $this->createNotFoundException('Order not found.');
-        }
-
-        $orderItems = $entityManager->getRepository(OrderItem::class)->findBy(['order' => $order]);
-        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-
-        return $this->renderLocalized('eshop_order/order_confirmation2.html.twig', [
-            'shopInfo' => $shopInfo,
-            'locale' => $request->getLocale(),
-            'show_sidebar' => false,
-            'languages' => $this->getAvailableLanguages(),
-            'order' => $order,
-            'orderItems' => $orderItems,
-            'categories' => $categories
-        ]);
-    }
-
-    #[Route('/customer/orders', name: 'customer_orders')]
-    /**
-     * Displays all orders made by the current customer.
-     * Requires authentication.
-     *
-     * @param EntityManagerInterface $entityManager
-     * @param Request $request
-     * @return Response
-     */
-    public function customerOrders(EntityManagerInterface $entityManager, Request $request): Response
+    public function orderConfirmation(int $id, Request $request): Response
     {
         $user = $this->getUser();
-        if (!$user) {
-            return $this->redirectToRoute('login');
+
+        if (!$user instanceof Customer) {
+            return $this->redirectToRoute('customer_login');
         }
 
-        $orders = $entityManager->getRepository(Order::class)->findBy(
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order || $order->getCustomer() !== $user) {
+            throw $this->createNotFoundException('Order not found.');
+        }
+
+        $orderItems = $this->entityManager->getRepository(OrderItem::class)->findBy(['order' => $order]);
+        $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_order/order_confirmation.html.twig',
+            [
+                'shopInfo' => $shopInfo,
+                'show_sidebar' => false,
+                'order' => $order,
+                'orderItems' => $orderItems,
+                'categories' => $categories,
+            ],
+            $request,
+        );
+    }
+
+    /**
+     * Displays the alternative order confirmation page for an order owned by the authenticated customer.
+     */
+    #[Route('/order-confirmation2/{id}', name: 'order_confirmation2', methods: ['GET'])]
+    public function orderConfirmation2(int $id, Request $request): Response
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return $this->redirectToRoute('customer_login');
+        }
+
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order || $order->getCustomer() !== $user) {
+            throw $this->createNotFoundException('Order not found.');
+        }
+
+        $orderItems = $this->entityManager->getRepository(OrderItem::class)->findBy(['order' => $order]);
+        $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_order/order_confirmation2.html.twig',
+            [
+                'shopInfo' => $shopInfo,
+                'show_sidebar' => false,
+                'order' => $order,
+                'orderItems' => $orderItems,
+                'categories' => $categories,
+            ],
+            $request,
+        );
+    }
+
+    /**
+     * Displays all orders placed by the authenticated customer.
+     */
+    #[Route('/customer/orders', name: 'customer_orders', methods: ['GET'])]
+    public function customerOrders(Request $request): Response
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return $this->redirectToRoute('customer_login');
+        }
+
+        $orders = $this->entityManager->getRepository(Order::class)->findBy(
             ['customer' => $user],
-            ['orderCreatedAt' => 'DESC']
+            ['orderCreatedAt' => 'DESC'],
         );
 
-        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+        $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
 
-        return $this->renderLocalized('eshop_order/customer_orders.html.twig', [
-            'shopInfo' => $shopInfo,
-            'locale' => $request->getLocale(),
-            'show_sidebar' => false,
-            'languages' => $this->getAvailableLanguages(),
-            'orders' => $orders,
-            'categories' => $categories
-        ]);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_order/customer_orders.html.twig',
+            [
+                'shopInfo' => $shopInfo,
+                'show_sidebar' => false,
+                'orders' => $orders,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/customer/return-requests', name: 'customer_return_requests')]
     /**
-     * Displays all return requests made by the current customer.
-     * Requires authentication and filters by user email.
-     *
-     * @param EntityManagerInterface $entityManager
-     * @param Request $request
-     * @return Response
+     * Displays all return requests created by the authenticated customer (filtered by email).
      */
-    public function returnRequests(EntityManagerInterface $entityManager, Request $request): Response
+    #[Route('/customer/return-requests', name: 'customer_return_requests', methods: ['GET'])]
+    public function returnRequests(Request $request): Response
     {
         $user = $this->getUser();
-        if (!$user) {
+
+        if (!$user instanceof Customer) {
             return $this->redirectToRoute('customer_login');
         }
 
-        $returnRequests = $entityManager->getRepository(ReturnRequest::class)
-            ->findBy(['userEmail' => $user->getEmail()], ['requestDate' => 'DESC']);
+        $returnRequests = $this->entityManager->getRepository(ReturnRequest::class)->findBy(
+            ['userEmail' => $user->getEmail()],
+            ['requestDate' => 'DESC'],
+        );
 
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
 
-        return $this->renderLocalized('customer/return_requests.html.twig', [
-            'returnRequests' => $returnRequests,
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'categories' => $categories
-        ], $request);
+        return $this->renderLocalized(
+            'customer/return_requests.html.twig',
+            [
+                'returnRequests' => $returnRequests,
+                'shopInfo' => $this->shopInfo,
+                'show_sidebar' => false,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 }

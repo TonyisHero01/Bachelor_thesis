@@ -1,7 +1,7 @@
 {% extends 'base.html.twig' %}
 
 {% block stylesheets %}
-    <link rel="stylesheet" href="{{ asset('../assets/styles/order_management.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/styles/order_management.css') }}">
 {% endblock %}
 
 {% block body %}
@@ -17,7 +17,11 @@
         <tr class="unit-order" style="background-color: {% if order.isCompleted() %} #d4edda {% else %} #f8d7da {% endif %};">
             <td>{{ order.getCustomer().getEmail() }}</td>
             <td>{{ order.getId() }}</td>
-            <td>{{ order.getTotalPrice() }} {{ currency }}</td>
+            <td>
+                <span class="money" data-base="{{ order.getTotalPrice() }}">
+                    {{ money(order.getTotalPrice()) }}
+                </span>
+            </td>
             <td>
                 <a href="{{ localized_path('order_detail', { 'id': order.getId() }) }}" class="btn">View Details</a>
             </td>

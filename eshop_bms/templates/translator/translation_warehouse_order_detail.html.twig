@@ -4,105 +4,263 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="warehouse/order_detail.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>Order Details</label>
-        <input type="hidden" name="original__auto_order_details_3" value="Order Details">
-        <input type="text" name="field__auto_order_details_3" placeholder="Order Details">
-    </div>
-    <div class="field-group">
-        <label>Order ID:</label>
-        <input type="hidden" name="original__auto_order_id__4" value="Order ID:">
-        <input type="text" name="field__auto_order_id__4" placeholder="Order ID:">
-    </div>
-    <div class="field-group">
-        <label>Customer:</label>
-        <input type="hidden" name="original__auto_customer__6" value="Customer:">
-        <input type="text" name="field__auto_customer__6" placeholder="Customer:">
-    </div>
-    <div class="field-group">
-        <label>Total Price:</label>
-        <input type="hidden" name="original__auto_total_price__8" value="Total Price:">
-        <input type="text" name="field__auto_total_price__8" placeholder="Total Price:">
-    </div>
-    <div class="field-group">
-        <label>Order Date:</label>
-        <input type="hidden" name="original__auto_order_date__10" value="Order Date:">
-        <input type="text" name="field__auto_order_date__10" placeholder="Order Date:">
-    </div>
-    <div class="field-group">
-        <label>Order Items</label>
-        <input type="hidden" name="original__auto_order_items_12" value="Order Items">
-        <input type="text" name="field__auto_order_items_12" placeholder="Order Items">
-    </div>
-    <div class="field-group">
-        <label>Product</label>
-        <input type="hidden" name="original__auto_product_13" value="Product">
-        <input type="text" name="field__auto_product_13" placeholder="Product">
-    </div>
-    <div class="field-group">
-        <label>SKU</label>
-        <input type="hidden" name="original__auto_sku_14" value="SKU">
-        <input type="text" name="field__auto_sku_14" placeholder="SKU">
-    </div>
-    <div class="field-group">
-        <label>Quantity</label>
-        <input type="hidden" name="original__auto_quantity_15" value="Quantity">
-        <input type="text" name="field__auto_quantity_15" placeholder="Quantity">
-    </div>
-    <div class="field-group">
-        <label>Unit Price</label>
-        <input type="hidden" name="original__auto_unit_price_16" value="Unit Price">
-        <input type="text" name="field__auto_unit_price_16" placeholder="Unit Price">
-    </div>
-    <div class="field-group">
-        <label>Subtotal</label>
-        <input type="hidden" name="original__auto_subtotal_17" value="Subtotal">
-        <input type="text" name="field__auto_subtotal_17" placeholder="Subtotal">
-    </div>
-    <div class="field-group">
-        <label>Delivery Method</label>
-        <input type="hidden" name="original__auto_delivery_method_25" value="Delivery Method">
-        <input type="text" name="field__auto_delivery_method_25" placeholder="Delivery Method">
-    </div>
-    <div class="field-group">
-        <label>Selected Method:</label>
-        <input type="hidden" name="original__auto_selected_method__26" value="Selected Method:">
-        <input type="text" name="field__auto_selected_method__26" placeholder="Selected Method:">
-    </div>
-    <div class="field-group">
-        <label>🏬 Pick Up at Store</label>
-        <input type="hidden" name="original__auto__pick_up_at_store_28" value="🏬 Pick Up at Store">
-        <input type="text" name="field__auto__pick_up_at_store_28" placeholder="🏬 Pick Up at Store">
-    </div>
-    <div class="field-group">
-        <label>🚚 Home Delivery</label>
-        <input type="hidden" name="original__auto__home_delivery_30" value="🚚 Home Delivery">
-        <input type="text" name="field__auto__home_delivery_30" placeholder="🚚 Home Delivery">
-    </div>
-    <div class="field-group">
-        <label>Delivery Information</label>
-        <input type="hidden" name="original__auto_delivery_information_32" value="Delivery Information">
-        <input type="text" name="field__auto_delivery_information_32" placeholder="Delivery Information">
-    </div>
-    <div class="field-group">
-        <label>Customer Note</label>
-        <input type="hidden" name="original__auto_customer_note_34" value="Customer Note">
-        <input type="text" name="field__auto_customer_note_34" placeholder="Customer Note">
-    </div>
-    <div class="field-group">
-        <label>Mark as Completed</label>
-        <input type="hidden" name="original__auto_mark_as_completed_37" value="Mark as Completed">
-        <input type="text" name="field__auto_mark_as_completed_37" placeholder="Mark as Completed">
-    </div>
-    <div class="field-group">
-        <label>Back to Orders</label>
-        <input type="hidden" name="original__auto_back_to_orders_38" value="Back to Orders">
-        <input type="text" name="field__auto_back_to_orders_38" placeholder="Back to Orders">
-    </div>
+<div class="field-group">
+    <label>Order #</label>
+    <input type="hidden" name="original__auto_order__0" value="Order #">
+    <input type="text" name="field__auto_order__0" placeholder="Order #">
+</div>
+<div class="field-group">
+    <label>(≈</label>
+    <input type="hidden" name="original__auto___3" value="(≈">
+    <input type="text" name="field__auto___3" placeholder="(≈">
+</div>
+<div class="field-group">
+    <label>items</label>
+    <input type="hidden" name="original__auto_items_5" value="items">
+    <input type="text" name="field__auto_items_5" placeholder="items">
+</div>
+<div class="field-group">
+    <label>·</label>
+    <input type="hidden" name="original__auto___6" value="·">
+    <input type="text" name="field__auto___6" placeholder="·">
+</div>
+<div class="field-group">
+    <label>Customer</label>
+    <input type="hidden" name="original__auto_customer_13" value="Customer">
+    <input type="text" name="field__auto_customer_13" placeholder="Customer">
+</div>
+<div class="field-group">
+    <label>Order Date</label>
+    <input type="hidden" name="original__auto_order_date_15" value="Order Date">
+    <input type="text" name="field__auto_order_date_15" placeholder="Order Date">
+</div>
+<div class="field-group">
+    <label>Total</label>
+    <input type="hidden" name="original__auto_total_17" value="Total">
+    <input type="text" name="field__auto_total_17" placeholder="Total">
+</div>
+<div class="field-group">
+    <label>Order Overview</label>
+    <input type="hidden" name="original__auto_order_overview_19" value="Order Overview">
+    <input type="text" name="field__auto_order_overview_19" placeholder="Order Overview">
+</div>
+<div class="field-group">
+    <label>Order ID</label>
+    <input type="hidden" name="original__auto_order_id_20" value="Order ID">
+    <input type="text" name="field__auto_order_id_20" placeholder="Order ID">
+</div>
+<div class="field-group">
+    <label>Total Price</label>
+    <input type="hidden" name="original__auto_total_price_22" value="Total Price">
+    <input type="text" name="field__auto_total_price_22" placeholder="Total Price">
+</div>
+<div class="field-group">
+    <label>Created At</label>
+    <input type="hidden" name="original__auto_created_at_23" value="Created At">
+    <input type="text" name="field__auto_created_at_23" placeholder="Created At">
+</div>
+<div class="field-group">
+    <label>Delivery Method</label>
+    <input type="hidden" name="original__auto_delivery_method_24" value="Delivery Method">
+    <input type="text" name="field__auto_delivery_method_24" placeholder="Delivery Method">
+</div>
+<div class="field-group">
+    <label>Delivery Status</label>
+    <input type="hidden" name="original__auto_delivery_status_26" value="Delivery Status">
+    <input type="text" name="field__auto_delivery_status_26" placeholder="Delivery Status">
+</div>
+<div class="field-group">
+    <label>Payment</label>
+    <input type="hidden" name="original__auto_payment_28" value="Payment">
+    <input type="text" name="field__auto_payment_28" placeholder="Payment">
+</div>
+<div class="field-group">
+    <label>Latest Amount</label>
+    <input type="hidden" name="original__auto_latest_amount_31" value="Latest Amount">
+    <input type="text" name="field__auto_latest_amount_31" placeholder="Latest Amount">
+</div>
+<div class="field-group">
+    <label>Provider</label>
+    <input type="hidden" name="original__auto_provider_35" value="Provider">
+    <input type="text" name="field__auto_provider_35" placeholder="Provider">
+</div>
+<div class="field-group">
+    <label>Transaction #</label>
+    <input type="hidden" name="original__auto_transaction__37" value="Transaction #">
+    <input type="text" name="field__auto_transaction__37" placeholder="Transaction #">
+</div>
+<div class="field-group">
+    <label>Paid At</label>
+    <input type="hidden" name="original__auto_paid_at_39" value="Paid At">
+    <input type="text" name="field__auto_paid_at_39" placeholder="Paid At">
+</div>
+<div class="field-group">
+    <label>Amount:</label>
+    <input type="hidden" name="original__auto_amount__42" value="Amount:">
+    <input type="text" name="field__auto_amount__42" placeholder="Amount:">
+</div>
+<div class="field-group">
+    <label>No payment records yet.</label>
+    <input type="hidden" name="original__auto_no_payment_records_yet__43" value="No payment records yet.">
+    <input type="text" name="field__auto_no_payment_records_yet__43" placeholder="No payment records yet.">
+</div>
+<div class="field-group">
+    <label>Payment History</label>
+    <input type="hidden" name="original__auto_payment_history_45" value="Payment History">
+    <input type="text" name="field__auto_payment_history_45" placeholder="Payment History">
+</div>
+<div class="field-group">
+    <label>Time</label>
+    <input type="hidden" name="original__auto_time_46" value="Time">
+    <input type="text" name="field__auto_time_46" placeholder="Time">
+</div>
+<div class="field-group">
+    <label>Status</label>
+    <input type="hidden" name="original__auto_status_47" value="Status">
+    <input type="text" name="field__auto_status_47" placeholder="Status">
+</div>
+<div class="field-group">
+    <label>Amount</label>
+    <input type="hidden" name="original__auto_amount_48" value="Amount">
+    <input type="text" name="field__auto_amount_48" placeholder="Amount">
+</div>
+<div class="field-group">
+    <label>Txn ID</label>
+    <input type="hidden" name="original__auto_txn_id_49" value="Txn ID">
+    <input type="text" name="field__auto_txn_id_49" placeholder="Txn ID">
+</div>
+<div class="field-group">
+    <label>Order Items</label>
+    <input type="hidden" name="original__auto_order_items_57" value="Order Items">
+    <input type="text" name="field__auto_order_items_57" placeholder="Order Items">
+</div>
+<div class="field-group">
+    <label>No items in this order.</label>
+    <input type="hidden" name="original__auto_no_items_in_this_order__60" value="No items in this order.">
+    <input type="text" name="field__auto_no_items_in_this_order__60" placeholder="No items in this order.">
+</div>
+<div class="field-group">
+    <label>Product</label>
+    <input type="hidden" name="original__auto_product_61" value="Product">
+    <input type="text" name="field__auto_product_61" placeholder="Product">
+</div>
+<div class="field-group">
+    <label>SKU</label>
+    <input type="hidden" name="original__auto_sku_62" value="SKU">
+    <input type="text" name="field__auto_sku_62" placeholder="SKU">
+</div>
+<div class="field-group">
+    <label>Quantity</label>
+    <input type="hidden" name="original__auto_quantity_63" value="Quantity">
+    <input type="text" name="field__auto_quantity_63" placeholder="Quantity">
+</div>
+<div class="field-group">
+    <label>Unit Price</label>
+    <input type="hidden" name="original__auto_unit_price_64" value="Unit Price">
+    <input type="text" name="field__auto_unit_price_64" placeholder="Unit Price">
+</div>
+<div class="field-group">
+    <label>Delivery</label>
+    <input type="hidden" name="original__auto_delivery_71" value="Delivery">
+    <input type="text" name="field__auto_delivery_71" placeholder="Delivery">
+</div>
+<div class="field-group">
+    <label>Selected Method:</label>
+    <input type="hidden" name="original__auto_selected_method__72" value="Selected Method:">
+    <input type="text" name="field__auto_selected_method__72" placeholder="Selected Method:">
+</div>
+<div class="field-group">
+    <label>🏬 Pick Up at Store</label>
+    <input type="hidden" name="original__auto__pick_up_at_store_74" value="🏬 Pick Up at Store">
+    <input type="text" name="field__auto__pick_up_at_store_74" placeholder="🏬 Pick Up at Store">
+</div>
+<div class="field-group">
+    <label>🚚 Home Delivery</label>
+    <input type="hidden" name="original__auto__home_delivery_75" value="🚚 Home Delivery">
+    <input type="text" name="field__auto__home_delivery_75" placeholder="🚚 Home Delivery">
+</div>
+<div class="field-group">
+    <label>Delivery Information</label>
+    <input type="hidden" name="original__auto_delivery_information_76" value="Delivery Information">
+    <input type="text" name="field__auto_delivery_information_76" placeholder="Delivery Information">
+</div>
+<div class="field-group">
+    <label>Customer Note</label>
+    <input type="hidden" name="original__auto_customer_note_78" value="Customer Note">
+    <input type="text" name="field__auto_customer_note_78" placeholder="Customer Note">
+</div>
+<div class="field-group">
+    <label>Shipment</label>
+    <input type="hidden" name="original__auto_shipment_81" value="Shipment">
+    <input type="text" name="field__auto_shipment_81" placeholder="Shipment">
+</div>
+<div class="field-group">
+    <label>Tracking #:</label>
+    <input type="hidden" name="original__auto_tracking__83" value="Tracking #:">
+    <input type="text" name="field__auto_tracking__83" placeholder="Tracking #:">
+</div>
+<div class="field-group">
+    <label>No shipment events yet.</label>
+    <input type="hidden" name="original__auto_no_shipment_events_yet__91" value="No shipment events yet.">
+    <input type="text" name="field__auto_no_shipment_events_yet__91" placeholder="No shipment events yet.">
+</div>
+<div class="field-group">
+    <label>Actions</label>
+    <input type="hidden" name="original__auto_actions_92" value="Actions">
+    <input type="text" name="field__auto_actions_92" placeholder="Actions">
+</div>
+<div class="field-group">
+    <label>Mark as Completed</label>
+    <input type="hidden" name="original__auto_mark_as_completed_94" value="Mark as Completed">
+    <input type="text" name="field__auto_mark_as_completed_94" placeholder="Mark as Completed">
+</div>
+<div class="field-group">
+    <label>Mark as Packed</label>
+    <input type="hidden" name="original__auto_mark_as_packed_95" value="Mark as Packed">
+    <input type="text" name="field__auto_mark_as_packed_95" placeholder="Mark as Packed">
+</div>
+<div class="field-group">
+    <label>Mark as Picked Up</label>
+    <input type="hidden" name="original__auto_mark_as_picked_up_96" value="Mark as Picked Up">
+    <input type="text" name="field__auto_mark_as_picked_up_96" placeholder="Mark as Picked Up">
+</div>
+<div class="field-group">
+    <label>Mark as Returned</label>
+    <input type="hidden" name="original__auto_mark_as_returned_97" value="Mark as Returned">
+    <input type="text" name="field__auto_mark_as_returned_97" placeholder="Mark as Returned">
+</div>
+<div class="field-group">
+    <label>Mark as Shipped</label>
+    <input type="hidden" name="original__auto_mark_as_shipped_98" value="Mark as Shipped">
+    <input type="text" name="field__auto_mark_as_shipped_98" placeholder="Mark as Shipped">
+</div>
+<div class="field-group">
+    <label>Mark as In Transit</label>
+    <input type="hidden" name="original__auto_mark_as_in_transit_99" value="Mark as In Transit">
+    <input type="text" name="field__auto_mark_as_in_transit_99" placeholder="Mark as In Transit">
+</div>
+<div class="field-group">
+    <label>Mark as Out for Delivery</label>
+    <input type="hidden" name="original__auto_mark_as_out_for_delivery_100" value="Mark as Out for Delivery">
+    <input type="text" name="field__auto_mark_as_out_for_delivery_100" placeholder="Mark as Out for Delivery">
+</div>
+<div class="field-group">
+    <label>Mark as Delivered</label>
+    <input type="hidden" name="original__auto_mark_as_delivered_101" value="Mark as Delivered">
+    <input type="text" name="field__auto_mark_as_delivered_101" placeholder="Mark as Delivered">
+</div>
+<div class="field-group">
+    <label>← Back to Orders</label>
+    <input type="hidden" name="original__auto__back_to_orders_102" value="← Back to Orders">
+    <input type="text" name="field__auto__back_to_orders_102" placeholder="← Back to Orders">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

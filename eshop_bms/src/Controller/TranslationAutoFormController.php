@@ -2,138 +2,151 @@
 
 namespace App\Controller;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Path;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Finder\Finder;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Filesystem\Path;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted('ROLE_TRANSLATOR')]
 class TranslationAutoFormController extends AbstractController
 {
+    private const LANG_PATTERN = '/^[a-zA-Z]{2,10}$/';
+    private const CSRF_AUTOFORM = 'translation_auto_form';
 
     private EntityManagerInterface $entityManager;
+    private Filesystem $fs;
 
     public function __construct(EntityManagerInterface $entityManager)
     {
         $this->entityManager = $entityManager;
+        $this->fs = new Filesystem();
     }
 
-
-    #[Route('/translator/generate-form', name: 'generate_translation_form')]
-    #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form')]
     /**
-     * Generates a translation form for a single template, based on query parameter 'path'.
-     * Can be used for both BMS and frontweb templates depending on the route.
-     *
-     * @param Request $request HTTP request containing the 'path' parameter and optionally 'target_language'.
-     * @param LoggerInterface $logger Logger for debugging and progress info.
-     *
-     * @return Response HTTP response containing a generated translation form or error.
+     * Generates a translation form for a single template file based on the "path" query parameter.
      */
-    public function generateForm(Request $request, LoggerInterface $logger): Response
+    #[Route('/translator/generate-form', name: 'generate_translation_form', methods: ['GET'])]
+    #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form', methods: ['GET'])]
+    public function generateForm(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
-        return $this->handleSingleGeneration($request, $logger);
-    }
-
-    #[Route('/translator/generate-all', name: 'generate_all_translation_forms')]
-    /**
-     * Scans all templates in both BMS and frontweb directories and generates translation forms
-     * for those which are not excluded by naming conventions (e.g., _form partials, base layout).
-     *
-     * @param Request $request The current request, used to simulate sub-requests.
-     * @param LoggerInterface $logger Logger for progress and debugging output.
-     *
-     * @return Response A summary HTML response listing success, skipped, and error results.
-     */
-    public function generateAll(Request $request, LoggerInterface $logger): Response
-    {
-        $projectDir = $this->getParameter('kernel.project_dir');
-        $bmsTemplatesRaw = $projectDir . '/templates';
-        $frontwebTemplatesRaw = '/var/www/eshop_frontweb_templates';
-
-        $bmsTemplates = realpath($bmsTemplatesRaw);
-        $frontwebTemplates = realpath($frontwebTemplatesRaw);
-
-        if (!$bmsTemplates && !$frontwebTemplates) {
-            return new Response("❌ Both BMS and Frontweb template paths are invalid.", 500);
+        $token = (string) $request->query->get('_token', '');
+        if (!$this->isCsrfTokenValid(self::CSRF_AUTOFORM, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
         }
 
-        $scanDirs = array_filter([$bmsTemplates, $frontwebTemplates], fn($path) => $path && is_dir($path));
+        return $this->handleSingleGeneration($request, $kernel, $logger);
+    }
+
+    /**
+     * Scans templates in both BMS and Frontweb directories and generates translation forms for each eligible file.
+     */
+    #[Route('/translator/generate-all', name: 'generate_all_translation_forms', methods: ['GET'])]
+    public function generateAll(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
+    {
+        $token = (string) $request->query->get('_token', '');
+        if (!$this->isCsrfTokenValid(self::CSRF_AUTOFORM, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        $projectDir = $kernel->getProjectDir();
+        $bmsTemplates = realpath($projectDir . '/templates') ?: null;
+
+        $frontwebTemplatesRaw = '/var/www/eshop_frontweb_templates';
+        $frontwebTemplates = realpath($frontwebTemplatesRaw) ?: null;
+
+        $scanDirs = array_values(array_filter([$bmsTemplates, $frontwebTemplates], fn ($p) => is_string($p) && is_dir($p)));
+
+        if ($scanDirs === []) {
+            return new Response('❌ No valid template directories found.', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
 
         $finder = new Finder();
         $finder->files()
             ->in($scanDirs)
             ->name('*.html.twig')
             ->filter(function (\SplFileInfo $file) {
-                $path = $file->getRealPath();
-                return !preg_match('#/(translator|translation|locale)(/|_)#', $path);
+                $path = (string) $file->getRealPath();
+                return $path !== '' && !preg_match('#/(translator|translation|locale)(/|_)#', $path);
             });
 
+        $scanned = [];
         $success = [];
         $errors = [];
-        $scanned = [];
 
         foreach ($finder as $file) {
             $realPath = $file->getRealPath();
-            $isFrontweb = str_starts_with($realPath, $frontwebTemplates);
+            if (!is_string($realPath) || $realPath === '') {
+                continue;
+            }
+
+            $isFrontweb = $frontwebTemplates !== null && str_starts_with($realPath, $frontwebTemplates . DIRECTORY_SEPARATOR);
 
             if (str_contains($realPath, '_form')) {
                 continue;
             }
-            
+
             if (!$isFrontweb && str_ends_with($realPath, 'base.html.twig')) {
                 continue;
             }
 
-            $filesystem = new Filesystem();
             $basePath = $isFrontweb ? $frontwebTemplates : $bmsTemplates;
-            if (!$basePath || !$realPath || strpos($realPath, $basePath) !== 0) {
+            if (!is_string($basePath) || !str_starts_with($realPath, $basePath . DIRECTORY_SEPARATOR)) {
                 continue;
             }
+
             $sourcePath = Path::makeRelative($realPath, $basePath);
             $scanned[] = $sourcePath;
+
             $subRequest = clone $request;
             $subRequest->query->set('path', $sourcePath);
 
             try {
-                $result = $this->handleSingleGeneration($subRequest, $logger);
+                $result = $this->handleSingleGeneration($subRequest, $kernel, $logger);
                 if ($result->getStatusCode() === 200) {
                     $success[] = $sourcePath;
                 } else {
-                    $errors[] = "$sourcePath → HTTP {$result->getStatusCode()}";
+                    $errors[] = $sourcePath . ' → HTTP ' . $result->getStatusCode();
                 }
             } catch (\Throwable $e) {
-                $errors[] = "$sourcePath → Exception: {$e->getMessage()}";
+                $errors[] = $sourcePath . ' → Exception: ' . $e->getMessage();
             }
         }
 
-        $localeDir = $projectDir . '/templates/locale';
-        $langs = array_filter(scandir($localeDir), fn($l) => !in_array($l, ['.', '..']) && is_dir($localeDir . '/' . $l));
-        $this->generateShopInfoForm($logger);
+        try {
+            $this->generateShopInfoForm($kernel, $logger);
+        } catch (\Throwable $e) {
+            $errors[] = 'shop_info → Exception: ' . $e->getMessage();
+        }
 
-        $html = "<h1>✅ Auto Translation Summary</h1>";
-        $html .= "<h2>Scanned:</h2><ul>" . implode('', array_map(fn($p) => "<li>$p</li>", $scanned)) . "</ul>";
-        $html .= "<h2>✅ Success:</h2><ul>" . implode('', array_map(fn($p) => "<li>$p</li>", $success)) . "</ul>";
-        $html .= "<h2>❌ Errors:</h2><ul>" . implode('', array_map(fn($e) => "<li style='color:red;'>$e</li>", $errors)) . "</ul>";
+        $li = static fn (string $s): string => '<li>' . htmlspecialchars($s, ENT_QUOTES) . '</li>';
 
-        return new Response($html);
+        $html = '<h1>✅ Auto Translation Summary</h1>';
+        $html .= '<h2>Scanned:</h2><ul>' . implode('', array_map($li, $scanned)) . '</ul>';
+        $html .= '<h2>✅ Success:</h2><ul>' . implode('', array_map($li, $success)) . '</ul>';
+        $html .= '<h2>❌ Errors:</h2><ul>' . implode('', array_map(fn ($e) => '<li style="color:red;">' . htmlspecialchars($e, ENT_QUOTES) . '</li>', $errors)) . '</ul>';
+
+        return new Response($html, Response::HTTP_OK);
     }
 
     /**
-     * Generates a special translation form for editable fields from ShopInfo entity,
-     * such as About Us, Privacy Policy, etc., and saves it as a Twig template.
-     *
-     * @param LoggerInterface $logger Logger used to record the generation process.
-     *
-     * @return void
+     * Generates a ShopInfo translation form template and saves it under templates/translator/.
      */
-    private function generateShopInfoForm(LoggerInterface $logger): void
+    private function generateShopInfoForm(KernelInterface $kernel, LoggerInterface $logger): void
     {
-        $projectDir = $this->getParameter('kernel.project_dir');
+        $projectDir = $kernel->getProjectDir();
+
+        $shopInfo = $this->entityManager->getRepository(\App\Entity\ShopInfo::class)->find(1);
+        if ($shopInfo === null) {
+            throw new \RuntimeException('ShopInfo not found (id=1).');
+        }
+
         $fields = [
             'aboutUs' => 'About Us',
             'howToOrder' => 'How to Order',
@@ -144,126 +157,141 @@ class TranslationAutoFormController extends AbstractController
             'refund' => 'Refund',
         ];
 
-        $shopInfo = $this->entityManager->getRepository(\App\Entity\ShopInfo::class)->find(1);
-
         $formFields = '';
         foreach ($fields as $field => $label) {
+            $getter = 'get' . ucfirst($field);
+            $originalValue = method_exists($shopInfo, $getter) ? (string) ($shopInfo->$getter() ?? '') : '';
+
             $escapedLabel = htmlspecialchars($label, ENT_QUOTES);
-            $originalValue = htmlspecialchars($shopInfo->{'get' . ucfirst($field)}() ?? '', ENT_QUOTES);
+            $escapedOriginalValue = htmlspecialchars($originalValue, ENT_QUOTES);
 
             $formFields .= <<<HTML
-    <div class="field-group">
-        <label>{$escapedLabel}</label>
-        <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em>{$originalValue}</em></div>
-        <input type="hidden" name="original__{$field}" value="{$escapedLabel}">
-        <textarea name="field__{$field}" placeholder="{$escapedLabel}"></textarea>
-    </div>
+<div class="field-group">
+    <label>{$escapedLabel}</label>
+    <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em>{$escapedOriginalValue}</em></div>
+    <textarea name="field__{$field}" placeholder="{$escapedLabel}"></textarea>
+</div>
 
-    HTML;
+HTML;
         }
 
         $output = <<<TWIG
-    {% extends 'base.html.twig' %}
+{% extends 'base.html.twig' %}
 
-    {% block title %}Translate Shop Info{% endblock %}
+{% block title %}Translate Shop Info{% endblock %}
 
-    {% block body %}
-    <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
-    <p style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404;">
-        ⚠️ Please fill in the localized version of the website content for selected language.
-    </p>
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
 
-    <form method="post" action="{{ path('translation_shop_info_submit') }}">
-        <input type="hidden" name="target_language" value="{{ lang }}">
+<form method="post" action="{{ path('translation_shop_info_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_shop_info_submit') }}">
+    <input type="hidden" name="target_language" value="{{ lang }}">
 
-    {$formFields}
-        <button type="submit">Save Translations</button>
-    </form>
-    {% endblock %}
-    TWIG;
+{$formFields}
 
-        $outputPath = "$projectDir/templates/translator/translation_shop_info.html.twig";
-        (new Filesystem())->dumpFile($outputPath, $output);
+    <button type="submit">Save Translations</button>
+</form>
+{% endblock %}
+TWIG;
+
+        $outputPath = $projectDir . '/templates/translator/translation_shop_info.html.twig';
+        $this->fs->dumpFile($outputPath, $output);
     }
 
     /**
-     * Handles the logic of reading a single Twig template, extracting static text snippets,
-     * generating translation fields, and saving a corresponding translation form.
-     *
-     * @param Request $request Request object, must contain 'path' query param.
-     * @param LoggerInterface $logger Logger for debug information.
-     *
-     * @return Response 200 if successful, or 400/404 in case of error.
+     * Reads a Twig template, extracts translatable static text, and writes a Twig form under templates/translator/.
      */
-    private function handleSingleGeneration(Request $request, LoggerInterface $logger): Response
+    private function handleSingleGeneration(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
-        $sourcePath = $request->get('path');
-        $targetLang = $request->query->get('target_language');
+        $sourcePathRaw = (string) $request->query->get('path', '');
+        if ($sourcePathRaw === '') {
+            return new Response("Missing 'path' parameter.", Response::HTTP_BAD_REQUEST);
+        }
 
-        if (!$targetLang) {
-            $referer = $request->headers->get('referer');
-            if (preg_match('#/([A-Z]{2})(\?.*)?$#', $referer ?? '', $matches)) {
-                $targetLang = $matches[1];
+        $targetLang = (string) $request->query->get('target_language', '');
+        if ($targetLang === '') {
+            $referer = (string) $request->headers->get('referer', '');
+            if (preg_match('#/([a-zA-Z]{2,10})(\?.*)?$#', $referer, $m)) {
+                $targetLang = $m[1];
             } else {
                 $targetLang = 'en';
             }
         }
 
-        if (!$sourcePath) {
-            return new Response("Missing 'path' parameter.", 400);
+        $targetLang = strtolower($targetLang);
+        if (!preg_match(self::LANG_PATTERN, $targetLang)) {
+            return new Response('Invalid target_language.', Response::HTTP_BAD_REQUEST);
         }
 
-        $projectDir = $this->getParameter('kernel.project_dir');
-        $bmsPath = $projectDir . '/templates/' . $sourcePath;
-        $frontwebPath = '/var/www/eshop_frontweb_templates/' . $sourcePath;
+        $projectDir = $kernel->getProjectDir();
+
+        $bmsBase = realpath($projectDir . '/templates') ?: null;
+        $frontwebBase = realpath('/var/www/eshop_frontweb_templates') ?: null;
+
+        $sourcePath = $this->normalizeRelativeTwigPath($sourcePathRaw);
+
+        $bmsFull = $bmsBase ? realpath($bmsBase . '/' . $sourcePath) : false;
+        $frontwebFull = $frontwebBase ? realpath($frontwebBase . '/' . $sourcePath) : false;
 
         $fullPath = null;
         $isFrontweb = false;
 
-        if (file_exists($frontwebPath)) {
-            $fullPath = $frontwebPath;
+        if (is_string($frontwebFull) && $frontwebBase && str_starts_with($frontwebFull, $frontwebBase . DIRECTORY_SEPARATOR) && is_file($frontwebFull)) {
+            $fullPath = $frontwebFull;
             $isFrontweb = true;
-        } elseif (file_exists($bmsPath)) {
-            $fullPath = $bmsPath;
+        } elseif (is_string($bmsFull) && $bmsBase && str_starts_with($bmsFull, $bmsBase . DIRECTORY_SEPARATOR) && is_file($bmsFull)) {
+            $fullPath = $bmsFull;
         }
 
-        if (!$fullPath) {
-            return new Response("Source template not found.", 404);
+        if ($fullPath === null) {
+            return new Response('Source template not found.', Response::HTTP_NOT_FOUND);
         }
 
-        $content = file_get_contents($fullPath);
-        $content = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $content);
-        $content = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $content);
-        $content = preg_replace('/\{\#.*?\#\}/s', '', $content);
-        $content = preg_replace('/<!--.*?-->/s', '', $content);
+        $content = (string) file_get_contents($fullPath);
+
+        $content = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $content) ?? $content;
+        $content = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $content) ?? $content;
+        $content = preg_replace('/\{\#.*?\#\}/s', '', $content) ?? $content;
+        $content = preg_replace('/<!--.*?-->/s', '', $content) ?? $content;
 
         preg_match_all('/>([^<>]*?){{.*?}}([^<>]*?)</', $content, $mixedMatches);
         preg_match_all('/>([^<]*?)</', $content, $pureMatches);
 
         $snippets = [];
         foreach ($mixedMatches[1] as $i => $before) {
-            $after = $mixedMatches[2][$i];
-            if (trim($before)) $snippets[] = trim($before);
-            if (trim($after)) $snippets[] = trim($after);
+            $after = $mixedMatches[2][$i] ?? '';
+            if (trim((string) $before) !== '') {
+                $snippets[] = trim((string) $before);
+            }
+            if (trim((string) $after) !== '') {
+                $snippets[] = trim((string) $after);
+            }
         }
         foreach ($pureMatches[1] as $text) {
-            $clean = trim($text);
-            if ($clean && !in_array($clean, $snippets)) {
+            $clean = trim((string) $text);
+            if ($clean !== '' && !in_array($clean, $snippets, true)) {
                 $snippets[] = $clean;
             }
         }
 
-        $formFields = "";
+        $formFields = '';
         foreach ($snippets as $i => $text) {
-            if (str_contains($text, '{%') || str_contains($text, '{{')) continue;
-            $safeKey = 'auto_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower(substr($text, 0, 30))) . "_" . $i;
+            if (str_contains($text, '{%') || str_contains($text, '{{')) {
+                continue;
+            }
+
+            $keyBase = strtolower(substr($text, 0, 30));
+            $keyBase = preg_replace('/[^a-z0-9]+/i', '_', $keyBase) ?: 'text';
+            $safeKey = 'auto_' . $keyBase . '_' . $i;
+
             $escapedText = htmlspecialchars($text, ENT_QUOTES);
+
             $formFields .= <<<HTML
-    <div class="field-group">
-        <label>{$escapedText}</label>
-        <input type="hidden" name="original__{$safeKey}" value="{$escapedText}">
-        <input type="text" name="field__{$safeKey}" placeholder="{$escapedText}">
-    </div>
+<div class="field-group">
+    <label>{$escapedText}</label>
+    <input type="hidden" name="original__{$safeKey}" value="{$escapedText}">
+    <input type="text" name="field__{$safeKey}" placeholder="{$escapedText}">
+</div>
 
 HTML;
         }
@@ -273,14 +301,19 @@ HTML;
             $translatedExtends = $match[1] === 'eshop_base.html.twig'
                 ? "{% extends 'locale/{$targetLang}/eshop_base.html.twig' %}"
                 : $originalExtends;
-            $formFields .= "<input type=\"hidden\" name=\"original__template_extends\" value=\"" . base64_encode($originalExtends) . "\">";
-            $formFields .= "<input type=\"hidden\" name=\"field__template_extends\" value=\"" . base64_encode($translatedExtends) . "\">";
+
+            $formFields .= '<input type="hidden" name="original__template_extends" value="' . htmlspecialchars(base64_encode($originalExtends), ENT_QUOTES) . '">' . "\n";
+            $formFields .= '<input type="hidden" name="field__template_extends" value="' . htmlspecialchars(base64_encode($translatedExtends), ENT_QUOTES) . '">' . "\n";
         }
 
         $prefix = $isFrontweb ? 'translation_frontweb_' : 'translation_';
         $filename = $prefix . str_replace(['/', '.html.twig'], ['_', ''], $sourcePath) . '.html.twig';
         $outputPath = $projectDir . '/templates/translator/' . $filename;
+
         $actionRoute = $isFrontweb ? 'frontweb_translation_submit' : 'translation_submit';
+        $csrfId = $isFrontweb ? 'frontweb_translation_submit' : 'translation_submit';
+
+        $escapedSourcePath = htmlspecialchars($sourcePath, ENT_QUOTES);
 
         $output = <<<TWIG
 {% extends 'base.html.twig' %}
@@ -289,17 +322,43 @@ HTML;
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('{$actionRoute}') }}">
-    <input type="hidden" name="original_path" value="{$sourcePath}">
+    <input type="hidden" name="_token" value="{{ csrf_token('{$csrfId}') }}">
+    <input type="hidden" name="original_path" value="{$escapedSourcePath}">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
 {$formFields}
+
     <button type="submit">Generate Translated File</button>
 </form>
 {% endblock %}
 TWIG;
 
-        (new Filesystem())->dumpFile($outputPath, $output);
-        return new Response("✅ Generated: $filename", 200);
+        $this->fs->dumpFile($outputPath, $output);
+
+        return new Response('✅ Generated: ' . htmlspecialchars($filename, ENT_QUOTES), Response::HTTP_OK);
+    }
+
+    /**
+     * Normalizes and validates a relative Twig template path to prevent traversal.
+     */
+    private function normalizeRelativeTwigPath(string $path): string
+    {
+        $path = trim(str_replace('\\', '/', $path));
+
+        if ($path === '' || str_contains($path, "\0")) {
+            throw $this->createNotFoundException('Invalid path');
+        }
+
+        if (str_starts_with($path, '/')) {
+            throw $this->createNotFoundException('Invalid path');
+        }
+
+        if (preg_match('#(^|/)\.\.(?:/|$)#', $path) === 1) {
+            throw $this->createNotFoundException('Invalid path');
+        }
+
+        return ltrim($path, '/');
     }
 }

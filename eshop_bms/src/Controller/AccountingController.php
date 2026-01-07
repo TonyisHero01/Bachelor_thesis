@@ -1,148 +1,212 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\Order;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Routing\Annotation\Route;
 use App\Repository\OrderRepository;
+use App\Repository\ShopInfoRepository;
+use Doctrine\Persistence\ManagerRegistry;
 use Dompdf\Dompdf;
 use Dompdf\Options;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\HttpKernel\KernelInterface;
-use App\Entity\ShopInfo;
-use Doctrine\ORM\EntityManagerInterface;
-use App\Repository\ShopInfoRepository;
-use Symfony\Component\Mime\Email;
-use Symfony\Component\HttpFoundation\Request;
-use Twig\Environment;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Mime\Email;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Twig\Environment;
 
 class AccountingController extends BaseController
 {
-    private $shopInfo;
-    private $entityManager;
+    private const ROLE_ACCOUNTING = 'ROLE_ACCOUNTING';
+
+    private $em;
 
     public function __construct(
-        EntityManagerInterface $entityManager,
+        ManagerRegistry $doctrine,
         Environment $twig,
         LoggerInterface $logger
     ) {
-        parent::__construct($twig, $logger);
-        $this->entityManager = $entityManager;
-        $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+        parent::__construct($twig, $logger, $doctrine);
+
+        $this->em = $doctrine->getManager();
     }
 
+    /**
+     * Displays a list of completed orders for accounting overview.
+     */
     #[Route('/bms/accounting', name: 'accounting')]
-    /**
-     * Displays a list of all completed orders in accounting view.
-     *
-     * @param OrderRepository $orderRepo
-     * @param Request $request
-     * @return Response
-     */
-    public function index(OrderRepository $orderRepo, Request $request): Response
-    {
-        $orders = $orderRepo->findBy(['isCompleted' => true], ['orderCreatedAt' => 'DESC']);
+    public function index(
+        OrderRepository $orderRepo,
+        Request $request,
+        AuthorizationCheckerInterface $authorizationChecker
+    ): Response {
+        if (!$authorizationChecker->isGranted(self::ROLE_ACCOUNTING)) {
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', [], $request);
+        }
 
-        return $this->renderLocalized('accounting/index.html.twig', [
-            'orders' => $orders
-        ], $request);
+        $orders = $orderRepo->findBy(
+            ['isCompleted' => true],
+            ['orderCreatedAt' => 'DESC']
+        );
+
+        return $this->renderLocalized(
+            'accounting/index.html.twig',
+            ['orders' => $orders],
+            $request
+        );
     }
 
+    /**
+     * Displays the detail view of a completed order.
+     */
     #[Route('/bms/accounting/order/{id}', name: 'accounting_order_detail')]
-    /**
-     * Shows the detail page of a specific completed order including line items.
-     *
-     * @param Order $order
-     * @param Request $request
-     * @return Response
-     */
-    public function orderDetail(Order $order, Request $request): Response
-    {
-        return $this->renderLocalized('accounting/order_detail.html.twig', [
-            'order' => $order,
-            'translations' => $this->getTranslations($request),
-        ], $request);
+    public function orderDetail(
+        Order $order,
+        Request $request,
+        AuthorizationCheckerInterface $authorizationChecker
+    ): Response {
+        if (!$authorizationChecker->isGranted(self::ROLE_ACCOUNTING)) {
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', [], $request);
+        }
+
+        return $this->renderLocalized(
+            'accounting/order_detail.html.twig',
+            [
+                'order' => $order,
+                'translations' => $this->getTranslations($request),
+            ],
+            $request
+        );
     }
 
-    #[Route('/bms/accounting/order/{id}/invoice/pdf', name: 'accounting_invoice_pdf')]
     /**
-     * Generates a downloadable PDF invoice for the specified order.
-     *
-     * @param Order $order
-     * @param Request $request
-     * @return Response PDF response with invoice content
+     * Generates a downloadable PDF invoice for the given order.
      */
-    public function generatePdf(Order $order, Request $request): Response
-    {
-        $html = $this->renderViewLocalized('accounting/invoice.html.twig', [
-            'order' => $order,
-        ], $request);
+    #[Route('/bms/accounting/order/{id}/invoice/pdf', name: 'accounting_invoice_pdf')]
+    public function generatePdf(
+        Order $order,
+        Request $request,
+        ShopInfoRepository $shopInfoRepository,
+        AuthorizationCheckerInterface $authorizationChecker
+    ): Response {
+        if (!$authorizationChecker->isGranted(self::ROLE_ACCOUNTING)) {
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', [], $request);
+        }
+
+        $shopInfo = $shopInfoRepository->findOneBy([]);
+
+        $html = $this->renderViewLocalized(
+            'accounting/invoice.html.twig',
+            [
+                'order' => $order,
+                'shopInfo' => $shopInfo,
+            ],
+            $request
+        );
 
         $options = new Options();
         $options->set('defaultFont', 'Arial');
+
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
-        return new Response($dompdf->output(), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="invoice_order_' . $order->getId() . '.pdf"',
-        ]);
+        return new Response(
+            $dompdf->output(),
+            Response::HTTP_OK,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="invoice_order_' . $order->getId() . '.pdf"',
+            ]
+        );
     }
 
-    #[Route('/bms/accounting/order/{id}/invoice/send', name: 'accounting_invoice_send')]
     /**
-     * Sends the invoice PDF for the given order via email to the customer.
-     *
-     * @param Order $order
-     * @param MailerInterface $mailer
-     * @param KernelInterface $kernel
-     * @param ShopInfoRepository $shopInfoRepo
-     * @param Request $request
-     * @return Response Redirect response after sending
+     * Sends the invoice PDF to the customer via email.
      */
+    #[Route('/bms/accounting/order/{id}/invoice/send', name: 'accounting_invoice_send', methods: ['POST'])]
     public function sendInvoice(
         Order $order,
         MailerInterface $mailer,
         KernelInterface $kernel,
         ShopInfoRepository $shopInfoRepo,
-        Request $request
+        Request $request,
+        AuthorizationCheckerInterface $authorizationChecker
     ): Response {
+        if (!$authorizationChecker->isGranted(self::ROLE_ACCOUNTING)) {
+            return $this->renderLocalized('employee/employee_not_logged.html.twig', [], $request);
+        }
+
+        if (!$this->isCsrfTokenValid('send_invoice_' . $order->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('danger', 'Invalid CSRF token.');
+
+            return $this->redirectToRouteLocalized(
+                'accounting_order_detail',
+                ['id' => $order->getId()],
+                Response::HTTP_FOUND,
+                $request
+            );
+        }
+
         $shopInfo = $shopInfoRepo->findOneBy([]);
 
-        $html = $this->renderViewLocalized('accounting/invoice.html.twig', [
-            'order' => $order,
-            'shopInfo' => $shopInfo
-        ], $request);
+        $html = $this->renderViewLocalized(
+            'accounting/invoice.html.twig',
+            [
+                'order' => $order,
+                'shopInfo' => $shopInfo,
+            ],
+            $request
+        );
 
         $options = new Options();
         $options->set('defaultFont', 'DejaVu Sans');
+
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
-        $pdfPath = $kernel->getProjectDir() . '/var/invoice_' . $order->getId() . '.pdf';
-        file_put_contents($pdfPath, $dompdf->output());
+        $tmp = \tempnam($kernel->getProjectDir() . '/var', 'invoice_');
+        if ($tmp === false) {
+            $this->addFlash('danger', 'Failed to create invoice file.');
 
-        $email = (new Email())
-            ->from($shopInfo->getEmail() ?? 'noreply@example.com')
-            ->to($order->getCustomer()->getEmail())
-            ->subject('Your Invoice from ' . ($shopInfo->getEshopName() ?? 'Our Shop'))
-            ->text('Please find your invoice attached.')
-            ->attachFromPath($pdfPath, 'invoice.pdf');
+            return $this->redirectToRouteLocalized(
+                'accounting_order_detail',
+                ['id' => $order->getId()],
+                Response::HTTP_FOUND,
+                $request
+            );
+        }
 
-        $mailer->send($email);
+        $pdfPath = $tmp . '.pdf';
+        \rename($tmp, $pdfPath);
+        \file_put_contents($pdfPath, $dompdf->output());
 
-        unlink($pdfPath);
+        try {
+            $email = (new Email())
+                ->from(($shopInfo?->getEmail()) ?? 'noreply@example.com')
+                ->to($order->getCustomer()->getEmail())
+                ->subject('Your Invoice from ' . (($shopInfo?->getEshopName()) ?? 'Our Shop'))
+                ->text('Please find your invoice attached.')
+                ->attachFromPath($pdfPath, 'invoice.pdf');
 
-        $this->addFlash('success', 'Invoice email sent successfully!');
+            $mailer->send($email);
 
-        return $this->redirectToRouteLocalized('accounting_order_detail', [
-            'id' => $order->getId()
-        ], 302, $request);
+            $this->addFlash('success', 'Invoice email sent successfully!');
+        } finally {
+            @\unlink($pdfPath);
+        }
+
+        return $this->redirectToRouteLocalized(
+            'accounting_order_detail',
+            ['id' => $order->getId()],
+            Response::HTTP_FOUND,
+            $request
+        );
     }
 }

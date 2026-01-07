@@ -20,19 +20,42 @@ class ProductRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Product::class);
     }
-    public function findLatestVersionProducts(): array
+    /**
+     * Returns the latest product row for each SKU based on MAX(version),
+     * and breaks ties with MAX(id) (in case same SKU + same version exists).
+     *
+     * @return Product[]
+     */
+    public function findLatestVersionProducts(?string $skuFilter = null, ?string $nameFilter = null): array
     {
-        $subQuery = $this->createQueryBuilder('p2')
+        // subquery: max version for each sku
+        $maxVersionDql = $this->createQueryBuilder('p2')
             ->select('MAX(p2.version)')
             ->where('p2.sku = p.sku')
             ->getDQL();
 
-        return $this->createQueryBuilder('p')
-            ->where("p.version = ($subQuery)")
-            ->orderBy('p.createdAt', 'DESC')
-            ->addOrderBy('p.id', 'DESC')
-            ->getQuery()
-            ->getResult();
+        // subquery: within latest version, pick max id (tie-break)
+        $maxIdDql = $this->createQueryBuilder('p3')
+            ->select('MAX(p3.id)')
+            ->where('p3.sku = p.sku')
+            ->andWhere("p3.version = ($maxVersionDql)")
+            ->getDQL();
+
+        $qb = $this->createQueryBuilder('p')
+            ->andWhere("p.id = ($maxIdDql)")
+            ->orderBy('p.sku', 'ASC');
+
+        if ($skuFilter !== null && $skuFilter !== '') {
+            $qb->andWhere('LOWER(p.sku) LIKE :sku')
+               ->setParameter('sku', '%' . mb_strtolower($skuFilter) . '%');
+        }
+
+        if ($nameFilter !== null && $nameFilter !== '') {
+            $qb->andWhere('LOWER(p.name) LIKE :name')
+               ->setParameter('name', '%' . mb_strtolower($nameFilter) . '%');
+        }
+
+        return $qb->getQuery()->getResult();
     }
     public function findLastFourProducts()
     {
@@ -53,26 +76,6 @@ class ProductRepository extends ServiceEntityRepository
             ->setParameter('categoryName', $categoryName)
             ->getQuery()
             ->getResult();
-    }
-    public function findLatestProductsGroupedBySku(?string $sku = null, ?string $name = null): array
-    {
-        $qb = $this->createQueryBuilder('p')
-            ->where('p.id IN (
-                SELECT MAX(p2.id)
-                FROM App\Entity\Product p2
-                GROUP BY p2.sku
-            )')
-            ->orderBy('p.sku', 'ASC');
-
-        if ($sku) {
-            $qb->andWhere('p.sku LIKE :sku')->setParameter('sku', "%$sku%");
-        }
-
-        if ($name) {
-            $qb->andWhere('p.name LIKE :name')->setParameter('name', "%$name%");
-        }
-
-        return $qb->getQuery()->getResult();
     }
     
     public function findAllProducts(): array

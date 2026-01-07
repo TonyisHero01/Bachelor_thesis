@@ -6,7 +6,7 @@ use App\Entity\Product;
 use App\Entity\OrderItem;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-
+use App\Entity\Category;
 
 /**
  * @extends ServiceEntityRepository<Product>
@@ -22,6 +22,33 @@ class ProductRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Product::class);
     }
+
+    public function findLatestByCategory(Category $category): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.translations', 't')
+            ->addSelect('t')
+            ->andWhere('p.category = :category')
+            ->setParameter('category', $category)
+
+            // 只要可见的
+            ->andWhere('p.hidden = false')
+
+            // ✅ 每个 SKU 只取 id 最大那条
+            ->andWhere('p.id = (
+                SELECT MAX(p2.id)
+                FROM App\Entity\Product p2
+                WHERE p2.sku = p.sku
+            )')
+
+            // 如果你希望“最新记录必须也在同一分类里”，建议加上这一行（更严谨）
+            ->andWhere('p.category = :category')
+
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findTopSellingProducts(int $limit = 4): array
     {
         $connection = $this->getEntityManager()->getConnection();

@@ -2,124 +2,197 @@
 
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpKernel\KernelInterface;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\Finder\Finder;
-use Doctrine\ORM\EntityManagerInterface;
-use App\Entity\ShopInfo;
-use App\Entity\ShopInfoTranslation;
 use App\Entity\Category;
 use App\Entity\CategoryTranslation;
 use App\Entity\Color;
 use App\Entity\ColorTranslation;
 use App\Entity\Product;
 use App\Entity\ProductTranslation;
+use App\Entity\ShopInfo;
+use App\Entity\ShopInfoTranslation;
+use App\Repository\ProductRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted('ROLE_TRANSLATOR')]
 class TranslatorController extends AbstractController
 {
-    #[Route('/translation/product/{lang}/{id}', name: 'translation_product_detail_form', methods: ['GET'])]
+    private const LANG_PATTERN = '/^[a-zA-Z]{2,10}$/';
+    private const CSRF_LANG_MGMT = 'translator_language_mgmt';
+    private const CSRF_TRANSLATION_SUBMIT = 'translation_submit';
+    private const CSRF_SHOPINFO_SUBMIT = 'translation_shop_info_submit';
+    private const CSRF_COLOR_SUBMIT = 'color_translation_submit';
+    private const CSRF_CATEGORY_SUBMIT = 'category_translation_submit';
+    private const CSRF_PRODUCT_DETAIL_SUBMIT = 'translation_product_detail_submit';
+
     /**
-     * Displays the translation form for a specific product in a given language.
-     *
-     * @Route("/translation/product/{lang}/{id}", name="translation_product_detail_form", methods={"GET"})
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     * @param string $lang Language code (e.g., "en", "cz").
-     * @param int $id Product ID.
-     * 
-     * @return Response Rendered translation form for the specified product.
+     * Lists available languages based on templates/locale/<lang> folders.
      */
-    public function showProductDetailForm(EntityManagerInterface $em, string $lang, int $id): Response
+    #[Route('/translation', name: 'translator_languages', methods: ['GET'])]
+    public function showLanguages(KernelInterface $kernel): Response
     {
-        $product = $em->getRepository(Product::class)->find($id);
-        if (!$product) {
-            throw $this->createNotFoundException("Product not found");
+        $localeRoot = $kernel->getProjectDir() . '/templates/locale';
+        $languages = [];
+
+        if (is_dir($localeRoot)) {
+            foreach (scandir($localeRoot) ?: [] as $item) {
+                if ($item === '.' || $item === '..') {
+                    continue;
+                }
+                if (is_dir($localeRoot . '/' . $item)) {
+                    $languages[] = strtolower($item);
+                }
+            }
         }
 
-        $translation = $em->getRepository(ProductTranslation::class)->findOneBy([
-            'product' => $product,
-            'locale' => $lang,
-        ]);
-        
-        $map = [];
-        if ($translation) {
-            $map = [
-                'name' => $translation->getName(),
-                'description' => $translation->getDescription(),
-                'material' => $translation->getMaterial(),
-            ];
-        }
+        sort($languages);
 
-        return $this->render('translation/translation_product_detail_form.html.twig', [
-            'lang' => $lang,
-            'product' => $product,
-            'translation' => $map,
+        return $this->render('translation/languages.html.twig', [
+            'languages' => $languages,
+            'csrf_token' => $this->generateCsrfToken(self::CSRF_LANG_MGMT),
         ]);
     }
 
-    #[Route('/translation/product/{id}/{lang}/submit', name: 'translation_product_detail_submit', methods: ['POST'])]
     /**
-     * Handles the submission of a translation for a specific product.
-     * Saves the translation into the ProductTranslation entity.
-     *
-     * @Route("/translation/product/{id}/{lang}/submit", name="translation_product_detail_submit", methods={"POST"})
-     *
-     * @param int $id Product ID.
-     * @param string $lang Target language code.
-     * @param Request $request HTTP request containing translated fields.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     *
-     * @return Response Redirects to product translation list after saving.
+     * Creates a new language folder under templates/locale/<lang>.
      */
-    public function submitProductDetailTranslation(
-        int $id,
+    #[Route('/translation/add-language', name: 'translator_add_language', methods: ['POST'])]
+    public function addLanguage(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
+    {
+        $lang = strtolower((string) $request->request->get('language', ''));
+        $token = (string) $request->request->get('_token', '');
+
+        if (!$this->isCsrfTokenValid(self::CSRF_LANG_MGMT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!preg_match(self::LANG_PATTERN, $lang)) {
+            return new Response('❌ Invalid language code', Response::HTTP_BAD_REQUEST);
+        }
+
+        $dir = $kernel->getProjectDir() . '/templates/locale/' . $lang;
+
+        try {
+            (new Filesystem())->mkdir($dir, 0755);
+        } catch (\Throwable $e) {
+            $logger->error('[Translator] addLanguage mkdir failed: ' . $e->getMessage());
+            return new Response('❌ Failed to create language directory', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->redirectToRoute('translator_languages');
+    }
+
+    /**
+     * Deletes templates/locale/<lang> directory.
+     */
+    #[Route('/translation/delete-language/{lang}', name: 'translator_delete_language', methods: ['POST'])]
+    public function deleteLanguage(string $lang, Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
+    {
+        $lang = strtolower($lang);
+        $token = (string) $request->request->get('_token', '');
+
+        if (!$this->isCsrfTokenValid(self::CSRF_LANG_MGMT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!preg_match(self::LANG_PATTERN, $lang)) {
+            return new Response('❌ Invalid language code', Response::HTTP_BAD_REQUEST);
+        }
+
+        if ($lang === 'en') {
+            return new Response('❌ Cannot delete default language "en"', Response::HTTP_BAD_REQUEST);
+        }
+
+        $dir = $kernel->getProjectDir() . '/templates/locale/' . $lang;
+
+        try {
+            if (is_dir($dir)) {
+                (new Filesystem())->remove($dir);
+            }
+        } catch (\Throwable $e) {
+            $logger->error('[Translator] deleteLanguage failed: ' . $e->getMessage());
+            return new Response('❌ Failed to delete language directory', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return $this->redirectToRoute('translator_languages');
+    }
+
+    /**
+     * Shows the translation center dashboard for a selected language.
+     */
+    #[Route('/translation/{lang}/center', name: 'translator_center', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'], methods: ['GET'])]
+    public function showTranslationCenter(string $lang): Response
+    {
+        $lang = strtolower($lang);
+
+        return $this->render('translation/translation_center.html.twig', [
+            'lang' => $lang,
+        ]);
+    }
+
+    /**
+     * Shows the list of available translation forms (BMS + frontweb) for a selected language.
+     */
+    #[Route('/translation/{lang}', name: 'translator_page_list', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'], methods: ['GET'])]
+    public function showPageListForLanguage(string $lang, KernelInterface $kernel): Response
+    {
+        $lang = strtolower($lang);
+
+        $translatorDir = $kernel->getProjectDir() . '/templates/translator';
+        $finder = new Finder();
+
+        $bmsPages = [];
+        $frontwebPages = [];
+
+        if (is_dir($translatorDir)) {
+            $finder->files()->in($translatorDir)->name('/^translation_.*\.html\.twig$/');
+
+            foreach ($finder as $file) {
+                $filename = $file->getFilename();
+                $isFrontweb = str_starts_with($filename, 'translation_frontweb_');
+
+                $key = $isFrontweb
+                    ? preg_replace('/^translation_frontweb_|\.html\.twig$/', '', $filename)
+                    : preg_replace('/^translation_|\.html\.twig$/', '', $filename);
+
+                if ($isFrontweb) {
+                    $frontwebPages[$key] = $filename;
+                } else {
+                    $bmsPages[$key] = $filename;
+                }
+            }
+        }
+
+        ksort($bmsPages);
+        ksort($frontwebPages);
+
+        return $this->render('translation/page_list.html.twig', [
+            'lang' => $lang,
+            'bmsPages' => $bmsPages,
+            'frontwebPages' => $frontwebPages,
+        ]);
+    }
+
+    /**
+     * Lists latest-version products and shows existing translations for the given language.
+     */
+    #[Route('/translation/product/{lang}', name: 'translation_product_form_list', methods: ['GET'])]
+    public function showProductTranslationForm(
         string $lang,
-        Request $request,
+        ProductRepository $productRepository,
         EntityManagerInterface $em
     ): Response {
-        $product = $em->getRepository(Product::class)->find($id);
-        if (!$product) {
-            throw $this->createNotFoundException('Product not found.');
-        }
+        $lang = strtolower($lang);
 
-        $translation = $em->getRepository(ProductTranslation::class)->findOneBy([
-            'product' => $product,
-            'locale' => $lang,
-        ]) ?? (new ProductTranslation())
-            ->setProduct($product)
-            ->setLocale($lang);
-
-        $translation
-            ->setName($request->request->get('translated_name'))
-            ->setDescription($request->request->get('translated_description'))
-            ->setMaterial($request->request->get('translated_material'));
-
-        $em->persist($translation);
-        $em->flush();
-
-        $this->addFlash('success', 'Translation saved.');
-        return $this->redirectToRoute('translation_product_form_list', ['lang' => $lang]);
-    }
-
-    #[Route('/translation/product/{lang}', name: 'translation_product_form_list', methods: ['GET'])]
-    /**
-     * Displays a list of products with translation input fields for the given language.
-     *
-     * @Route("/translation/product/{lang}", name="translation_product_form_list", methods={"GET"})
-     *
-     * @param string $lang Language code to show existing translations or input new ones.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     *
-     * @return Response Rendered list page of translatable products and their existing translations.
-     */
-    public function showProductTranslationForm(string $lang, EntityManagerInterface $em): Response
-    {
-        $products = $em->getRepository(Product::class)->findLatestVersionProducts();
-
+        $products = $productRepository->findLatestVersionProducts();
         $translations = $em->getRepository(ProductTranslation::class)->findBy(['locale' => $lang]);
 
         $translatedMap = [];
@@ -138,76 +211,90 @@ class TranslatorController extends AbstractController
         ]);
     }
 
-    #[Route('/translation/product/submit', name: 'translation_product_submit', methods: ['POST'])]
     /**
-     * Handles the submission of bulk product translations from the product list view.
-     * Updates or creates ProductTranslation entities per field and language.
-     *
-     * @Route("/translation/product/submit", name="translation_product_submit", methods={"POST"})
-     *
-     * @param Request $request The request containing all translated values.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     *
-     * @return Response Redirects to the translation list view with success message.
+     * Displays the translation form for a specific product in a given language.
      */
-    public function submitProductTranslations(Request $request, EntityManagerInterface $em): Response
-    {
-        $lang = $request->request->get('target_language', 'en');
-        $data = $request->request->all();
+    #[Route('/translation/product/{lang}/{id}', name: 'translation_product_detail_form', methods: ['GET'])]
+    public function showProductDetailForm(
+        EntityManagerInterface $em,
+        string $lang,
+        int $id
+    ): Response {
+        $lang = strtolower($lang);
 
-        foreach ($data as $key => $value) {
-            if (!str_starts_with($key, 'field__')) continue;
-
-            if (!preg_match('/^field__(\w+)__(\d+)$/', $key, $matches)) continue;
-
-            $field = $matches[1];
-            $productId = (int) $matches[2];
-            $originalKey = "original__{$field}__{$productId}";
-            $originalText = $data[$originalKey] ?? '';
-
-            if (!trim($value)) continue;
-
-            $product = $em->getRepository(Product::class)->find($productId);
-            if (!$product) continue;
-
-            $translationRepo = $em->getRepository(ProductTranslation::class);
-            $translation = $translationRepo->findOneBy([
-                'product' => $product,
-                'language' => $lang,
-                'field' => $field,
-            ]);
-
-            if (!$translation) {
-                $translation = new ProductTranslation();
-                $translation->setProduct($product);
-                $translation->setLanguage($lang);
-                $translation->setField($field);
-            }
-
-            $translation->setOriginal($originalText);
-            $translation->setTranslation($value);
-            $em->persist($translation);
+        $product = $em->getRepository(Product::class)->find($id);
+        if ($product === null) {
+            throw $this->createNotFoundException('Product not found');
         }
 
-        $em->flush();
+        $translation = $em->getRepository(ProductTranslation::class)->findOneBy([
+            'product' => $product,
+            'locale' => $lang,
+        ]);
 
-        $this->addFlash('success', 'Translations saved successfully.');
-        return $this->redirectToRoute('translation_product_form', ['lang' => $lang]);
+        $map = [
+            'name' => $translation?->getName(),
+            'description' => $translation?->getDescription(),
+            'material' => $translation?->getMaterial(),
+        ];
+
+        return $this->render('translation/translation_product_detail_form.html.twig', [
+            'lang' => $lang,
+            'product' => $product,
+            'translation' => $map,
+            'csrf_token' => $this->generateCsrfToken(self::CSRF_PRODUCT_DETAIL_SUBMIT),
+        ]);
     }
 
-    #[Route('/translation/color/{lang}', name: 'color_translation_form')]
+    /**
+     * Saves the translation (name/description/material) for a specific product and language.
+     */
+    #[Route('/translation/product/{id}/{lang}/submit', name: 'translation_product_detail_submit', methods: ['POST'])]
+    public function submitProductDetailTranslation(
+        int $id,
+        string $lang,
+        Request $request,
+        EntityManagerInterface $em
+    ): Response {
+        $lang = strtolower($lang);
+        $token = (string) $request->request->get('_token', '');
+
+        if (!$this->isCsrfTokenValid(self::CSRF_PRODUCT_DETAIL_SUBMIT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        $product = $em->getRepository(Product::class)->find($id);
+        if ($product === null) {
+            throw $this->createNotFoundException('Product not found');
+        }
+
+        $translation = $em->getRepository(ProductTranslation::class)->findOneBy([
+            'product' => $product,
+            'locale' => $lang,
+        ]) ?? (new ProductTranslation())
+            ->setProduct($product)
+            ->setLocale($lang);
+
+        $translation
+            ->setName((string) $request->request->get('translated_name', ''))
+            ->setDescription((string) $request->request->get('translated_description', ''))
+            ->setMaterial((string) $request->request->get('translated_material', ''));
+
+        $em->persist($translation);
+        $em->flush();
+
+        $this->addFlash('success', 'Translation saved.');
+        return $this->redirectToRoute('translation_product_form_list', ['lang' => $lang]);
+    }
+
     /**
      * Displays the form for translating color names into the specified language.
-     *
-     * @Route("/translation/color/{lang}", name="color_translation_form")
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     * @param string $lang Target language code (e.g. "en", "cz").
-     *
-     * @return Response Rendered color translation form.
      */
+    #[Route('/translation/color/{lang}', name: 'color_translation_form', methods: ['GET'])]
     public function showColorTranslationForm(EntityManagerInterface $em, string $lang): Response
     {
+        $lang = strtolower($lang);
+
         $colors = $em->getRepository(Color::class)->findAll();
         $translations = $em->getRepository(ColorTranslation::class)->findBy(['locale' => $lang]);
 
@@ -220,368 +307,201 @@ class TranslatorController extends AbstractController
             'lang' => $lang,
             'colors' => $colors,
             'translatedNames' => $translatedNames,
+            'csrf_token' => $this->generateCsrfToken(self::CSRF_COLOR_SUBMIT),
         ]);
     }
 
-    #[Route('/translation/color/{lang}/submit', name: 'color_translation_submit', methods: ['POST'])]
     /**
-     * Handles submission of translated color names for the specified language.
-     *
-     * @Route("/translation/color/{lang}/submit", name="color_translation_submit", methods={"POST"})
-     *
-     * @param Request $request HTTP request containing translated color names.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     * @param string $lang Target language code.
-     *
-     * @return Response Redirects to the translator center after saving.
+     * Saves translated color names for the specified language.
      */
+    #[Route('/translation/color/{lang}/submit', name: 'color_translation_submit', methods: ['POST'])]
     public function submitColorTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
     {
+        $lang = strtolower($lang);
+        $token = (string) $request->request->get('_token', '');
+
+        if (!$this->isCsrfTokenValid(self::CSRF_COLOR_SUBMIT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
         $ids = $request->request->all('color_ids');
         $names = $request->request->all('translated_names');
 
         foreach ($ids as $i => $id) {
             $color = $em->getRepository(Color::class)->find($id);
-            if (!$color) continue;
+            if ($color === null) {
+                continue;
+            }
+
+            $name = (string) ($names[$i] ?? '');
+            if (trim($name) === '') {
+                continue;
+            }
 
             $translation = $em->getRepository(ColorTranslation::class)->findOneBy([
                 'color' => $color,
                 'locale' => $lang,
             ]) ?? new ColorTranslation();
 
-            $translation->setColor($color);
-            $translation->setLocale($lang);
-            $translation->setName($names[$i]);
+            $translation
+                ->setColor($color)
+                ->setLocale($lang)
+                ->setName($name);
 
             $em->persist($translation);
         }
 
         $em->flush();
-
         return $this->redirectToRoute('translator_center', ['lang' => $lang]);
     }
 
-    #[Route('/translator/shop-info/submit', name: 'translation_shop_info_submit', methods: ['POST'])]
     /**
-     * Handles submission of translated shop information fields (e.g., About Us, Payment).
-     *
-     * @Route("/translator/shop-info/submit", name="translation_shop_info_submit", methods={"POST"})
-     *
-     * @param Request $request HTTP request containing translated shop info fields.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     *
-     * @return Response Redirects to the translator page list or returns error if language is missing.
+     * Shows the translation form for product categories.
      */
+    #[Route('/translation/category/{lang}', name: 'category_translation_form', methods: ['GET'])]
+    public function categoryTranslationForm(string $lang, EntityManagerInterface $em): Response
+    {
+        $lang = strtolower($lang);
+        $categories = $em->getRepository(Category::class)->findAll();
+
+        $translations = $em->getRepository(CategoryTranslation::class)->findBy(['locale' => $lang]);
+        $translatedNames = [];
+        foreach ($translations as $t) {
+            $translatedNames[$t->getCategory()->getId()] = $t->getName();
+        }
+
+        return $this->render('translation/category_translation_form.html.twig', [
+            'categories' => $categories,
+            'lang' => $lang,
+            'translatedNames' => $translatedNames,
+            'csrf_token' => $this->generateCsrfToken(self::CSRF_CATEGORY_SUBMIT),
+        ]);
+    }
+
+    /**
+     * Saves translated category names for the specified language.
+     */
+    #[Route('/translation/category/{lang}/submit', name: 'category_translation_submit', methods: ['POST'])]
+    public function submitCategoryTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
+    {
+        $lang = strtolower($lang);
+        $token = (string) $request->request->get('_token', '');
+
+        if (!$this->isCsrfTokenValid(self::CSRF_CATEGORY_SUBMIT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        $ids = $request->request->all('category_ids');
+        $names = $request->request->all('translated_names');
+
+        foreach ($ids as $i => $id) {
+            $category = $em->getRepository(Category::class)->find($id);
+            if ($category === null) {
+                continue;
+            }
+
+            $translatedName = (string) ($names[$i] ?? '');
+            if (trim($translatedName) === '') {
+                continue;
+            }
+
+            $translation = $em->getRepository(CategoryTranslation::class)->findOneBy([
+                'category' => $category,
+                'locale' => $lang,
+            ]) ?? new CategoryTranslation();
+
+            $translation
+                ->setCategory($category)
+                ->setLocale($lang)
+                ->setName($translatedName);
+
+            $em->persist($translation);
+        }
+
+        $em->flush();
+        return $this->redirectToRoute('translator_center', ['lang' => $lang]);
+    }
+
+    /**
+     * Saves ShopInfoTranslation for the selected language.
+     */
+    #[Route('/translator/shop-info/submit', name: 'translation_shop_info_submit', methods: ['POST'])]
     public function submitShopInfoTranslation(Request $request, EntityManagerInterface $em): Response
     {
-        $targetLang = $request->request->get('target_language');
-        if (!$targetLang) {
-            return new Response("Missing target_language", 400);
+        $targetLang = strtolower((string) $request->request->get('target_language', ''));
+        $token = (string) $request->request->get('_token', '');
+
+        if (!$this->isCsrfTokenValid(self::CSRF_SHOPINFO_SUBMIT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
         }
 
-        $shopInfo = $em->getRepository(ShopInfo::class)->find(1);
-        if (!$shopInfo) {
-            return new Response("No ShopInfo found", 404);
+        if (!preg_match(self::LANG_PATTERN, $targetLang)) {
+            return new Response('❌ Invalid target_language', Response::HTTP_BAD_REQUEST);
         }
 
-        $translation = $em->getRepository(ShopInfoTranslation::class)
-            ->findOneBy(['shopInfo' => $shopInfo, 'locale' => $targetLang]) ?? new ShopInfoTranslation();
+        $shopInfo = $em->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+        if ($shopInfo === null) {
+            return new Response('❌ No ShopInfo found', Response::HTTP_NOT_FOUND);
+        }
+
+        $translation = $em->getRepository(ShopInfoTranslation::class)->findOneBy([
+            'shopInfo' => $shopInfo,
+            'locale' => $targetLang,
+        ]) ?? new ShopInfoTranslation();
 
         $translation->setShopInfo($shopInfo);
         $translation->setLocale($targetLang);
 
-        foreach ($request->request->all() as $key => $value) {
-            if (str_starts_with($key, 'field__')) {
-                $field = substr($key, 7);
-                if (property_exists(ShopInfoTranslation::class, $field)) {
-                    $setter = 'set' . ucfirst($field);
-                    if (method_exists($translation, $setter)) {
-                        $translation->$setter($value);
-                    }
-                }
+        $allowed = [
+            'aboutUs' => 'setAboutUs',
+            'howToOrder' => 'setHowToOrder',
+            'businessConditions' => 'setBusinessConditions',
+            'privacyPolicy' => 'setPrivacyPolicy',
+            'shippingInfo' => 'setShippingInfo',
+            'payment' => 'setPayment',
+            'refund' => 'setRefund',
+            'eshopName' => 'setEshopName',
+            'companyName' => 'setCompanyName',
+            'cin' => 'setCin',
+            'address' => 'setAddress',
+            'telephone' => 'setTelephone',
+            'email' => 'setEmail',
+        ];
+
+        foreach ($allowed as $field => $setter) {
+            $value = (string) $request->request->get('field__' . $field, '');
+            if (method_exists($translation, $setter)) {
+                $translation->$setter($value);
             }
         }
 
         $em->persist($translation);
         $em->flush();
 
-        return $this->redirectToRoute('translator_page_list', [
-            'lang' => $targetLang,
-        ]);
+        $this->addFlash('success', 'Shop info translation saved.');
+        return $this->redirectToRoute('translator_page_list', ['lang' => $targetLang]);
     }
 
-    #[Route('/translation', name: 'translator_languages')]
     /**
-     * Displays the list of available languages based on folders in templates/locale.
-     *
-     * @Route("/translation", name="translator_languages")
-     *
-     * @param KernelInterface $kernel Symfony kernel to resolve the project directory.
-     *
-     * @return Response Rendered list of supported translation languages.
+     * Writes a localized Twig template file under templates/locale/<lang>/.
      */
-    public function showLanguages(KernelInterface $kernel): Response
-    {
-        $localeDir = $kernel->getProjectDir() . '/templates/locale';
-        $languages = [];
-
-        if (is_dir($localeDir)) {
-            foreach (scandir($localeDir) as $item) {
-                if ($item !== '.' && $item !== '..' && is_dir($localeDir . '/' . $item)) {
-                    $languages[] = $item;
-                }
-            }
-        }
-
-        return $this->render('translation/languages.html.twig', [
-            'languages' => $languages
-        ]);
-    }
-
-    #[Route('/translation/add-language', name: 'translator_add_language', methods: ['POST'])]
-    /**
-     * Handles creation of a new language folder under templates/locale.
-     *
-     * @Route("/translation/add-language", name="translator_add_language", methods={"POST"})
-     *
-     * @param Request $request HTTP request containing 'language' input.
-     * @param KernelInterface $kernel Symfony kernel to resolve project directory.
-     * @param LoggerInterface $logger Logger for debugging input.
-     *
-     * @return Response Redirects to the language list page.
-     */
-    public function addLanguage(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
-    {
-        $language = $request->request->get('language');
-
-        if (!$language) {
-            return new Response('Missing language', 400);
-        }
-
-        $localeDir = $kernel->getProjectDir() . '/templates/locale/' . $language;
-
-        if (!is_dir($localeDir)) {
-            mkdir($localeDir, 0777, true);
-        }
-
-        return $this->redirectToRoute('translator_languages');
-    }
-
-    #[Route('/translation/{lang}', name: 'translator_page_list', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
-    /**
-     * Shows the list of available translation forms (BMS and frontweb) for a selected language.
-     *
-     * @Route("/translation/{lang}", name="translator_page_list", requirements={"lang" = "^(?!submit$)[a-zA-Z]+"})
-     *
-     * @param string $lang Selected language code.
-     *
-     * @return Response Rendered page list template with available translation forms.
-     */
-    public function showPageListForLanguage(string $lang): Response
-    {
-        $translatorDir = $this->getParameter('kernel.project_dir') . '/templates/translator/';
-        $finder = new Finder();
-        $finder->files()->in($translatorDir)->name('/^translation_.*\.html\.twig$/');
-
-        $frontwebPages = [];
-        $bmsPages = [];
-
-        foreach ($finder as $file) {
-            $filename = $file->getFilename();
-            $isFrontweb = str_starts_with($filename, 'translation_frontweb_');
-
-            $key = $isFrontweb
-                ? preg_replace('/^translation_frontweb_|\.html\.twig$/', '', $filename)
-                : preg_replace('/^translation_|\.html\.twig$/', '', $filename);
-
-            if ($isFrontweb) {
-                $frontwebPages[$key] = $filename;
-            } else {
-                $bmsPages[$key] = $filename;
-            }
-        }
-
-        ksort($bmsPages);
-        ksort($frontwebPages);
-
-        return $this->render('translation/page_list.html.twig', [
-            'lang' => $lang,
-            'bmsPages' => $bmsPages,
-            'frontwebPages' => $frontwebPages,
-        ]);
-    }
-
-    #[Route('/translation/{lang}/center', name: 'translator_center', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
-    /**
-     * Displays the main translation center dashboard for a selected language.
-     *
-     * @Route("/translation/{lang}/center", name="translator_center", requirements={"lang" = "^(?!submit$)[a-zA-Z]+"})
-     *
-     * @param string $lang Selected language code.
-     *
-     * @return Response Rendered translation center overview.
-     */
-    public function showTranslationCenter(string $lang): Response
-    {
-        return $this->render('translation/translation_center.html.twig', [
-            'lang' => $lang,
-        ]);
-    }
-
-    #[Route('/translation/category/{lang}', name: 'category_translation_form')]
-    /**
-     * Shows the translation form for product categories.
-     *
-     * @Route("/translation/category/{lang}", name="category_translation_form")
-     *
-     * @param string $lang Target language code.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     *
-     * @return Response Rendered form for translating category names.
-     */
-    public function categoryTranslationForm(string $lang, EntityManagerInterface $em): Response
-    {
-        $categories = $em->getRepository(Category::class)->findAll();
-
-        return $this->render('translation/category_translation_form.html.twig', [
-            'categories' => $categories,
-            'lang' => $lang,
-        ]);
-    }
-
-    #[Route('/translation/category/{lang}/submit', name: 'category_translation_submit', methods: ['POST'])]
-    /**
-     * Handles submission of translated category names.
-     *
-     * @Route("/translation/category/{lang}/submit", name="category_translation_submit", methods={"POST"})
-     *
-     * @param Request $request Form request containing category IDs and translated names.
-     * @param EntityManagerInterface $em Doctrine entity manager.
-     * @param string $lang Target language code.
-     *
-     * @return Response Redirects to the translation center after saving.
-     */
-    public function submitCategoryTranslations(Request $request, EntityManagerInterface $em, string $lang): Response
-    {
-        $ids = $request->request->all('category_ids');
-        $names = $request->request->all('translated_names');
-
-        foreach ($ids as $i => $id) {
-            $category = $em->getRepository(Category::class)->find($id);
-            if (!$category) continue;
-
-            $translatedName = $names[$i] ?? '';
-            if (!$translatedName) continue;
-
-            $translation = $em->getRepository(CategoryTranslation::class)->findOneBy([
-                'category' => $category,
-                'locale' => $lang
-            ]) ?? new CategoryTranslation();
-
-            $translation->setCategory($category);
-            $translation->setLocale($lang);
-            $translation->setName($translatedName);
-            $em->persist($translation);
-        }
-
-        $em->flush();
-
-        return $this->redirectToRoute('translator_center', ['lang' => $lang]);
-    }
-
-    #[Route('/translator/form/{path}/{lang}', name: 'translator_form', requirements: ['path' => '.+'])]
-    /**
-     * Renders the auto-generated translation form for a BMS template.
-     *
-     * @Route("/translator/form/{path}/{lang}", name="translator_form", requirements={"path" = ".+"})
-     *
-     * @param string $path Relative path to the target template (with slashes).
-     * @param string $lang Target language code.
-     *
-     * @return Response Rendered translation form.
-     */
-    public function showTranslationForm(string $path, string $lang): Response
-    {
-        $normalized = str_replace('/', '_', $path);
-        $template = 'translator/' . $normalized;
-
-        return $this->render($template, [
-            'lang' => $lang,
-        ]);
-    }
-
-    #[Route('/frontweb/translator/form/{path}/{lang}', name: 'frontweb_translator_form', requirements: ['path' => '.+'])]
-    /**
-     * Renders the auto-generated translation form for a frontweb template.
-     *
-     * @Route("/frontweb/translator/form/{path}/{lang}", name="frontweb_translator_form", requirements={"path" = ".+"})
-     *
-     * @param string $path Relative path to the target template (with slashes).
-     * @param string $lang Target language code.
-     *
-     * @return Response Rendered frontweb translation form.
-     */
-    public function showFrontwebTranslationForm(string $path, string $lang): Response
-    {
-        $normalized = str_replace('/', '_', $path);
-        $template = 'translator/' . $normalized;
-
-        return $this->render($template, [
-            'lang' => $lang,
-        ]);
-    }
-
-    #[Route('/translation/delete-language/{lang}', name: 'translator_delete_language', methods: ['POST'])]
-    /**
-     * Deletes a language's entire translation directory under templates/locale/{lang}.
-     *
-     * @Route("/translation/delete-language/{lang}", name="translator_delete_language", methods={"POST"})
-     *
-     * @param string $lang Language code to delete.
-     * @param KernelInterface $kernel Symfony kernel to resolve project directory path.
-     *
-     * @return Response Redirects back to language list page after deletion.
-     */
-    public function deleteLanguage(string $lang, KernelInterface $kernel): Response
-    {
-        $dir = $kernel->getProjectDir() . '/templates/locale/' . $lang;
-
-        if (is_dir($dir)) {
-            $it = new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS);
-            $files = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::CHILD_FIRST);
-            foreach ($files as $file) {
-                $file->isDir() ? rmdir($file) : unlink($file);
-            }
-            rmdir($dir);
-        }
-
-        return $this->redirectToRoute('translator_languages');
-    }
-
     #[Route('/translation/submit', name: 'translation_submit', methods: ['POST'])]
-    /**
-     * Handles the submission of a translated Twig template form.
-     * Extracts translation fields and saves a new localized template file under templates/locale/{lang}/.
-     *
-     * - Preserves Twig expressions and block structures.
-     * - Optionally replaces {% extends ... %} using base64-encoded inputs.
-     * - Automatically determines if the template is in frontweb or BMS project.
-     *
-     * @Route("/translation/submit", name="translation_submit", methods={"POST"})
-     *
-     * @param Request $request HTTP request containing translation inputs.
-     * @param KernelInterface $kernel Symfony kernel to resolve file paths.
-     * @param LoggerInterface $logger For error/debug logging.
-     *
-     * @return Response HTTP response indicating success or error.
-     */
     public function handleTranslationSubmit(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
     {
-        $language = $request->request->get('target_language');
-        $originalPath = $request->request->get('original_path');
+        $language = strtolower((string) $request->request->get('target_language', ''));
+        $originalPath = (string) $request->request->get('original_path', '');
+        $token = (string) $request->request->get('_token', '');
 
-        if (!$language || !$originalPath) {
-            return new Response('Missing required fields', 400);
+        if (!$this->isCsrfTokenValid(self::CSRF_TRANSLATION_SUBMIT, $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!preg_match(self::LANG_PATTERN, $language)) {
+            return new Response('❌ Invalid target_language', Response::HTTP_BAD_REQUEST);
+        }
+
+        if ($originalPath === '') {
+            return new Response('❌ Missing original_path', Response::HTTP_BAD_REQUEST);
         }
 
         $projectDir = $kernel->getProjectDir();
@@ -590,93 +510,173 @@ class TranslatorController extends AbstractController
             || str_starts_with($originalPath, 'eshop/')
             || str_starts_with($originalPath, 'customer/');
 
-        $sourceFile = $isFrontweb
-            ? realpath($projectDir . '/../eshop_frontweb/templates/' . $originalPath)
-            : realpath($projectDir . '/templates/' . $originalPath);
+        $originalPath = $this->normalizeRelativeTwigPath($originalPath);
 
-        if (!file_exists($sourceFile)) {
-            $logger->error("❌ Original file not found: $sourceFile");
-            return new Response("Original file not found: $sourceFile", 404);
+        $sourceBase = $isFrontweb
+            ? realpath($projectDir . '/../eshop_frontweb/templates')
+            : realpath($projectDir . '/templates');
+
+        if ($sourceBase === false) {
+            return new Response('❌ Source templates directory not found', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $baseDir = $isFrontweb
-            ? $projectDir . '/../eshop_frontweb/templates/locale/' . $language
+        $sourceFile = realpath($sourceBase . '/' . $originalPath);
+        if ($sourceFile === false || !str_starts_with($sourceFile, $sourceBase . DIRECTORY_SEPARATOR)) {
+            $logger->error('[Translator] Invalid source file path: ' . $originalPath);
+            return new Response('❌ Invalid template path', Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!is_file($sourceFile)) {
+            return new Response('❌ Original file not found', Response::HTTP_NOT_FOUND);
+        }
+
+        $outputBase = $isFrontweb
+            ? realpath($projectDir . '/../eshop_frontweb/templates') . '/locale/' . $language
             : $projectDir . '/templates/locale/' . $language;
 
-        $translatedFile = $baseDir . '/' . $originalPath;
+        $translatedFile = $outputBase . '/' . $originalPath;
         $translatedDir = dirname($translatedFile);
 
-        if (!is_dir($translatedDir)) {
-            if (!mkdir($translatedDir, 0777, true) && !is_dir($translatedDir)) {
-                $logger->error("❌ Failed to create directory: $translatedDir");
-                return new Response("Failed to create directory: $translatedDir", 500);
-            }
+        try {
+            (new Filesystem())->mkdir($translatedDir, 0755);
+        } catch (\Throwable $e) {
+            $logger->error('[Translator] mkdir output failed: ' . $e->getMessage());
+            return new Response('❌ Failed to create output directory', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $originalContent = file_get_contents($sourceFile);
+        $originalContent = (string) file_get_contents($sourceFile);
 
         $twigPlaceholders = [];
-
-        $originalContent = preg_replace_callback('/{{.*?}}/s', function ($matches) use (&$twigPlaceholders, $logger) {
+        $originalContent = preg_replace_callback('/{{.*?}}/s', function ($m) use (&$twigPlaceholders) {
             $key = '__TWIG_EXPR__' . count($twigPlaceholders) . '__';
-            $twigPlaceholders[$key] = $matches[0];
+            $twigPlaceholders[$key] = $m[0];
             return $key;
-        }, $originalContent);
+        }, $originalContent) ?? $originalContent;
 
-        $originalContent = preg_replace_callback('/{%\s*(.*?)\s*%}/s', function ($matches) use (&$twigPlaceholders, $logger) {
-            $content = trim($matches[1]);
+        $originalContent = preg_replace_callback('/{%\s*(.*?)\s*%}/s', function ($m) use (&$twigPlaceholders) {
+            $content = trim((string) ($m[1] ?? ''));
             if (str_starts_with($content, 'extends')) {
-                return $matches[0];
+                return $m[0];
             }
             $key = '__TWIG_BLOCK__' . count($twigPlaceholders) . '__';
-            $twigPlaceholders[$key] = $matches[0];
+            $twigPlaceholders[$key] = $m[0];
             return $key;
-        }, $originalContent);
+        }, $originalContent) ?? $originalContent;
 
         foreach ($request->request->all() as $key => $value) {
-            if (str_starts_with($key, 'original__')) {
-                $suffix = substr($key, strlen('original__'));
-                $originalText = $value;
-                $translatedText = $request->request->get('field__' . $suffix);
-        
-                if ($translatedText && $translatedText !== $originalText) {
-                    $escapedOriginal = preg_quote($originalText, '/');
-                    $escapedOriginal = str_replace('\{\{.*?\}\}', '\{\{.*?\}\}', $escapedOriginal);
-                    $pattern = '/' . $escapedOriginal . '/s';
-
-                    $originalContentBefore = $originalContent;
-                    $originalContent = preg_replace_callback($pattern, function ($matches) use ($translatedText, $logger) {
-                        return $translatedText;
-                    }, $originalContent, 1);
-
-                }
+            if (!is_string($key) || !str_starts_with($key, 'original__')) {
+                continue;
             }
+
+            if ($key === 'original__template_extends') {
+                continue;
+            }
+
+            $suffix = substr($key, strlen('original__'));
+            $originalText = (string) $value;
+            $translatedText = (string) $request->request->get('field__' . $suffix, '');
+
+            if ($translatedText === '' || $translatedText === $originalText) {
+                continue;
+            }
+
+            $pattern = '/' . preg_quote($originalText, '/') . '/s';
+            $originalContent = preg_replace($pattern, $translatedText, $originalContent, 1) ?? $originalContent;
         }
 
-        if (
-            $request->request->has('original__template_extends') &&
-            $request->request->has('field__template_extends')
-        ) {
-            $originalExtends = base64_decode($request->request->get('original__template_extends'));
-            $translatedExtends = base64_decode($request->request->get('field__template_extends'));
+        $encodedOriginalExtends = (string) $request->request->get('original__template_extends', '');
+        $encodedTranslatedExtends = (string) $request->request->get('field__template_extends', '');
 
-            $originalContent = preg_replace(
-                '/' . preg_quote($originalExtends, '/') . '/',
-                $translatedExtends,
-                $originalContent
-            );
+        if ($encodedOriginalExtends !== '' && $encodedTranslatedExtends !== '') {
+            $decodedOriginal = base64_decode($encodedOriginalExtends, true);
+            $decodedTranslated = base64_decode($encodedTranslatedExtends, true);
+
+            if (is_string($decodedOriginal) && is_string($decodedTranslated)) {
+                $originalContent = str_replace($decodedOriginal, $decodedTranslated, $originalContent);
+            }
         }
 
         $originalContent = strtr($originalContent, $twigPlaceholders);
 
-        if (preg_match_all('/shopInfo\.get([a-zA-Z0-9_]+)\(\)/', $originalContent, $matches)) {
-            foreach ($matches[1] as $methodSuffix) {
-                $fullMethod = 'get' . $methodSuffix;
-            }
-        }
-
         file_put_contents($translatedFile, $originalContent);
 
-        return new Response("✅ Translation saved to: $translatedFile");
+        return new Response(sprintf(
+            '✅ Translation saved to: <code>%s</code>',
+            htmlspecialchars($translatedFile, ENT_QUOTES)
+        ));
+    }
+
+    /**
+     * Normalizes and validates a relative Twig template path to prevent traversal.
+     */
+    private function normalizeRelativeTwigPath(string $path): string
+    {
+        $path = trim(str_replace('\\', '/', $path));
+
+        if ($path === '' || str_contains($path, "\0")) {
+            throw $this->createNotFoundException('Invalid path');
+        }
+
+        if (str_starts_with($path, '/')) {
+            throw $this->createNotFoundException('Invalid path');
+        }
+
+        if (preg_match('#(^|/)\.\.(?:/|$)#', $path) === 1) {
+            throw $this->createNotFoundException('Invalid path');
+        }
+
+        return ltrim($path, '/');
+    }
+
+    /**
+     * Generates a CSRF token value for the given token id.
+     */
+    private function generateCsrfToken(string $id): string
+    {
+        return $this->container->get('security.csrf.token_manager')->getToken($id)->getValue();
+    }
+
+        /**
+     * Renders an auto-generated BMS translation form stored under templates/translator/.
+     */
+    #[Route('/translator/form/{path}/{lang}', name: 'translator_form', requirements: ['path' => '.+'], methods: ['GET'])]
+    public function showTranslationForm(string $path, string $lang): Response
+    {
+        $template = $this->resolveTranslatorTemplate($path);
+
+        return $this->render($template, [
+            'lang' => strtolower($lang),
+        ]);
+    }
+
+    /**
+     * Renders an auto-generated frontweb translation form stored under templates/translator/.
+     */
+    #[Route('/frontweb/translator/form/{path}/{lang}', name: 'frontweb_translator_form', requirements: ['path' => '.+'], methods: ['GET'])]
+    public function showFrontwebTranslationForm(string $path, string $lang): Response
+    {
+        $template = $this->resolveTranslatorTemplate($path);
+
+        return $this->render($template, [
+            'lang' => strtolower($lang),
+        ]);
+    }
+
+    /**
+     * Resolves a safe template name under templates/translator/ and blocks traversal attempts.
+     */
+    private function resolveTranslatorTemplate(string $path): string
+    {
+        $path = str_replace('\\', '/', trim($path));
+
+        if ($path === '' || str_contains($path, "\0") || str_contains($path, '..') || str_starts_with($path, '/')) {
+            throw $this->createNotFoundException('Invalid template path');
+        }
+
+        if (!str_ends_with($path, '.html.twig')) {
+            $path .= '.html.twig';
+        }
+
+        return 'translator/' . $path;
     }
 }

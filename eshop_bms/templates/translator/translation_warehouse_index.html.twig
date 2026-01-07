@@ -4,95 +4,73 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="warehouse/index.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>#</label>
-        <input type="hidden" name="original__auto___0" value="#">
-        <input type="text" name="field__auto___0" placeholder="#">
-    </div>
-    <div class="field-group">
-        <label>Warehouse Menu</label>
-        <input type="hidden" name="original__auto_warehouse_menu_2" value="Warehouse Menu">
-        <input type="text" name="field__auto_warehouse_menu_2" placeholder="Warehouse Menu">
-    </div>
-    <div class="field-group">
-        <label>📦 Order Management</label>
-        <input type="hidden" name="original__auto__order_management_3" value="📦 Order Management">
-        <input type="text" name="field__auto__order_management_3" placeholder="📦 Order Management">
-    </div>
-    <div class="field-group">
-        <label>🔄 Return Requests</label>
-        <input type="hidden" name="original__auto__return_requests_4" value="🔄 Return Requests">
-        <input type="text" name="field__auto__return_requests_4" placeholder="🔄 Return Requests">
-    </div>
-    <div class="field-group">
-        <label>🧾 Pending Orders</label>
-        <input type="hidden" name="original__auto__pending_orders_5" value="🧾 Pending Orders">
-        <input type="text" name="field__auto__pending_orders_5" placeholder="🧾 Pending Orders">
-    </div>
-    <div class="field-group">
-        <label>Order ID</label>
-        <input type="hidden" name="original__auto_order_id_6" value="Order ID">
-        <input type="text" name="field__auto_order_id_6" placeholder="Order ID">
-    </div>
-    <div class="field-group">
-        <label>Customer</label>
-        <input type="hidden" name="original__auto_customer_7" value="Customer">
-        <input type="text" name="field__auto_customer_7" placeholder="Customer">
-    </div>
-    <div class="field-group">
-        <label>Status</label>
-        <input type="hidden" name="original__auto_status_8" value="Status">
-        <input type="text" name="field__auto_status_8" placeholder="Status">
-    </div>
-    <div class="field-group">
-        <label>Created At</label>
-        <input type="hidden" name="original__auto_created_at_9" value="Created At">
-        <input type="text" name="field__auto_created_at_9" placeholder="Created At">
-    </div>
-    <div class="field-group">
-        <label>No pending orders 🎉</label>
-        <input type="hidden" name="original__auto_no_pending_orders__16" value="No pending orders 🎉">
-        <input type="text" name="field__auto_no_pending_orders__16" placeholder="No pending orders 🎉">
-    </div>
-    <div class="field-group">
-        <label>📉 Low Stock Products</label>
-        <input type="hidden" name="original__auto__low_stock_products_18" value="📉 Low Stock Products">
-        <input type="text" name="field__auto__low_stock_products_18" placeholder="📉 Low Stock Products">
-    </div>
-    <div class="field-group">
-        <label>Product Name</label>
-        <input type="hidden" name="original__auto_product_name_19" value="Product Name">
-        <input type="text" name="field__auto_product_name_19" placeholder="Product Name">
-    </div>
-    <div class="field-group">
-        <label>Current Stock</label>
-        <input type="hidden" name="original__auto_current_stock_20" value="Current Stock">
-        <input type="text" name="field__auto_current_stock_20" placeholder="Current Stock">
-    </div>
-    <div class="field-group">
-        <label>New Stock</label>
-        <input type="hidden" name="original__auto_new_stock_21" value="New Stock">
-        <input type="text" name="field__auto_new_stock_21" placeholder="New Stock">
-    </div>
-    <div class="field-group">
-        <label>Update</label>
-        <input type="hidden" name="original__auto_update_22" value="Update">
-        <input type="text" name="field__auto_update_22" placeholder="Update">
-    </div>
-    <div class="field-group">
-        <label>✔ Update</label>
-        <input type="hidden" name="original__auto__update_26" value="✔ Update">
-        <input type="text" name="field__auto__update_26" placeholder="✔ Update">
-    </div>
-    <div class="field-group">
-        <label>All products are sufficiently stocked 🎉</label>
-        <input type="hidden" name="original__auto_all_products_are_sufficiently__27" value="All products are sufficiently stocked 🎉">
-        <input type="text" name="field__auto_all_products_are_sufficiently__27" placeholder="All products are sufficiently stocked 🎉">
-    </div>
+<div class="field-group">
+    <label>#</label>
+    <input type="hidden" name="original__auto___0" value="#">
+    <input type="text" name="field__auto___0" placeholder="#">
+</div>
+<div class="field-group">
+    <label>Warehouse Menu</label>
+    <input type="hidden" name="original__auto_warehouse_menu_2" value="Warehouse Menu">
+    <input type="text" name="field__auto_warehouse_menu_2" placeholder="Warehouse Menu">
+</div>
+<div class="field-group">
+    <label>📦 Order Management</label>
+    <input type="hidden" name="original__auto__order_management_3" value="📦 Order Management">
+    <input type="text" name="field__auto__order_management_3" placeholder="📦 Order Management">
+</div>
+<div class="field-group">
+    <label>🔄 Return Requests</label>
+    <input type="hidden" name="original__auto__return_requests_4" value="🔄 Return Requests">
+    <input type="text" name="field__auto__return_requests_4" placeholder="🔄 Return Requests">
+</div>
+<div class="field-group">
+    <label>📉 Low Stock Products</label>
+    <input type="hidden" name="original__auto__low_stock_products_5" value="📉 Low Stock Products">
+    <input type="text" name="field__auto__low_stock_products_5" placeholder="📉 Low Stock Products">
+</div>
+<div class="field-group">
+    <label>🧾 Pending Orders</label>
+    <input type="hidden" name="original__auto__pending_orders_6" value="🧾 Pending Orders">
+    <input type="text" name="field__auto__pending_orders_6" placeholder="🧾 Pending Orders">
+</div>
+<div class="field-group">
+    <label>Orders that are not yet completed or shipped will appear here.</label>
+    <input type="hidden" name="original__auto_orders_that_are_not_yet_comple_7" value="Orders that are not yet completed or shipped will appear here.">
+    <input type="text" name="field__auto_orders_that_are_not_yet_comple_7" placeholder="Orders that are not yet completed or shipped will appear here.">
+</div>
+<div class="field-group">
+    <label>Order ID</label>
+    <input type="hidden" name="original__auto_order_id_8" value="Order ID">
+    <input type="text" name="field__auto_order_id_8" placeholder="Order ID">
+</div>
+<div class="field-group">
+    <label>Customer</label>
+    <input type="hidden" name="original__auto_customer_9" value="Customer">
+    <input type="text" name="field__auto_customer_9" placeholder="Customer">
+</div>
+<div class="field-group">
+    <label>Payment</label>
+    <input type="hidden" name="original__auto_payment_10" value="Payment">
+    <input type="text" name="field__auto_payment_10" placeholder="Payment">
+</div>
+<div class="field-group">
+    <label>Created At</label>
+    <input type="hidden" name="original__auto_created_at_11" value="Created At">
+    <input type="text" name="field__auto_created_at_11" placeholder="Created At">
+</div>
+<div class="field-group">
+    <label>No pending orders 🎉</label>
+    <input type="hidden" name="original__auto_no_pending_orders__18" value="No pending orders 🎉">
+    <input type="text" name="field__auto_no_pending_orders__18" placeholder="No pending orders 🎉">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

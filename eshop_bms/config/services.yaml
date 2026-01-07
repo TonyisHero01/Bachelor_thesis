@@ -1,25 +1,49 @@
+# config/services.yaml
 parameters:
-    MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
-    NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
-    CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
-    images_directory: '%kernel.project_dir%/public/images'
+  MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
+  NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
+  CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
+  images_directory: '%kernel.project_dir%/public/images'
 
 services:
-    _defaults:
-        autowire: true
-        autoconfigure: true
+  _defaults:
+    autowire: true
+    autoconfigure: true
 
-    App\:
-        resource: '../src/'
-        exclude:
-            - '../src/DependencyInjection/'
-            - '../src/Entity/'
-            - '../src/Kernel.php'
+  # 自动注册除去以下目录/文件的所有类为服务
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/Entity/'
+      - '../src/Kernel.php'
 
-    App\Controller\BaseController:
-        arguments:
-            $twig: '@twig'
-            $logger: '@logger'
+  # 覆盖 BaseController 的构造参数（额外注入 doctrine）
+  App\Controller\BaseController:
+    arguments:
+      $twig: '@twig'
+      $logger: '@logger'
+      $doctrine: '@doctrine'
 
-    App\Twig\LocalizedPathExtension:
-        tags: ['twig.extension']
+  # 本地化路径 Twig 扩展
+  App\Twig\LocalizedPathExtension:
+    tags: ['twig.extension']
+
+  # 货币格式化 Twig 扩展
+  App\Twig\MoneyExtension:
+    arguments:
+      $cm: '@App\Service\CurrencyManager'
+    tags: ['twig.extension']
+
+  # 货币管理服务（会读写 Session 里的当前货币）
+  App\Service\CurrencyManager:
+    arguments:
+      $doctrine: '@doctrine'
+      $requestStack: '@request_stack'
+
+  # 全局变量订阅器：注入 shopInfo / currencies / defaultCurrency / availableLanguages
+  App\EventSubscriber\GlobalVariableSubscriber:
+    arguments:
+      $projectDir: '%kernel.project_dir%'
+    tags:
+      - { name: kernel.event_subscriber }

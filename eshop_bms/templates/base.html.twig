@@ -1,39 +1,108 @@
+{# templates/base.html.twig #}
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        {% block stylesheets %}
-        <link rel="stylesheet" href="{{ asset('../assets/styles/app.css') }}">
-        {% endblock %}
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Welcome!{% endblock %}</title>
 
-        {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
-        {% endblock %}
-    </head>
-    <body>
-        <header>
-            <div class="header-left">
-                <h2 class="logo"><a href="{{ path('home') }}" style="text-decoration: none; color: inherit;">{{ shopName }}</a></h2>
-            </div>
-            <div class="header-right">
-                {% set route = app.request.attributes.get('_route') %}
-                {% set routeParams = app.request.attributes.get('_route_params')|default({}) %}
-                {% set actionUrl = path(route, routeParams|merge(app.request.query.all)|merge({'_locale': ''})) %}
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
 
-                <form method="get" action="{{ actionUrl }}">
-                    <select name="_locale" onchange="this.form.submit()">
-                        {% set allLanguages = ['en']|merge(availableLanguages|filter(lang => lang != 'en')) %}
-                        {% for lang in allLanguages %}
-                            <option value="{{ lang }}" {% if app.request.get('_locale') == lang or (not app.request.get('_locale') and lang == 'en') %}selected{% endif %}>
-                                {{ lang|upper }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </form>
-            </div>
-        </header>
-        {% block body %}{% endblock %}
-    </body>
+  {% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/styles/app.css') }}">
+  {% endblock %}
+
+  {% block javascripts %}
+    {% block importmap %}{{ importmap('app') }}{% endblock %}
+  {% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+<header class="site-header">
+  <div class="header-left">
+    {% set __shopName = (shopInfo is defined and shopInfo) ? (shopInfo.eshopName ?? 'Eshop') : 'Eshop' %}
+    <h2 class="logo">
+      <a href="{{ localized_path('home') }}">{{ __shopName }}</a>
+    </h2>
+  </div>
+
+  <div class="header-right">
+    <div class="header-controls">
+
+      {% set __langs = (availableLanguages is defined and availableLanguages is not empty) ? availableLanguages : ['en'] %}
+      {% set __langs = ['en']|merge(__langs|filter(l => l != 'en')) %}
+      {% if __langs|length > 1 %}
+        {% set _route = app.request.attributes.get('_route') %}
+        {% set _params = app.request.attributes.get('_route_params')|default({}) %}
+        <form method="get" action="{{ path(_route, _params) }}" class="picker-form">
+          <select name="_locale" class="picker-select" onchange="this.form.submit()">
+            {% for lang in __langs %}
+              <option value="{{ lang }}"
+                {% if app.request.get('_locale') == lang or (not app.request.get('_locale') and lang == 'en') %}selected{% endif %}>
+                {{ lang|upper }}
+              </option>
+            {% endfor %}
+          </select>
+          {% for key, val in app.request.query.all %}
+            {% if key != '_locale' %}
+              <input type="hidden" name="{{ key }}" value="{{ val }}">
+            {% endif %}
+          {% endfor %}
+        </form>
+      {% endif %}
+
+      {% set __currs = (currencies is defined and currencies is not empty) ? currencies : [] %}
+      {% set __active = app.session.get('currency') %}
+
+      {% if __active is null %}
+        {% set __activeTmp = null %}
+        {% for c in __currs %}
+          {% if c.isIsDefault() %}
+            {% set __activeTmp = c.name %}
+          {% endif %}
+        {% endfor %}
+        {% if __activeTmp is null and __currs is not empty %}
+          {% set __activeTmp = (__currs|first).name %}
+        {% endif %}
+        {% set __active = __activeTmp is not null ? __activeTmp : 'EUR' %}
+      {% endif %}
+
+      <select
+        id="currency-select"
+        class="picker-select"
+        data-set-url="{{ path('set_currency') }}"
+        data-csrf="{{ csrf_token('set_currency') }}"
+      >
+        {% if __currs is not empty %}
+          {% for c in __currs %}
+            <option value="{{ c.name }}" {% if c.name == __active %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        {% else %}
+          <option value="{{ __active }}" selected>{{ __active }}</option>
+        {% endif %}
+      </select>
+
+    </div>
+  </div>
+</header>
+
+<main class="site-main">
+  {% block body %}{% endblock %}
+</main>
+
+<script>
+  window.currencyConfig = {
+    postUrl: "{{ path('set_currency') }}",
+    csrf: "{{ csrf_token('set_currency') }}",
+    active: "{{ __active|e('js') }}",
+    rates: {
+      {% for c in (currencies|default([])) %}
+        "{{ c.name|e('js') }}": {{ (c.value ?? 1)|default(1) }}{{ not loop.last ? ',' : '' }}
+      {% endfor %}
+    }
+  };
+</script>
+
+<script src="{{ asset('assets/currency.js') }}"></script>
+
+</body>
 </html>

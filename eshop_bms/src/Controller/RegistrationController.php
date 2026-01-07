@@ -1,50 +1,42 @@
 <?php
+
 namespace App\Controller;
 
 use App\Entity\Employee;
 use App\Form\RegistrationFormType;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\ExpressionLanguage\Expression;
 
-class RegistrationController extends BaseController
+final class RegistrationController extends BaseController
 {
-    #[Route('/register', name: 'app_register')]
     /**
      * Displays and processes the employee registration form.
-     *
-     * Only authenticated users can register new employees (e.g., admin creating sub-accounts).
-     *
-     * @param Request $request The current HTTP request.
-     * @param UserPasswordHasherInterface $passwordHasher Password hashing service.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager for persisting employee data.
-     * @param AuthorizationCheckerInterface $authorizationChecker Security checker for user authentication.
-     *
-     * @return Response Rendered registration form or redirect to success page.
      */
-    public function register(Request $request, UserPasswordHasherInterface $passwordHasher, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
-    {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
+    #[Route('/register', name: 'app_register', methods: ['GET', 'POST'])]
+    public function register(
+        Request $request,
+        UserPasswordHasherInterface $passwordHasher,
+        EntityManagerInterface $em
+    ): Response {
+        $this->denyUnlessAdminOrSuperAdmin();
         $employee = new Employee();
         $form = $this->createForm(RegistrationFormType::class, $employee);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $plainPassword = (string) $form->get('plainPassword')->getData();
+
             $employee->setPassword(
-                $passwordHasher->hashPassword(
-                    $employee,
-                    $form->get('plainPassword')->getData()
-                )
+                $passwordHasher->hashPassword($employee, $plainPassword)
             );
 
-            $entityManager->persist($employee);
-            $entityManager->flush();
+            $em->persist($employee);
+            $em->flush();
 
             return $this->redirectToRoute('register_succesfull');
         }
@@ -53,12 +45,21 @@ class RegistrationController extends BaseController
             'registrationForm' => $form->createView(),
         ]);
     }
-    #[Route('/register_succesfull', name: 'register_succesfull')]
-    public function registerSuccessfullNotificate(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+
+    /**
+     * Displays a registration success notification page.
+     */
+    #[Route('/register_succesfull', name: 'register_succesfull', methods: ['GET'])]
+    public function registerSuccessfullNotificate(): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
+        $this->denyUnlessAdminOrSuperAdmin();
         return $this->renderLocalized('registration/register_successfull_notification.html.twig', []);
+    }
+
+    private function denyUnlessAdminOrSuperAdmin(): void
+    {
+        if (!$this->isGranted('ROLE_SUPER_ADMIN') && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createAccessDeniedException();
+        }
     }
 }

@@ -3,7 +3,7 @@
 {% block title %}Return Request Details{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/styles/return_request_detail.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/styles/return_request_detail.css') }}">
 
 <div class="example-wrapper">
     <h2>Return Request #{{ request.getId() }}</h2>
@@ -51,6 +51,6 @@
     <a href="{{ localized_path('app_return_requests') }}" class="back-btn">Back to Return Requests</a>
 </div>
 
-<script src="{{ asset('../assets/returnRequestDetail.js') }}"></script>
+<script src="{{ asset('assets/returnRequestDetail.js') }}"></script>
 
 {% endblock %}

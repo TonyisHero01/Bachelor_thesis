@@ -23,7 +23,6 @@ class CategoryRepository extends ServiceEntityRepository
     public function findAllCategories(): array
     {
         return $this->createQueryBuilder('c')
-            ->addOrderBy('c.parent', 'ASC')
             ->addOrderBy('c.name', 'ASC')
             ->getQuery()
             ->getResult();

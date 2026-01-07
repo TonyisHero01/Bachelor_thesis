@@ -1,41 +1,36 @@
 <?php
+
 namespace App\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Entity\Employee;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
-class SecurityController extends BaseController
+final class SecurityController extends BaseController
 {
-    #[Route(path: '/login', name: 'app_login')]
     /**
-     * Displays the login form and handles authentication errors.
-     *
-     * If the user is already logged in as an Employee, they are redirected to the home page.
-     *
-     * @param AuthenticationUtils $authenticationUtils Utility to retrieve the last authentication error and username.
-     *
-     * @return Response Rendered login form or redirect if already logged in.
+     * Displays the login form and shows authentication errors.
      */
+    #[Route('/login', name: 'app_login', methods: ['GET', 'POST'])]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
-        if ($this->getUser() instanceof App\Entity\Employee) {
+        if ($this->getUser() instanceof Employee) {
             return $this->redirectToRoute('home');
         }
 
-        $error = $authenticationUtils->getLastAuthenticationError();
-        $lastUsername = $authenticationUtils->getLastUsername();
-
         return $this->renderLocalized('security/login.html.twig', [
-            'last_username' => $lastUsername,
-            'error' => $error,
+            'last_username' => $authenticationUtils->getLastUsername(),
+            'error' => $authenticationUtils->getLastAuthenticationError(),
         ]);
     }
 
-    #[Route(path: '/logout', name: 'app_logout')]
+    /**
+     * Logs the current user out (handled by Symfony firewall).
+     */
+    #[Route('/logout', name: 'app_logout', methods: ['POST'])]
     public function logout(): void
     {
-        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+        throw new \LogicException('This method is intercepted by the logout mechanism.');
     }
 }

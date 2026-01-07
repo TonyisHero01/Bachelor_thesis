@@ -4,30 +4,73 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="registration/register.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>Employee Registration</label>
-        <input type="hidden" name="original__auto_employee_registration_1" value="Employee Registration">
-        <input type="text" name="field__auto_employee_registration_1" placeholder="Employee Registration">
-    </div>
-    <div class="field-group">
-        <label>Choose Employee&#039;s Positions</label>
-        <input type="hidden" name="original__auto_choose_employee_s_positions_3" value="Choose Employee&#039;s Positions">
-        <input type="text" name="field__auto_choose_employee_s_positions_3" placeholder="Choose Employee&#039;s Positions">
-    </div>
-    <div class="field-group">
-        <label>Register</label>
-        <input type="hidden" name="original__auto_register_5" value="Register">
-        <input type="text" name="field__auto_register_5" placeholder="Register">
-    </div>
-    <div class="field-group">
-        <label>Cancel</label>
-        <input type="hidden" name="original__auto_cancel_6" value="Cancel">
-        <input type="text" name="field__auto_cancel_6" placeholder="Cancel">
-    </div>
+<div class="field-group">
+    <label>) }}</label>
+    <input type="hidden" name="original__auto___0" value=") }}">
+    <input type="text" name="field__auto___0" placeholder=") }}">
+</div>
+<div class="field-group">
+    <label>New Employee</label>
+    <input type="hidden" name="original__auto_new_employee_7" value="New Employee">
+    <input type="text" name="field__auto_new_employee_7" placeholder="New Employee">
+</div>
+<div class="field-group">
+    <label>Create a new employee account and assign one or more positions.</label>
+    <input type="hidden" name="original__auto_create_a_new_employee_account__8" value="Create a new employee account and assign one or more positions.">
+    <input type="text" name="field__auto_create_a_new_employee_account__8" placeholder="Create a new employee account and assign one or more positions.">
+</div>
+<div class="field-group">
+    <label>⬅ Back to Employee List</label>
+    <input type="hidden" name="original__auto__back_to_employee_list_9" value="⬅ Back to Employee List">
+    <input type="text" name="field__auto__back_to_employee_list_9" placeholder="⬅ Back to Employee List">
+</div>
+<div class="field-group">
+    <label>Basic Information</label>
+    <input type="hidden" name="original__auto_basic_information_11" value="Basic Information">
+    <input type="text" name="field__auto_basic_information_11" placeholder="Basic Information">
+</div>
+<div class="field-group">
+    <label>Minimum 6 characters.</label>
+    <input type="hidden" name="original__auto_minimum_6_characters__21" value="Minimum 6 characters.">
+    <input type="text" name="field__auto_minimum_6_characters__21" placeholder="Minimum 6 characters.">
+</div>
+<div class="field-group">
+    <label>Employee Positions</label>
+    <input type="hidden" name="original__auto_employee_positions_23" value="Employee Positions">
+    <input type="text" name="field__auto_employee_positions_23" placeholder="Employee Positions">
+</div>
+<div class="field-group">
+    <label>You can assign multiple roles. Super admin can additionally grant</label>
+    <input type="hidden" name="original__auto_you_can_assign_multiple_roles__24" value="You can assign multiple roles. Super admin can additionally grant">
+    <input type="text" name="field__auto_you_can_assign_multiple_roles__24" placeholder="You can assign multiple roles. Super admin can additionally grant">
+</div>
+<div class="field-group">
+    <label>Administrator</label>
+    <input type="hidden" name="original__auto_administrator_25" value="Administrator">
+    <input type="text" name="field__auto_administrator_25" placeholder="Administrator">
+</div>
+<div class="field-group">
+    <label>privileges.</label>
+    <input type="hidden" name="original__auto_privileges__26" value="privileges.">
+    <input type="text" name="field__auto_privileges__26" placeholder="privileges.">
+</div>
+<div class="field-group">
+    <label>Create Employee</label>
+    <input type="hidden" name="original__auto_create_employee_29" value="Create Employee">
+    <input type="text" name="field__auto_create_employee_29" placeholder="Create Employee">
+</div>
+<div class="field-group">
+    <label>Cancel</label>
+    <input type="hidden" name="original__auto_cancel_30" value="Cancel">
+    <input type="text" name="field__auto_cancel_30" placeholder="Cancel">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

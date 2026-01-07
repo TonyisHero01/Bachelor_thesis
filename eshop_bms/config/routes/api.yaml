@@ -1,0 +1,3 @@
+api_v1_controllers:
+  resource: '../../src/Api/Controller/V1/'
+  type: attribute

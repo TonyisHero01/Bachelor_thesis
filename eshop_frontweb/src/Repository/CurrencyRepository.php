@@ -20,4 +20,13 @@ class CurrencyRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Currency::class);
     }
+    public function findDefaultCurrency(): ?Currency
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.isDefault = :isDefault')
+            ->setParameter('isDefault', true)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

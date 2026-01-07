@@ -3,7 +3,7 @@
 {% block title %}Return Request - {{ shopInfo.getEshopName() }}{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/return-form.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/return-form.css') }}">
 
 <div class="return-container">
     <h2>Return Request for Order #{{ order.getId() }}</h2>
@@ -57,6 +57,6 @@
     </form>
 </div>
 
-<script src="{{ asset('../assets/eshopReturnForm.js') }}"></script>
+<script src="{{ asset('assets/eshopReturnForm.js') }}"></script>
 
 {% endblock %}

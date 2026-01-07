@@ -4,24 +4,35 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translator_page_list.css') }}">
+
 <div class="translation-page-container">
-<h1>Choose a Page to Translate</h1>
-<ul>
-    <h3>BMS Pages</h3>
-    {% for key, filename in bmsPages %}
-        <li>
-            <a href="{{ localized_path('translator_form', { path: filename, lang: lang }) }}">{{ key|replace({'_': ' '})|title }}</a>
-        </li>
-    {% endfor %}
+    <h1>Choose a Page to Translate</h1>
 
-    <h3>Frontweb Pages</h3>
-    {% for key, filename in frontwebPages %}
-        <li>
-            <a href="{{ localized_path('frontweb_translator_form', { path: filename, lang: lang }) }}">{{ key|replace({'_': ' '})|title }}</a>
-        </li>
-    {% endfor %}
-</ul>
+    <ul>
+        <h3>BMS Pages</h3>
+        {% for key, filename in bmsPages %}
+            <li>
+                <a href="{{ localized_path('translator_form', { path: filename, lang: lang }) }}">
+                    {{ key|replace({'_': ' '})|title }}
+                </a>
+            </li>
+        {% endfor %}
 
-<a href="{{ path('generate_all_translation_forms') }}" class="auto-btn">⚡ Generate All</a>
+        <h3>Frontweb Pages</h3>
+        {% for key, filename in frontwebPages %}
+            <li>
+                <a href="{{ localized_path('frontweb_translator_form', { path: filename, lang: lang }) }}">
+                    {{ key|replace({'_': ' '})|title }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <a
+        href="{{ path('generate_all_translation_forms', { _token: csrf_token('translation_auto_form') }) }}"
+        class="auto-btn"
+    >
+        ⚡ Generate All
+    </a>
 </div>
 {% endblock %}

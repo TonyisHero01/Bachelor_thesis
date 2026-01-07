@@ -2,201 +2,211 @@
 
 namespace App\Controller;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted('ROLE_TRANSLATOR')]
 class FrontwebTranslatorController extends AbstractController
 {
-    #[Route('/translation/frontweb/{lang}', name: 'frontweb_translator_page_list', requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'])]
     /**
-     * Displays a list of translatable frontweb pages for the given language.
-     *
-     * @param string $lang Language code (e.g., "en", "cz")
-     * @return Response
+     * Displays a list of translatable frontweb pages for the selected language.
      */
+    #[Route(
+        '/translation/frontweb/{lang}',
+        name: 'frontweb_translator_page_list',
+        requirements: ['lang' => '^(?!submit$)[a-zA-Z]+'],
+        methods: ['GET']
+    )]
     public function showPageList(string $lang): Response
     {
+        $lang = strtolower($lang);
+
         return $this->render('translation/page_list.html.twig', [
-            'lang' => $lang
+            'lang' => $lang,
+            'bmsPages' => [],
+            'frontwebPages' => [
+                // 这里按你自己维护的 frontweb 页面列表写
+                // key 用来显示标题，value 是 templates 下的相对路径（不带 templates/ 前缀）
+                'frontweb_home' => 'eshop/index.html.twig',
+                // 'frontweb_cart' => 'eshop/cart.html.twig',
+            ],
         ]);
     }
 
-    #[Route('/translation/frontweb/form/{path}/{lang}', name: 'frontweb_translator_form', requirements: ['path' => '.+'])]
     /**
-     * Renders a translation form for a specific frontweb template and target language.
-     *
-     * @param string $path Relative path to template (without locale prefix)
-     * @param string $lang Target language code
-     * @return Response
+     * Renders the translation form template for a given frontweb page and target language.
      */
+    #[Route(
+        '/translation/frontweb/form/{path}/{lang}',
+        name: 'frontweb_translator_form',
+        requirements: ['path' => '.+'],
+        methods: ['GET']
+    )]
     public function showTranslationForm(string $path, string $lang): Response
     {
+        $lang = strtolower($lang);
+        $path = $this->normalizeRelativeTwigPath($path);
+
         $normalized = str_replace('/', '_', $path);
         $template = 'frontweb_translator/translation_' . $normalized;
 
         return $this->render($template, [
             'lang' => $lang,
+            'path' => $path,
         ]);
     }
 
-    #[Route('/translation/frontweb/submit', name: 'frontweb_translation_submit', methods: ['POST'])]
     /**
-     * Handles submission of a translation form.
-     * Replaces original texts with translated values and saves to `frontweb/templates/locale/{lang}/...`.
-     *
-     * @param Request $request
-     * @param KernelInterface $kernel
-     * @param LoggerInterface $logger
-     * @return Response
+     * Handles submission of the frontweb translation form and writes a localized twig file
+     * into eshop_frontweb/templates/locale/{lang}/...
      */
-    public function handleTranslationSubmit(Request $request, KernelInterface $kernel, LoggerInterface $logger): Response
-    {
-        $language = $request->request->get('target_language');
-        $originalPath = $request->request->get('original_path');
+    #[Route(
+        '/translation/frontweb/submit',
+        name: 'frontweb_translation_submit',
+        methods: ['POST']
+    )]
+    public function handleTranslationSubmit(
+        Request $request,
+        KernelInterface $kernel,
+        LoggerInterface $logger
+    ): Response {
+        $language = strtolower((string) $request->request->get('target_language', ''));
+        $originalPath = (string) $request->request->get('original_path', '');
+        $token = (string) $request->request->get('_token', '');
 
-        if (!$language || !$originalPath) {
-            return new Response('❌ Missing required fields', 400);
+        if ($language === '' || $originalPath === '') {
+            return new Response('❌ Missing required fields', Response::HTTP_BAD_REQUEST);
         }
+
+        if (!$this->isCsrfTokenValid('frontweb_translation_submit', $token)) {
+            return new Response('❌ Invalid CSRF token', Response::HTTP_BAD_REQUEST);
+        }
+
+        $originalPath = $this->normalizeRelativeTwigPath($originalPath);
 
         $bmsDir = $kernel->getProjectDir();
         $frontwebDir = realpath($bmsDir . '/../eshop_frontweb');
 
-        if (!$frontwebDir) {
-            return new Response('❌ Cannot locate frontweb directory', 500);
+        if ($frontwebDir === false) {
+            return new Response('❌ Cannot locate frontweb directory', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $bmsPath = $bmsDir . '/templates/' . ltrim($originalPath, '/');
-        $frontwebPath = $frontwebDir . '/templates/' . ltrim($originalPath, '/');
+        $bmsPath = $bmsDir . '/templates/' . $originalPath;
+        $frontwebPath = $frontwebDir . '/templates/' . $originalPath;
 
-        $sourceFile = file_exists($bmsPath) ? $bmsPath : (file_exists($frontwebPath) ? $frontwebPath : null);
-        if (!$sourceFile) {
-            $logger->error("[Frontweb Translator] ❌ Original file not found in either BMS or Frontweb: $originalPath");
-            return new Response("❌ Original file not found: $originalPath", 404);
+        $sourceFile = is_file($bmsPath) ? $bmsPath : (is_file($frontwebPath) ? $frontwebPath : null);
+
+        if ($sourceFile === null) {
+            $logger->error(sprintf(
+                '[Frontweb Translator] Original file not found. originalPath=%s',
+                $originalPath
+            ));
+
+            return new Response('❌ Original file not found', Response::HTTP_NOT_FOUND);
         }
 
-        $relativePath = preg_replace('#^templates/#', '', ltrim($originalPath, '/'));
-        $translatedFile = $frontwebDir . '/templates/locale/' . $language . '/' . $relativePath;
+        $translatedFile = $frontwebDir . '/templates/locale/' . $language . '/' . $originalPath;
         $translatedDir = dirname($translatedFile);
 
         if (!is_dir($translatedDir) && !mkdir($translatedDir, 0777, true) && !is_dir($translatedDir)) {
-            $logger->error("[Frontweb Translator] ❌ Failed to create directory: $translatedDir");
-            return new Response("❌ Failed to create directory: $translatedDir", 500);
+            $logger->error(sprintf(
+                '[Frontweb Translator] Failed to create directory: %s',
+                $translatedDir
+            ));
+
+            return new Response('❌ Failed to create output directory', Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $originalContent = file_get_contents($sourceFile);
+        $originalContent = (string) file_get_contents($sourceFile);
 
-        $encodedOriginalExtends = $request->request->get('original__template_extends');
-        $encodedTranslatedExtends = $request->request->get('field__template_extends');
+        $encodedOriginalExtends = (string) $request->request->get('original__template_extends', '');
+        $encodedTranslatedExtends = (string) $request->request->get('field__template_extends', '');
 
-        if ($encodedOriginalExtends && $encodedTranslatedExtends) {
-            $decodedOriginal = base64_decode($encodedOriginalExtends);
-            $decodedTranslated = base64_decode($encodedTranslatedExtends);
+        if ($encodedOriginalExtends !== '' && $encodedTranslatedExtends !== '') {
+            $decodedOriginal = base64_decode($encodedOriginalExtends, true);
+            $decodedTranslated = base64_decode($encodedTranslatedExtends, true);
 
-            if ($decodedOriginal && $decodedTranslated) {
+            if (is_string($decodedOriginal) && is_string($decodedTranslated)) {
                 $originalContent = str_replace($decodedOriginal, $decodedTranslated, $originalContent);
             }
         }
 
-        $tokens = preg_split('/({{.*?}}|{%\s.*?%})/s', $originalContent, -1, PREG_SPLIT_DELIM_CAPTURE);
+        $tokens = preg_split(
+            '/({{.*?}}|{%\s.*?%})/s',
+            $originalContent,
+            -1,
+            PREG_SPLIT_DELIM_CAPTURE
+        );
+
+        if (!is_array($tokens)) {
+            return new Response('❌ Failed to parse template tokens', Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
 
         foreach ($request->request->all() as $key => $value) {
-            if (str_starts_with($key, 'original__') && $key !== 'original__template_extends') {
-                $suffix = substr($key, strlen('original__'));
-                $originalText = $value;
-                $translatedText = $request->request->get('field__' . $suffix);
+            if (!is_string($key) || !str_starts_with($key, 'original__')) {
+                continue;
+            }
 
-                if ($translatedText && $translatedText !== $originalText) {
-                    $escapedOriginal = preg_quote($originalText, '/');
-                    $escapedOriginal = preg_replace('/\\\\\{\\\\\{.*?\\\\\}\\\\\}/', '.*?', $escapedOriginal);
-                    $pattern = '/' . $escapedOriginal . '/s';
+            if ($key === 'original__template_extends') {
+                continue;
+            }
 
-                    foreach ($tokens as $i => $token) {
-                        if (!str_starts_with(trim($token), '{%') && !str_starts_with(trim($token), '{{')) {
-                            $tokens[$i] = preg_replace_callback($pattern, function ($match) use ($translatedText, $logger) {
-                                return $translatedText;
-                            }, $token, 1);
-                        }
-                    }
+            $suffix = substr($key, strlen('original__'));
+            $originalText = (string) $value;
+            $translatedText = (string) $request->request->get('field__' . $suffix, '');
+
+            if ($translatedText === '' || $translatedText === $originalText) {
+                continue;
+            }
+
+            $escapedOriginal = preg_quote($originalText, '/');
+            $escapedOriginal = preg_replace('/\\\\\{\\\\\{.*?\\\\\}\\\\\}/', '.*?', (string) $escapedOriginal);
+            $pattern = '/' . $escapedOriginal . '/s';
+
+            foreach ($tokens as $i => $tokenPart) {
+                $trimmed = trim((string) $tokenPart);
+
+                if (str_starts_with($trimmed, '{%') || str_starts_with($trimmed, '{{')) {
+                    continue;
                 }
+
+                $tokens[$i] = preg_replace($pattern, $translatedText, (string) $tokenPart, 1);
             }
         }
 
         $translatedContent = implode('', $tokens);
         file_put_contents($translatedFile, $translatedContent);
 
-        return new Response("✅ Translation saved to: <code>frontweb/templates/locale/{$language}/{$relativePath}</code>");
+        return new Response(sprintf(
+            '✅ Translation saved to: <code>eshop_frontweb/templates/locale/%s/%s</code>',
+            htmlspecialchars($language, ENT_QUOTES),
+            htmlspecialchars($originalPath, ENT_QUOTES)
+        ));
     }
 
-    #[Route('/frontweb/translator/generate-form', name: 'frontweb_auto_translation_form')]
-    /**
-     * Automatically generates a translation form for a given frontweb template file
-     * by extracting all visible static text and creating editable fields.
-     *
-     * @param Request $request
-     * @return Response
-     */
-    public function generateFrontwebForm(Request $request): Response
+    private function normalizeRelativeTwigPath(string $path): string
     {
-        $sourcePath = $request->query->get('path');
-        $basePath = $this->getParameter('kernel.project_dir') . '/../frontweb/templates/';
+        $path = trim($path);
 
-        if (!$sourcePath || !file_exists($basePath . $sourcePath)) {
-            return new Response("❌ frontweb 模板文件未找到", 404);
+        $path = str_replace('\\', '/', $path);
+
+        if ($path === '' || str_contains($path, "\0")) {
+            throw $this->createNotFoundException('Invalid path');
         }
 
-        $content = file_get_contents($basePath . $sourcePath);
-
-        preg_match_all('/>([^<>]*?){{.*?}}([^<>]*?)</', $content, $mixedMatches);
-        preg_match_all('/>([^<]*?)</', $content, $pureMatches);
-
-        $snippets = [];
-        foreach ($mixedMatches[1] as $index => $before) {
-            $after = $mixedMatches[2][$index];
-            if (trim($before)) $snippets[] = trim($before);
-            if (trim($after)) $snippets[] = trim($after);
-        }
-        foreach ($pureMatches[1] as $text) {
-            if (trim($text) && !in_array(trim($text), $snippets)) {
-                $snippets[] = trim($text);
-            }
+        if (str_starts_with($path, '/')) {
+            throw $this->createNotFoundException('Invalid path');
         }
 
-        $formFields = "";
-        foreach ($snippets as $i => $text) {
-            $safeKey = 'auto_' . preg_replace('/[^a-z0-9]+/i', '_', strtolower(substr($text, 0, 30))) . '_' . $i;
-            $formFields .= <<<HTML
-    <div class="field-group">
-        <label>{$text}</label>
-        <input type="hidden" name="original__{$safeKey}" value="{$text}">
-        <input type="text" name="field__{$safeKey}" placeholder="{$text}">
-    </div>
-    HTML;
+        if (preg_match('#(^|/)\.\.(?:/|$)#', $path) === 1) {
+            throw $this->createNotFoundException('Invalid path');
         }
 
-        $output = <<<TWIG
-    {% extends 'base.html.twig' %}
-
-    {% block title %}Translate – Auto Generated{% endblock %}
-
-    {% block body %}
-    <form method="post" action="{{ path('frontweb_translation_submit') }}">
-    <input type="hidden" name="original_path" value="{$sourcePath}">
-    <input type="hidden" name="target_language" value="{{ lang }}">
-
-    {$formFields}
-
-    <button type="submit">Generate Translated File</button>
-    </form>
-    {% endblock %}
-    TWIG;
-
-        $outputPath = $basePath . 'translator/translation_' . str_replace(['/', '.html.twig'], ['_', ''], $sourcePath) . '.html.twig';
-        (new \Symfony\Component\Filesystem\Filesystem())->dumpFile($outputPath, $output);
-
-        return new Response("✅ Automatic translation form generated successfully.", 200);
+        return ltrim($path, '/');
     }
 }

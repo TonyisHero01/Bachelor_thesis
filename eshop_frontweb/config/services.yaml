@@ -1,8 +1,3 @@
-# This file is the entry point to configure your own services.
-# Files in the packages/ subdirectory configure your dependencies.
-
-# Put parameters here that don't need to change on each machine where the app is deployed
-# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     locale: 'en'
     MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
@@ -14,15 +9,10 @@ services:
     _defaults:
         autowire: true
         autoconfigure: true
+        bind:
+            $projectDir: '%kernel.project_dir%'
 
-    App\Twig\AppExtension:
-        tags: [ 'twig.extension' ]
-        public: true    # ✅ 关键点：确保它是公开服务
-    App\EventSubscriber\LocaleSubscriber:
-        arguments:
-            $defaultLocale: '%locale%'
-        tags:
-            - { name: kernel.event_subscriber }
+    # 自动扫描 Controller / Service / Form ...
     App\:
         resource: '../src/'
         exclude:
@@ -30,7 +20,37 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    # ===================== 多语言 Localized Path Twig 扩展 =====================
+    App\Twig\LocalizedPathExtension:
+        tags: ['twig.extension']
 
-    # add more service definitions when explicit configuration is needed
-    # please note that last definitions always *replace* previous ones
-    
+    # ===================== money() Twig 扩展（带货币换算） =====================
+    App\Twig\MoneyExtension:
+        arguments:
+            $cm: '@App\Service\CurrencyManager'
+        tags: ['twig.extension']
+
+    # ===================== 货币管理器 =====================
+    App\Service\CurrencyManager:
+        arguments:
+            $doctrine: '@doctrine'
+            $requestStack: '@request_stack'
+            $logger: '@logger'
+
+    # ===================== Locale / 语言切换订阅器 =====================
+    App\EventSubscriber\LocaleSubscriber:
+        arguments:
+            $defaultLocale: '%locale%'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # ===================== 全局变量订阅器（把 currencies / languages / shopName 注入 every template） =====================
+    App\EventSubscriber\GlobalVariableSubscriber:
+        tags: ['kernel.event_subscriber']
+
+    # ===================== BaseController 显式注入依赖（推荐，不然有些 IDE 推断不出来） =====================
+    App\Controller\BaseController:
+        arguments:
+            $twig: '@twig'
+            $logger: '@logger'
+            $doctrine: '@doctrine'

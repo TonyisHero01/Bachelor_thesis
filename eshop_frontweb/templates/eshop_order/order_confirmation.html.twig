@@ -1,37 +1,64 @@
+{# templates/eshop_order/order_confirmation.html.twig #}
 {% extends 'eshop_base.html.twig' %}
 
 {% block title %}Order Confirmation - {{ shopInfo.getEshopName() }}{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-confirm.css') }}">
-    <div class="order-confirmation">
-        <h2>Order Confirmation</h2>
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-confirm.css') }}">
 
-        <table>
-            <tr>
-                <td>My Order</td>
-                <td><strong>Order ID:</strong> {{ order.getId() }}</td>
-            </tr>
-            {% for item in orderItems %}
-                <tr class="item_product_name"><td>{{ item.getProductName() }} x{{ item.getQuantity() }}</td><td></td></tr>
-                {% if not shopInfo.hidePrices %}
-                    <tr><td>Subtotal:</td><td> {{ item.getSubtotal()|number_format(2) }}</td></tr>
-                    <tr><td>Tax:</td><td> {{ item.getTaxAmount()|number_format(2) }}</td></tr>
-                {% endif %}
-            {% endfor %}
-        </table>
+<div class="order-confirmation">
+  <h2>Order Confirmation</h2>
 
-        {% if not shopInfo.hidePrices %}
-            <p><strong>Total Price:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
-        {% endif %}
+  <table>
+    <tr>
+      <td>My Order</td>
+      <td><strong>Order ID:</strong> {{ order.getId() }}</td>
+    </tr>
 
-        <div class="order-actions">
-            <button id="cancelOrderBtn">Cancel Order</button>
-            <button id="confirmOrderBtn">Confirm Order</button>
-        </div>
+    {% for item in orderItems %}
+      <tr class="item_product_name">
+        <td>
+          {{ item.getProductName() }} ×{{ item.getQuantity() }}
+          <div class="sku">SKU: {{ item.getSku() }}</div>
+        </td>
+        <td></td>
+      </tr>
 
-        <a href="{{ path('customer_cart', {'_locale': locale}) }}">Back to Cart</a>
-    </div>
+      {% if not shopInfo.hidePrices %}
+        <tr>
+          <td>Subtotal (excl. tax):</td>
+          <td>{{ money(item.getSubtotal()) }}</td>
+        </tr>
+        <tr>
+          <td>Tax:</td>
+          <td>{{ money(item.getTaxAmount()) }}</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+  </table>
 
-    <script src="{{ asset('../assets/eshopOrderConfirmation.js') }}"></script>
+  {% if not shopInfo.hidePrices %}
+    <p class="total">
+      <strong>Total Price:</strong>
+      {{ money(order.getTotalPrice()) }}
+    </p>
+  {% endif %}
+
+  <div class="order-actions">
+    <button id="cancelOrderBtn"
+            data-cancel-api="{{ path('cancel_order', {'id': order.getId(), '_locale': locale}) }}">
+      Cancel Order
+    </button>
+
+    <a id="confirmOrderBtn"
+       class="btn-primary"
+       href="{{ path('checkout_mock_gateway', {'order': order.getId(), '_locale': locale}) }}">
+      Proceed to Payment
+    </a>
+  </div>
+
+  <a class="back-link" href="{{ path('customer_cart', {'_locale': locale}) }}">Back to Cart</a>
+</div>
+
+<script src="{{ asset('assets/eshopOrderConfirmation.js') }}"></script>
 {% endblock %}

@@ -3,12 +3,14 @@
 {% block title %}Select Delivery Option - {{ shopInfo.getEshopName() }}{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-delivery.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-delivery.css') }}">
 
 <div class="delivery-options">
     <h2>Choose Delivery Method</h2>
 
-    <form id="deliveryForm">
+    <form id="deliveryForm"
+      data-create-api="{{ path('order_create', {'_locale': locale}) }}"
+      data-pay-url="{{ path('checkout_mock_gateway', {'_locale': locale}) }}">
         <label>
             <input type="radio" name="deliveryMethod" value="pickup" checked>
             Pick Up at Store
@@ -39,5 +41,5 @@
     </form>
 </div>
 
-<script src="{{ asset('../assets/eshopSelectDelivery.js') }}"></script>
+<script src="{{ asset('assets/eshopSelectDelivery.js') }}"></script>
 {% endblock %}

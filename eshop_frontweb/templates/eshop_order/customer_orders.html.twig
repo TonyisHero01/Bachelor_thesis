@@ -1,63 +1,71 @@
+{# templates/eshop_order/customer_orders.html.twig #}
 {% extends 'eshop_base.html.twig' %}
 
 {% block title %}My Orders - {{ shopInfo.getEshopName() }}{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-list.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-list.css') }}">
 
 <div class="customer-orders">
+  <h2>My Orders</h2>
 
-    <h2>My Orders</h2>
+  {% if orders is empty %}
+    <p>You have no orders.</p>
+  {% else %}
+    <table class="order-table">
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Order Date</th>
+          {% if not shopInfo.hidePrices %}
+            <th>Total Price</th>
+          {% endif %}
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
 
-    {% if orders is empty %}
-        <p>You have no orders.</p>
-    {% else %}
-        <table class="order-table">
-            <thead>
-                <tr>
-                    <th>Order ID</th>
-                    <th>Order Date</th>
-                    {% if not shopInfo.hidePrices %}
-                        <th>Total Price</th>
-                    {% endif %}
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for order in orders %}
-                    <tr>
-                        <td data-label="Order ID">{{ order.getId() }}</td>
-                        <td data-label="Order Date">{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</td>
-                        {% if not shopInfo.hidePrices %}
-                            <td data-label="Total Price">
-                                {{ order.getTotalPrice()|number_format(2) }}
-                                {% if order.getOrderItems() is not empty %}
-                                    {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}
-                                {% else %}
-                                    No currency
-                                {% endif %}
-                            </td>
-                        {% endif %}
-                        <td data-label="Status">
-                            {% if order.getIsCompleted() %}
-                                <span class="status completed">COMPLETED</span>
-                            {% else %}
-                                <span class="status pending">PENDING</span>
-                            {% endif %}
-                        </td>
-                        <td data-label="Action">
-                            <a href="{{ path('order_confirmation2', {'id': order.getId(), '_locale': locale}) }}" class="btn">View</a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endif %}
+      <tbody>
+      {% for order in orders %}
+        {% set hasShipment = order.getShipment() is not null %}
+        <tr>
+          <td data-label="Order ID">{{ order.getId() }}</td>
+          <td data-label="Order Date">{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</td>
 
-    <a href="{{ path('homepage', {'_locale': locale}) }}" class="btn return-home">
-        <i class="fas fa-home"></i> Return to Home
-    </a>
+          {% if not shopInfo.hidePrices %}
+            <td data-label="Total Price">
+              {# ✅ 用 money()：金额随 active_currency 自动换算并输出 .money 元素 #}
+              {{ money(order.getTotalPrice()) }}
+            </td>
+          {% endif %}
+
+          <td data-label="Status">
+            {% if order.getIsCompleted() %}
+              <span class="status completed">COMPLETED</span>
+            {% else %}
+              <span class="status pending">PENDING</span>
+            {% endif %}
+          </td>
+
+          <td data-label="Action">
+            <a href="{{ path('order_confirmation2', {'id': order.getId(), '_locale': locale}) }}" class="btn">View</a>
+
+            {% if hasShipment %}
+              <a href="{{ path('frontweb_track_my_order', {'id': order.getId(), '_locale': locale}) }}" class="btn" style="margin-left:.5rem;">
+                Track
+              </a>
+            {% else %}
+              <span class="btn disabled" style="margin-left:.5rem; opacity:.6; cursor:not-allowed;">Not shipped yet</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <a href="{{ path('app_eshop_home', {'_locale': locale}) }}" class="btn return-home">
+    <i class="fas fa-home"></i> Return to Home
+  </a>
 </div>
-
 {% endblock %}

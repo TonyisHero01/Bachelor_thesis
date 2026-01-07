@@ -1,23 +1,36 @@
 controllers:
-    resource:
-        path: ../src/Controller/
-        namespace: App\Controller
-    type: attribute
+  resource: ../src/Controller/
+  type: attribute
+  exclude:
+    - 'Api/'
+    - 'Api/**'   # 递归排除 Api 下的 V1、V2 等
+
+# 你原来手写的路由保持不变
 product_edit:
-    path: '/bms/product_edit/{id}'
-    controller: App\Controller\ProductController::edit
+  path: '/bms/product_edit/{id}'
+  controller: App\Controller\ProductController::edit
+
 save_product:
-    path: '/bms/product_save/{id}'
-    controller: App\Controller\ProductController::saveProduct
+  path: '/bms/product_save/{id}'
+  controller: App\Controller\ProductController::saveProduct
+
 save_image:
-    path: '/image_save/{id}'
-    controller: App\Controller\ProductController::saveImage
+  path: '/image_save/{id}'
+  controller: App\Controller\ProductController::saveImage
+
 register_succesfull:
-    path: 'register_succesfull'
-    controller: App\Controller\RegistrationController::registerSuccessfullNotificate
+  path: 'register_succesfull'
+  controller: App\Controller\RegistrationController::registerSuccessfullNotificate
+
 home:
-    path: 'home'
-    controller: App\Controller\HomeController::home
+  path: 'home'
+  controller: App\Controller\HomeController::home
+
 images:
-    path: /images/*
-    controller: null
+  path: /images/*
+  controller: null
+
+set_currency:
+  path: /set-currency
+  controller: App\Controller\CurrencyController::setCurrency
+  methods: [POST]

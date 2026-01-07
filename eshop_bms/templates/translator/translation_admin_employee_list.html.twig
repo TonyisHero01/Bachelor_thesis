@@ -4,80 +4,83 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="admin/employee_list.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>Employee List</label>
-        <input type="hidden" name="original__auto_employee_list_2" value="Employee List">
-        <input type="text" name="field__auto_employee_list_2" placeholder="Employee List">
-    </div>
-    <div class="field-group">
-        <label>Add Employee</label>
-        <input type="hidden" name="original__auto_add_employee_5" value="Add Employee">
-        <input type="text" name="field__auto_add_employee_5" placeholder="Add Employee">
-    </div>
-    <div class="field-group">
-        <label>Filter by Role:</label>
-        <input type="hidden" name="original__auto_filter_by_role__6" value="Filter by Role:">
-        <input type="text" name="field__auto_filter_by_role__6" placeholder="Filter by Role:">
-    </div>
-    <div class="field-group">
-        <label>All</label>
-        <input type="hidden" name="original__auto_all_7" value="All">
-        <input type="text" name="field__auto_all_7" placeholder="All">
-    </div>
-    <div class="field-group">
-        <label>Warehouseman</label>
-        <input type="hidden" name="original__auto_warehouseman_8" value="Warehouseman">
-        <input type="text" name="field__auto_warehouseman_8" placeholder="Warehouseman">
-    </div>
-    <div class="field-group">
-        <label>Warehouse Manager</label>
-        <input type="hidden" name="original__auto_warehouse_manager_9" value="Warehouse Manager">
-        <input type="text" name="field__auto_warehouse_manager_9" placeholder="Warehouse Manager">
-    </div>
-    <div class="field-group">
-        <label>Translator</label>
-        <input type="hidden" name="original__auto_translator_10" value="Translator">
-        <input type="text" name="field__auto_translator_10" placeholder="Translator">
-    </div>
-    <div class="field-group">
-        <label>Event Manager</label>
-        <input type="hidden" name="original__auto_event_manager_11" value="Event Manager">
-        <input type="text" name="field__auto_event_manager_11" placeholder="Event Manager">
-    </div>
-    <div class="field-group">
-        <label>Accounting</label>
-        <input type="hidden" name="original__auto_accounting_12" value="Accounting">
-        <input type="text" name="field__auto_accounting_12" placeholder="Accounting">
-    </div>
-    <div class="field-group">
-        <label>Administrator</label>
-        <input type="hidden" name="original__auto_administrator_13" value="Administrator">
-        <input type="text" name="field__auto_administrator_13" placeholder="Administrator">
-    </div>
-    <div class="field-group">
-        <label>Reset</label>
-        <input type="hidden" name="original__auto_reset_14" value="Reset">
-        <input type="text" name="field__auto_reset_14" placeholder="Reset">
-    </div>
-    <div class="field-group">
-        <label>Previous</label>
-        <input type="hidden" name="original__auto_previous_23" value="Previous">
-        <input type="text" name="field__auto_previous_23" placeholder="Previous">
-    </div>
-    <div class="field-group">
-        <label>Next</label>
-        <input type="hidden" name="original__auto_next_24" value="Next">
-        <input type="text" name="field__auto_next_24" placeholder="Next">
-    </div>
-    <div class="field-group">
-        <label>Page Count</label>
-        <input type="hidden" name="original__auto_page_count_25" value="Page Count">
-        <input type="text" name="field__auto_page_count_25" placeholder="Page Count">
-    </div>
+<div class="field-group">
+    <label>Employee List</label>
+    <input type="hidden" name="original__auto_employee_list_2" value="Employee List">
+    <input type="text" name="field__auto_employee_list_2" placeholder="Employee List">
+</div>
+<div class="field-group">
+    <label>Add Employee</label>
+    <input type="hidden" name="original__auto_add_employee_5" value="Add Employee">
+    <input type="text" name="field__auto_add_employee_5" placeholder="Add Employee">
+</div>
+<div class="field-group">
+    <label>Filter by Role:</label>
+    <input type="hidden" name="original__auto_filter_by_role__6" value="Filter by Role:">
+    <input type="text" name="field__auto_filter_by_role__6" placeholder="Filter by Role:">
+</div>
+<div class="field-group">
+    <label>All</label>
+    <input type="hidden" name="original__auto_all_7" value="All">
+    <input type="text" name="field__auto_all_7" placeholder="All">
+</div>
+<div class="field-group">
+    <label>Warehouseman</label>
+    <input type="hidden" name="original__auto_warehouseman_8" value="Warehouseman">
+    <input type="text" name="field__auto_warehouseman_8" placeholder="Warehouseman">
+</div>
+<div class="field-group">
+    <label>Warehouse Manager</label>
+    <input type="hidden" name="original__auto_warehouse_manager_9" value="Warehouse Manager">
+    <input type="text" name="field__auto_warehouse_manager_9" placeholder="Warehouse Manager">
+</div>
+<div class="field-group">
+    <label>Translator</label>
+    <input type="hidden" name="original__auto_translator_10" value="Translator">
+    <input type="text" name="field__auto_translator_10" placeholder="Translator">
+</div>
+<div class="field-group">
+    <label>Event Manager</label>
+    <input type="hidden" name="original__auto_event_manager_11" value="Event Manager">
+    <input type="text" name="field__auto_event_manager_11" placeholder="Event Manager">
+</div>
+<div class="field-group">
+    <label>Accounting</label>
+    <input type="hidden" name="original__auto_accounting_12" value="Accounting">
+    <input type="text" name="field__auto_accounting_12" placeholder="Accounting">
+</div>
+<div class="field-group">
+    <label>Administrator</label>
+    <input type="hidden" name="original__auto_administrator_13" value="Administrator">
+    <input type="text" name="field__auto_administrator_13" placeholder="Administrator">
+</div>
+<div class="field-group">
+    <label>Reset</label>
+    <input type="hidden" name="original__auto_reset_14" value="Reset">
+    <input type="text" name="field__auto_reset_14" placeholder="Reset">
+</div>
+<div class="field-group">
+    <label>Previous</label>
+    <input type="hidden" name="original__auto_previous_23" value="Previous">
+    <input type="text" name="field__auto_previous_23" placeholder="Previous">
+</div>
+<div class="field-group">
+    <label>Next</label>
+    <input type="hidden" name="original__auto_next_24" value="Next">
+    <input type="text" name="field__auto_next_24" placeholder="Next">
+</div>
+<div class="field-group">
+    <label>Page Count</label>
+    <input type="hidden" name="original__auto_page_count_25" value="Page Count">
+    <input type="text" name="field__auto_page_count_25" placeholder="Page Count">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

@@ -1,124 +1,347 @@
+{# templates/product/edit.html.twig #}
 {% extends 'base.html.twig' %}
 
+{% block title %}Edit Product - {{ product.name }}{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/product_edit.css') }}">
+{% endblock %}
+
 {% block body %}
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Product List</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/product_edit.css') }}">
-</head>
-<body>
-    <h1>Product Edit</h1>
-    <div id=productId product-id-data={{ product.id }}></div>
-    <div id="routeData" data-product_list-route="{{ localized_path('show_All_products') }}"></div>
-    <div id="body">
-    
-    <form action="#"  enctype="multipart/form-data">
-        <label for="versionSelect">Choose Version:</label>
-        <select id="versionSelect" name="versionSelect" onchange="switchVersion(this.value)">
-            {% for productVersion in productsWithSameSku %}
+<div class="page-wrapper">
+
+  <header class="page-header">
+    <div class="page-header__info">
+      <h1 class="page-header__title">
+        Edit Product
+        <span class="page-header__sku">SKU: {{ product.sku }}</span>
+      </h1>
+      <p class="page-header__meta">
+        Created at
+        <strong>{{ product.createdAt|date('Y-m-d H:i') }}</strong>
+        {% if product.updatedAt %}
+          · Last updated
+          <strong>{{ product.updatedAt|date('Y-m-d H:i') }}</strong>
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="page-header__actions">
+      <button type="button" class="btn btn--secondary" id="backButton" onclick="backToProducts(event)">
+        ← Back to products
+      </button>
+      <button type="button" class="btn btn--primary" id="saveButton" onclick="save_()">
+        💾 Save
+      </button>
+    </div>
+  </header>
+
+  <div id="productId" data-product-id="{{ product.id }}"></div>
+  <div id="routeData" data-product-list-route="{{ localized_path('show_All_products') }}"></div>
+
+  <main class="layout">
+
+    <section class="card card--main">
+      <h2 class="card__title">Basic Information</h2>
+
+      <form id="product-edit-form" action="#" enctype="multipart/form-data" onsubmit="return false;">
+
+        <div class="form-row">
+          <div class="form-field form-field--full">
+            <label for="versionSelect" class="form-label">Version history</label>
+            <select id="versionSelect" name="versionSelect" class="form-select" onchange="switchVersion(this.value)">
+              {% for productVersion in productsWithSameSku %}
                 <option value="{{ localized_path('edit_product', {'id': productVersion.id}) }}"
-                    {% if productVersion.id == product.id %}selected{% endif %}>
-                    Version {{ productVersion.version }} - {{ productVersion.updatedAt|date('Y-m-d H:i') }}
+                        {% if productVersion.id == product.id %}selected{% endif %}>
+                  v{{ productVersion.version }} · {{ productVersion.updatedAt|date('Y-m-d H:i') }}
                 </option>
+              {% endfor %}
+            </select>
+            <p class="form-help">
+              Switch between different versions of this product.
+            </p>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="name" class="form-label">Name</label>
+            <input type="text"
+                   id="name"
+                   name="name"
+                   required
+                   maxlength="{{ NAME_MAX_LENGTH }}"
+                   value="{{ product.name }}"
+                   class="form-input">
+          </div>
+
+          <div class="form-field">
+            <label for="categoryOptions" class="form-label">Category</label>
+            <select id="categoryOptions" name="categoryOptions" class="form-select">
+              {% for category in categories %}
+                <option value="{{ category.id }}"
+                        {% if product.category and category.id == product.category.id %}selected{% endif %}>
+                  {{ category.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field form-field--full">
+            <label for="description" class="form-label">Description</label>
+            <textarea id="description"
+                      name="description"
+                      rows="8"
+                      class="form-textarea">{{ product.description }}</textarea>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="number_in_stock" class="form-label">Number in stock</label>
+            <input type="number"
+                   id="number_in_stock"
+                   name="numberInStock"
+                   value="{{ product.numberInStock }}"
+                   min="0"
+                   class="form-input">
+          </div>
+
+          <div class="form-field">
+            <label for="price" class="form-label">Base price</label>
+            <input type="number"
+                   id="price"
+                   name="price"
+                   value="{{ product.price }}"
+                   step="0.01"
+                   min="0"
+                   class="form-input">
+          </div>
+
+          <div class="form-field">
+            <label for="discount" class="form-label">Discount</label>
+            <input type="number"
+                   id="discount"
+                   name="discount"
+                   value="{{ product.discount }}"
+                   step="0.01"
+                   min="0"
+                   class="form-input">
+          </div>
+
+          <div class="form-field">
+            <label for="tax_rate" class="form-label">Tax Rate (%)</label>
+            <input type="number"
+                   id="tax_rate"
+                   name="tax_rate"
+                   value="{{ product.taxRate }}"
+                   step="0.1"
+                   min="0"
+                   class="form-input">
+          </div>
+        </div>
+
+        <h2 class="card__subtitle">Variant & Dimensions</h2>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="sizeOptions" class="form-label">Size</label>
+            <select id="sizeOptions" name="size" class="form-select">
+              <option value="">None</option>
+              {% for size in sizes %}
+                <option value="{{ size.id }}"
+                        {% if product.size and size.id == product.size.id %}selected{% endif %}>
+                  {{ size.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="colorOptions" class="form-label">Color</label>
+            <select id="colorOptions" name="colorOptions" class="form-select">
+              {% for color in colors %}
+                <option value="{{ color.id }}"
+                        {% if product.color and color.id == product.color.id %}selected{% endif %}>
+                  {{ color.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="material" class="form-label">Material</label>
+            <input type="text"
+                   id="material"
+                   name="material"
+                   value="{{ product.material }}"
+                   class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="width" class="form-label">Width</label>
+            <input type="number"
+                   id="width"
+                   name="width"
+                   value="{{ product.width }}"
+                   step="0.01"
+                   min="0"
+                   class="form-input">
+          </div>
+          <div class="form-field">
+            <label for="height" class="form-label">Height</label>
+            <input type="number"
+                   id="height"
+                   name="height"
+                   value="{{ product.height }}"
+                   step="0.01"
+                   min="0"
+                   class="form-input">
+          </div>
+          <div class="form-field">
+            <label for="length" class="form-label">Length</label>
+            <input type="number"
+                   id="length"
+                   name="length"
+                   value="{{ product.length }}"
+                   step="0.01"
+                   min="0"
+                   class="form-input">
+          </div>
+          <div class="form-field">
+            <label for="weight" class="form-label">Weight</label>
+            <input type="number"
+                   id="weight"
+                   name="weight"
+                   value="{{ product.weight }}"
+                   step="0.01"
+                   min="0"
+                   class="form-input">
+          </div>
+        </div>
+
+        <h2 class="card__subtitle">Extra attributes</h2>
+
+        <div id="attributes-container" class="attributes-container">
+          {% if product.attributes is not empty %}
+            {% for key, value in product.attributes %}
+              <div class="attribute-pair">
+                <input type="text"
+                       name="attributeKey[]"
+                       placeholder="Key"
+                       value="{{ key }}"
+                       required>
+                <input type="text"
+                       name="attributeValue[]"
+                       placeholder="Value"
+                       value="{{ value }}"
+                       required>
+                <button type="button"
+                        class="btn btn--small btn--danger delete-attribute"
+                        onclick="deleteAttribute(this)">
+                  Delete
+                </button>
+              </div>
             {% endfor %}
-        </select>
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}" value="{{ product.name }}"><br>
-        <p id="last modified">Added time: </p>
-        <p id="add_time">{{ product.createdAt|date('Y-m-d H:i') }}</p>
-        <div id="sku">SKU: {{ product.sku }}</div>
-        <label for="categoryOptions">Choose Category:</label><br>
-        <select id="categoryOptions" name="categoryOptions">
-            {% for category in categories %}
-                <option value="{{ category.id }}" {% if category.name == product.category %}selected{% endif %}>{{category.name}}</option>
+          {% else %}
+            <div class="attribute-pair">
+              <input type="text" name="attributeKey[]" placeholder="Key" required>
+              <input type="text" name="attributeValue[]" placeholder="Value" required>
+            </div>
+          {% endif %}
+        </div>
+
+        <button type="button"
+                id="addAttributeButton"
+                class="btn btn--small btn--ghost"
+                onclick="addAttribute()">
+          + Add attribute
+        </button>
+
+        <div class="form-row form-row--flags">
+          <label for="hideBox" class="flag">
+            <input type="checkbox"
+                   id="hideBox"
+                   name="hideBox"
+                   {% if product.hidden %}checked{% endif %}>
+            <span>Hide product from storefront</span>
+          </label>
+
+          <label for="noVersionUpdate" class="flag">
+            <input type="checkbox"
+                   id="noVersionUpdate"
+                   name="no_version_update">
+            <span>Don't create new version (update current one)</span>
+          </label>
+        </div>
+
+      </form>
+    </section>
+
+    <aside class="card card--side">
+
+      <section class="card-section">
+        <h2 class="card__title">Images</h2>
+        <p class="form-help">
+          Upload new images or delete existing ones.
+        </p>
+
+        <div id="image_container" class="image-container">
+          {% if product.imageUrls is not empty %}
+            {% for imageUrl in product.imageUrls %}
+              <div class="image_upload_section" data-image-url="{{ imageUrl }}">
+                <img src="{{ asset('images/' ~ imageUrl) }}"
+                     alt="{{ product.name }}"
+                     width="304"
+                     height="228">
+                <button type="button"
+                        class="btn btn--small btn--danger delete-button"
+                        onclick="deleteImage('{{ imageUrl }}')">
+                  Delete image
+                </button>
+              </div>
             {% endfor %}
-        </select><br>
-        <label for="description">Description</label><br>
-        <textarea id="description" name="description" rows="15" value="{{ product.description }}">{{ product.description }}</textarea><br>
-        <label for="number_in_stock">Number in stock</label><br>
-        <input type="text" id="number_in_stock" name="numberInStock" value="{{ product.numberInStock }}"><br>
-        <label for="image_urls">Images</label><br>
-        <div id="image_container">
-            {% if product.imageUrls is not empty %}
-                {% for imageUrl in product.imageUrls %}
-                    <div class="image_upload_section" data-image-url="{{imageUrl}}">
-                        <img id="image" src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" width="304" height="228"><br>
-                        <button type="button" class="delete-button" onclick="deleteImage('{{ imageUrl }}')">Delete Image</button>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="image_upload_section">
-                    <p>No images uploaded yet</p>
-                </div>
-            {% endif %}
+          {% else %}
+            <p class="form-help">No images uploaded yet.</p>
+          {% endif %}
+
+          <div class="image_upload_section">
+            <label class="form-label">Add images</label>
             <input class="image_upload_input" type="file" multiple>
             <input type="hidden" class="image_path" value="">
+          </div>
         </div>
-        <label for="sizeOptions">Choose Size:</label><br>
-        <select id="sizeOptions" name="size">
-            <option value="">None</option>
-            {% for size in sizes %}
-                <option value="{{ size.id }}" {% if product.size and size.id == product.size.id %}selected{% endif %}>
-                    {{ size.name }}
-                </option>
-            {% endfor %}
-        </select><br>
-        <label for="width">Width</label><br>
-        <input type="number" id="width" name="width" value="{{ product.width }}" step="0.01" min="0"><br>
-        <label for="height">Height</label>
-        <input type="number" id="height" name="height" value="{{ product.height }}" step="0.01" min="0">
-        <label for="length">Length</label>
-        <input type="number" id="length" name="length" value="{{ product.length }}" step="0.01" min="0"><br>
-        <label for="weight">Weight</label>
-        <input type="number" id="weight" name="weight" value="{{ product.weight }}" step="0.01" min="0"><br>
-        <label for="material">Material</label>
-        <input type="text" id="material" name="material" value="{{ product.material }}"><br>
-        <label for="colorOptions">Choose Color:</label><br>
-        <select id="colorOptions" name="colorOptions">
-            {% for color in colors %}
-                <option value="{{ color.id }}" {% if color.name == product.color %}selected{% endif %}>{{ color.name }}</option>
-            {% endfor %}
-        </select><br>
-        <div id="attributes-container">
-            <label>Extra Attributes:</label><br>
-            {% if product.attributes is not empty %}
-                {% for key, value in product.attributes %}
-                    <div class="attribute-pair">
-                        <input type="text" name="attributeKey[]" placeholder="Key" value="{{ key }}" required>
-                        <input type="text" name="attributeValue[]" placeholder="Value" value="{{ value }}" required>
-                        <button type="button" class="delete-attribute" onclick="deleteAttribute(this)">Delete</button>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="attribute-pair">
-                    <input type="text" name="attributeKey[]" placeholder="Key" required>
-                    <input type="text" name="attributeValue[]" placeholder="Value" required>
-                </div>
-            {% endif %}
+      </section>
+
+      <section class="card-section">
+        <h2 class="card__title">Price preview</h2>
+
+        {% if product.currency is defined %}
+          <p class="form-help">
+            Current currency:
+            <strong>{{ product.currency }}</strong>
+          </p>
+        {% endif %}
+
+        <div class="price-preview">
+          <span class="price-preview__label">Preview:</span>
+          <span class="price-preview__value money"
+                data-base="{{ product.price }}">
+            {{ money(product.price) }}
+          </span>
         </div>
-        <button type="button" id="addAttributeButton" onclick="addAttribute()">Add Attribute</button><br>
-        <label for="price">Price</label>
-        <input type="number" id="price" name="price" value="{{ product.price }}" step="0.01" min="0"><br>
-        <div id="currency">Currency: {{product.currency}}</div>
-        <label for="discount">Discount</label>
-        <input type="number" id="discount" name="discount" value="{{ product.discount }}" step="0.01" min="0"><br>
-        <label for="tax_rate">Tax Rate (%)</label>
-        <input type="number" id="tax_rate" name="tax_rate" value="{{ product.taxRate }}" step="0.1" min="0"><br>
-        <label for="hideBox">
-            <input type="checkbox" id="hideBox" name="hideBox" {% if product.hidden %}checked{% endif %}> Hide Product
-        </label><br>
-        <label for="noVersionUpdate">
-            <input type="checkbox" id="noVersionUpdate" name="no_version_update">
-            Don't create new version
-        </label><br>
-        <div class="buttons">
-        <button type="button" id="saveButton" onclick="save_()">Save</button>
-        <button type="button" id="backButton" onclick="backToProducts()">Back to products</button></div>
-        <script src="{{ asset('../assets/edit.js') }}"></script>
-    </form>
-    </div>
-</body>
-</html>
+      </section>
+
+    </aside>
+
+  </main>
+
+</div>
+
+<script src="{{ asset('assets/edit.js') }}"></script>
 {% endblock %}

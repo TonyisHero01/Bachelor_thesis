@@ -6,16 +6,24 @@
 <head>
   <meta charset="UTF-8">
   <title>Home</title>
-  <link rel="stylesheet" href="{{ asset('../assets/styles/home.css') }}">
+  <link rel="stylesheet" href="{{ asset('assets/styles/home.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
   <div class="content">
     Hi {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
     <br>
-    <a href="/{{ app.user ? 'logout' : 'login' }}">
-        {{ app.user ? (translations.logout ?? 'Logout') : (translations.login ?? 'Login') }}
-    </a>
+    {% if app.user %}
+        <form method="post" action="{{ path('app_logout') }}" style="display:inline">
+            <button type="submit" class="logout-button">
+                {{ translations.logout ?? 'Logout' }}
+            </button>
+        </form>
+    {% else %}
+        <a href="{{ path('app_login') }}">
+            {{ translations.login ?? 'Login' }}
+        </a>
+    {% endif %}
 
     {% if 'ROLE_SUPER_ADMIN' in roles %}
     <form action="#" enctype="multipart/form-data">
@@ -97,11 +105,13 @@
         {% endfor %}
       </div>
       <button type="button" id="addCurrencyButton" onclick="addCurrency()">{{ translations.add_currency ?? 'Add Currency' }}</button>
-
+      
+      <input type="hidden" id="csrf_token_eshop_save" value="{{ csrf_save_eshop }}">
+      
       <div class="buttons">
         <button type="button" id="saveButton" onclick="save_()">{{ translations.save ?? 'Save' }}</button>
         <button type="button" id="backButton" onclick="discard()">{{ translations.discard_changes ?? 'Discard Changes' }}</button>
-        <script src="{{ asset('../assets/eshopEdit.js') }}"></script>
+        <script src="{{ asset('assets/eshopEdit.js') }}"></script>
     </form>
     {% endif %}
 
@@ -119,50 +129,16 @@
       <h3>💰 Top 5 Customers by Spending</h3>
       <canvas id="topCustomersChart"></canvas>
     </div>
+    <script>
+      window.dashboardData = {
+        sales: {{ sales|json_encode|raw }},
+        topProducts: {{ topProducts|json_encode|raw }},
+        topCustomers: {{ topCustomers|json_encode|raw }}
+      };
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-      const salesData = {{ sales|json_encode|raw }};
-      const topProducts = {{ topProducts|json_encode|raw }};
-      const topCustomers = {{ topCustomers|json_encode|raw }};
-
-      new Chart(document.getElementById('salesChart'), {
-        type: 'line',
-        data: {
-          labels: salesData.map(d => d.date),
-          datasets: [{
-            label: 'Sales (CZK)',
-            data: salesData.map(d => parseFloat(d.total)),
-            fill: true,
-            tension: 0.1
-          }]
-        }
-      });
-
-      new Chart(document.getElementById('topProductsChart'), {
-        type: 'bar',
-        data: {
-          labels: topProducts.map(d => d.product_name),
-          datasets: [{
-            label: 'Quantity Sold',
-            data: topProducts.map(d => parseFloat(d.total_quantity))
-          }]
-        }
-      });
-
-      new Chart(document.getElementById('topCustomersChart'), {
-        type: 'bar',
-        data: {
-          labels: topCustomers.map(d => d.email),
-          datasets: [{
-            label: 'Total Spent (CZK)',
-            data: topCustomers.map(d => parseFloat(d.total_spent))
-          }]
-        }
-      });
-
-      
-    </script>
+    <script src="{{ asset('assets/dashboard.js') }}"></script>
     {% endif %}
   </div>
 
@@ -171,11 +147,6 @@
     <ul>
       {% if 'ROLE_SUPER_ADMIN' in roles %}
         <li><a href='{{ localized_path('show_All_admins') }}'>{{ translations.role_super_admin ?? 'SUPER ADMIN' }}</a></li>
-        <li style="margin-left: 20px;">
-          <button onclick="getAdminCode()" style="color:green; font-weight:bold; background:none; border:none; cursor:pointer;">
-            🔐 Get programming verification code
-          </button>
-        </li>
       {% endif %}
       {% if 'ROLE_ADMIN' in roles %}
         <li><a href='{{ localized_path('show_All_employees') }}'>{{ translations.role_admin ?? 'ADMINISTRATOR' }}</a></li>
@@ -195,22 +166,9 @@
       {% if 'ROLE_ACCOUNTING' in roles %}
         <li><a href='{{ localized_path('accounting') }}'>{{ translations.role_accounting ?? 'ACCOUNTING' }}</a></li>
       {% endif %}
-        <li>General Functions</li>
-        <li style="margin-left: 40px;"><a href='{{ localized_path('code_playground') }}'>Code Editor</a></li>
     </ul>
   </div>
-  <div id="codeModal" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%);
-      background:white; border:1px solid #ccc; padding:20px; box-shadow: 0 0 10px rgba(0,0,0,0.3); z-index:1000;">
-      <h3>Current verification code: </h3>
-      <p id="adminCodeDisplay" style="font-size:1.5em; color:red;">加载中...</p>
-      <button onclick="copyCode()">Copy</button>
-      <button onclick="closeModal()">Close</button>
-  </div>
-  <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.5); z-index:999;" onclick="closeModal()"></div>
-  <div class="admin-code" data-api="{{ path('admin_get_code_api') }}"></div>
 
-  <script src="{{ asset('../assets/adminCode.js') }}"></script>
 </body>
 </html>
 {% endblock %}

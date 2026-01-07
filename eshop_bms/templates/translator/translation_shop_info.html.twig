@@ -4,55 +4,47 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
-<p style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404;">
-    ⚠️ Please fill in the localized version of the website content for selected language.
-</p>
 
 <form method="post" action="{{ path('translation_shop_info_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_shop_info_submit') }}">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
 <div class="field-group">
     <label>About Us</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__aboutUs" value="About Us">
     <textarea name="field__aboutUs" placeholder="About Us"></textarea>
 </div>
 <div class="field-group">
     <label>How to Order</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__howToOrder" value="How to Order">
     <textarea name="field__howToOrder" placeholder="How to Order"></textarea>
 </div>
 <div class="field-group">
     <label>Business Conditions</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__businessConditions" value="Business Conditions">
     <textarea name="field__businessConditions" placeholder="Business Conditions"></textarea>
 </div>
 <div class="field-group">
     <label>Privacy Policy</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__privacyPolicy" value="Privacy Policy">
     <textarea name="field__privacyPolicy" placeholder="Privacy Policy"></textarea>
 </div>
 <div class="field-group">
     <label>Shipping Info</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__shippingInfo" value="Shipping Info">
     <textarea name="field__shippingInfo" placeholder="Shipping Info"></textarea>
 </div>
 <div class="field-group">
     <label>Payment</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__payment" value="Payment">
     <textarea name="field__payment" placeholder="Payment"></textarea>
 </div>
 <div class="field-group">
     <label>Refund</label>
     <div class="original-text" style="margin: 5px 0;"><strong>Original:</strong> <em></em></div>
-    <input type="hidden" name="original__refund" value="Refund">
     <textarea name="field__refund" placeholder="Refund"></textarea>
 </div>
+
 
     <button type="submit">Save Translations</button>
 </form>

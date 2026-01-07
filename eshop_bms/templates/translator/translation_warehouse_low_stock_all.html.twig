@@ -4,55 +4,83 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="warehouse/low_stock_all.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>📦 All Low Stock Products</label>
-        <input type="hidden" name="original__auto__all_low_stock_products_1" value="📦 All Low Stock Products">
-        <input type="text" name="field__auto__all_low_stock_products_1" placeholder="📦 All Low Stock Products">
-    </div>
-    <div class="field-group">
-        <label>Select products and enter a new stock value to update in batch.</label>
-        <input type="hidden" name="original__auto_select_products_and_enter_a_ne_2" value="Select products and enter a new stock value to update in batch.">
-        <input type="text" name="field__auto_select_products_and_enter_a_ne_2" placeholder="Select products and enter a new stock value to update in batch.">
-    </div>
-    <div class="field-group">
-        <label>Select</label>
-        <input type="hidden" name="original__auto_select_3" value="Select">
-        <input type="text" name="field__auto_select_3" placeholder="Select">
-    </div>
-    <div class="field-group">
-        <label>Product Name</label>
-        <input type="hidden" name="original__auto_product_name_4" value="Product Name">
-        <input type="text" name="field__auto_product_name_4" placeholder="Product Name">
-    </div>
-    <div class="field-group">
-        <label>Current Stock</label>
-        <input type="hidden" name="original__auto_current_stock_5" value="Current Stock">
-        <input type="text" name="field__auto_current_stock_5" placeholder="Current Stock">
-    </div>
-    <div class="field-group">
-        <label>No low stock products 🎉</label>
-        <input type="hidden" name="original__auto_no_low_stock_products__10" value="No low stock products 🎉">
-        <input type="text" name="field__auto_no_low_stock_products__10" placeholder="No low stock products 🎉">
-    </div>
-    <div class="field-group">
-        <label>New stock for selected products:</label>
-        <input type="hidden" name="original__auto_new_stock_for_selected_product_12" value="New stock for selected products:">
-        <input type="text" name="field__auto_new_stock_for_selected_product_12" placeholder="New stock for selected products:">
-    </div>
-    <div class="field-group">
-        <label>✔ Update Selected</label>
-        <input type="hidden" name="original__auto__update_selected_13" value="✔ Update Selected">
-        <input type="text" name="field__auto__update_selected_13" placeholder="✔ Update Selected">
-    </div>
-    <div class="field-group">
-        <label>⬅ Back to Dashboard</label>
-        <input type="hidden" name="original__auto__back_to_dashboard_14" value="⬅ Back to Dashboard">
-        <input type="text" name="field__auto__back_to_dashboard_14" placeholder="⬅ Back to Dashboard">
-    </div>
+<div class="field-group">
+    <label>📦 All Low Stock Products</label>
+    <input type="hidden" name="original__auto__all_low_stock_products_2" value="📦 All Low Stock Products">
+    <input type="text" name="field__auto__all_low_stock_products_2" placeholder="📦 All Low Stock Products">
+</div>
+<div class="field-group">
+    <label>Select one or more products and set a new stock value to update them in batch.</label>
+    <input type="hidden" name="original__auto_select_one_or_more_products_an_3" value="Select one or more products and set a new stock value to update them in batch.">
+    <input type="text" name="field__auto_select_one_or_more_products_an_3" placeholder="Select one or more products and set a new stock value to update them in batch.">
+</div>
+<div class="field-group">
+    <label>⬅ Back to Dashboard</label>
+    <input type="hidden" name="original__auto__back_to_dashboard_5" value="⬅ Back to Dashboard">
+    <input type="text" name="field__auto__back_to_dashboard_5" placeholder="⬅ Back to Dashboard">
+</div>
+<div class="field-group">
+    <label>🎉</label>
+    <input type="hidden" name="original__auto___7" value="🎉">
+    <input type="text" name="field__auto___7" placeholder="🎉">
+</div>
+<div class="field-group">
+    <label>No low stock products</label>
+    <input type="hidden" name="original__auto_no_low_stock_products_8" value="No low stock products">
+    <input type="text" name="field__auto_no_low_stock_products_8" placeholder="No low stock products">
+</div>
+<div class="field-group">
+    <label>All products are sufficiently stocked at the moment.</label>
+    <input type="hidden" name="original__auto_all_products_are_sufficiently__9" value="All products are sufficiently stocked at the moment.">
+    <input type="text" name="field__auto_all_products_are_sufficiently__9" placeholder="All products are sufficiently stocked at the moment.">
+</div>
+<div class="field-group">
+    <label>⬅ Back to Warehouse Overview</label>
+    <input type="hidden" name="original__auto__back_to_warehouse_overview_10" value="⬅ Back to Warehouse Overview">
+    <input type="text" name="field__auto__back_to_warehouse_overview_10" placeholder="⬅ Back to Warehouse Overview">
+</div>
+<div class="field-group">
+    <label>Select</label>
+    <input type="hidden" name="original__auto_select_12" value="Select">
+    <input type="text" name="field__auto_select_12" placeholder="Select">
+</div>
+<div class="field-group">
+    <label>Product Name</label>
+    <input type="hidden" name="original__auto_product_name_13" value="Product Name">
+    <input type="text" name="field__auto_product_name_13" placeholder="Product Name">
+</div>
+<div class="field-group">
+    <label>Current Stock</label>
+    <input type="hidden" name="original__auto_current_stock_14" value="Current Stock">
+    <input type="text" name="field__auto_current_stock_14" placeholder="Current Stock">
+</div>
+<div class="field-group">
+    <label>0 selected</label>
+    <input type="hidden" name="original__auto_0_selected_19" value="0 selected">
+    <input type="text" name="field__auto_0_selected_19" placeholder="0 selected">
+</div>
+<div class="field-group">
+    <label>Choose products above, then set a new stock value for all selected.</label>
+    <input type="hidden" name="original__auto_choose_products_above_then_se_20" value="Choose products above, then set a new stock value for all selected.">
+    <input type="text" name="field__auto_choose_products_above_then_se_20" placeholder="Choose products above, then set a new stock value for all selected.">
+</div>
+<div class="field-group">
+    <label>New stock for selected products:</label>
+    <input type="hidden" name="original__auto_new_stock_for_selected_product_21" value="New stock for selected products:">
+    <input type="text" name="field__auto_new_stock_for_selected_product_21" placeholder="New stock for selected products:">
+</div>
+<div class="field-group">
+    <label>✔ Update Selected</label>
+    <input type="hidden" name="original__auto__update_selected_22" value="✔ Update Selected">
+    <input type="text" name="field__auto__update_selected_22" placeholder="✔ Update Selected">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

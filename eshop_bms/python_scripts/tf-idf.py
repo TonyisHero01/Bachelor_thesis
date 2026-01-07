@@ -73,7 +73,6 @@ def get_documents(cursor):
         );
     """)
 
-    # ✅ 强制提交表结构更改
     connection.commit()
 
     documents = {}

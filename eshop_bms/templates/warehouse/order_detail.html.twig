@@ -1,75 +1,367 @@
 {% extends 'base.html.twig' %}
-{% block stylesheets %}
-    {{ parent() }}
-    <link rel="stylesheet" href="{{ asset('../assets/styles/order_detail.css') }}">
-{% endblock %}
-{% block body %}
 
-<h1>Order Details</h1>
-<div class="order-info">
-  <p><strong>Order ID:</strong> {{ order.getId() }}</p>
-  <p><strong>Customer:</strong> {{ order.getCustomer().getEmail() }}</p>
-  <p><strong>Total Price:</strong> {{ order.getTotalPrice() }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
-  <p><strong>Order Date:</strong> {{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</p>
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/order_detail.css') }}">
+{% endblock %}
+
+{% block body %}
+{% set currencyName = (order.getOrderItems()|length > 0)
+  ? (order.getOrderItems()|first.getProduct().getCurrency().getName())
+  : 'CZK' %}
+
+{% set orderPs = order.getPaymentStatus()|upper %}
+{% set badgeColor = orderPs == 'COMPLETED' ? '#28a745'
+                  : (orderPs == 'FAILED' ? '#dc3545'
+                  : (orderPs == 'REFUNDED' ? '#6f42c1' : '#6c757d')) %}
+
+{% set currentDelivery = order.getDeliveryStatus()|upper %}
+{% set disabledAll = currentDelivery in ['DELIVERED','RETURNED'] %}
+
+<div class="page">
+
+  <header class="header card">
+    <div class="title-group">
+      <h1>Order #{{ order.getId() }}</h1>
+      <span class="badge
+        {% if orderPs == 'COMPLETED' %}badge-success
+        {% elseif orderPs == 'FAILED' %}badge-danger
+        {% elseif orderPs == 'REFUNDED' %}badge-warning
+        {% else %}badge-secondary{% endif %}">
+        {{ orderPs|title }}
+      </span>
+
+      {% if currentDelivery %}
+        <span class="status" data-status="{{ currentDelivery }}">
+          <span class="badge">
+            {{ currentDelivery|replace({'_': ' '})|title }}
+          </span>
+        </span>
+      {% endif %}
+    </div>
+
+    <div class="header-meta">
+      <div class="meta-item">
+        <span class="meta-label">Customer</span>
+        <span class="meta-value">{{ order.getCustomer().getEmail() }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Order Date</span>
+        <span class="meta-value">{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Total</span>
+        <span class="meta-value">
+          <span class="money" data-base="{{ order.getTotalPrice() }}">{{ money(order.getTotalPrice()) }}</span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid grid-2">
+    <section class="card">
+      <div class="section-title">
+        <h2>Order Overview</h2>
+      </div>
+      <div class="info-list">
+        <div class="info-item">
+          <label>Order ID</label>
+          <div class="value">{{ order.getId() }}</div>
+        </div>
+        <div class="info-item">
+          <label>Customer</label>
+          <div class="value">{{ order.getCustomer().getEmail() }}</div>
+        </div>
+        <div class="info-item">
+          <label>Total Price</label>
+          <div class="value">
+            <span class="money" data-base="{{ order.getTotalPrice() }}">{{ money(order.getTotalPrice()) }}</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <label>Created At</label>
+          <div class="value">{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</div>
+        </div>
+        <div class="info-item">
+          <label>Delivery Method</label>
+          <div class="value">
+            {% if order.getDeliveryMethod() == 'pickup' %}
+              🏬 Pick Up at Store
+            {% else %}
+              🚚 Home Delivery
+            {% endif %}
+          </div>
+        </div>
+        <div class="info-item">
+          <label>Delivery Status</label>
+          <div class="value">
+            {% if currentDelivery %}
+              {{ currentDelivery|replace({'_': ' '})|title }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <h2>Payment</h2>
+      </div>
+
+      <p>
+        <span class="badge"
+              style="background: {{ badgeColor }};border-color: {{ badgeColor }};color:#fff;">
+          {{ orderPs }}
+        </span>
+      </p>
+
+      {% set latestPayment = order.getLatestPayment() %}
+      {% if latestPayment %}
+        <div class="info-list info-list-single">
+          <div class="info-item">
+            <label>Latest Amount</label>
+            <div class="value">
+              <span class="money" data-base="{{ latestPayment.getAmount() }}">{{ money(latestPayment.getAmount()) }}</span>
+              {% if latestPayment.getFxRate() and latestPayment.getFxRate() != '1.00000000' %}
+                <small class="muted">
+                  (≈ {{ latestPayment.getAmountInCurrency() }} {{ latestPayment.getCurrency() }} @ {{ latestPayment.getFxRate() }})
+                </small>
+              {% endif %}
+            </div>
+          </div>
+          <div class="info-item">
+            <label>Provider</label>
+            <div class="value">{{ latestPayment.getProvider()|default('—') }}</div>
+          </div>
+          <div class="info-item">
+            <label>Transaction #</label>
+            <div class="value">{{ latestPayment.getTransactionId()|default('—') }}</div>
+          </div>
+          <div class="info-item">
+            <label>Paid At</label>
+            <div class="value">{{ latestPayment.getCreatedAt()|date('Y-m-d H:i') }}</div>
+          </div>
+        </div>
+      {% else %}
+        <p>
+          <strong>Amount:</strong>
+          <span class="money" data-base="{{ order.getTotalPrice() }}">{{ money(order.getTotalPrice()) }}</span>
+        </p>
+        <p class="muted"><em>No payment records yet.</em></p>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if order.getPayments()|length > 0 %}
+    <section class="card">
+      <div class="section-title">
+        <h2>Payment History</h2>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Amount</th>
+            <th>Provider</th>
+            <th>Txn ID</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for pay in order.getPayments() %}
+            {% set s = pay.getStatus()|upper %}
+            {% set color = s == 'SUCCESS' ? '#28a745'
+                          : (s == 'FAILED' ? '#dc3545'
+                          : (s == 'REFUNDED' ? '#6f42c1' : '#6c757d')) %}
+            <tr>
+              <td>{{ pay.getCreatedAt()|date('Y-m-d H:i') }}</td>
+              <td>
+                <span class="badge" style="background: {{ color }};border-color: {{ color }};color:#fff;">
+                  {{ s }}
+                </span>
+              </td>
+              <td>
+                <span class="money" data-base="{{ pay.getAmount() }}">{{ money(pay.getAmount()) }}</span>
+              </td>
+              <td>{{ pay.getProvider()|default('—') }}</td>
+              <td>{{ pay.getTransactionId()|default('—') }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="section-title">
+      <h2>Order Items</h2>
+      <span class="muted small">{{ order.getOrderItems()|length }} items</span>
+    </div>
+
+    {% if order.getOrderItems()|length == 0 %}
+      <p class="muted">No items in this order.</p>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+          <tr>
+            <th>Product</th>
+            <th>SKU</th>
+            <th>Quantity</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for item in order.getOrderItems() %}
+            {% set unit = item.getUnitPrice() %}
+            {% set total = item.getSubtotalWithTax() %}
+            <tr>
+              <td>
+                <a href="{{ localized_path('show_product', {'id': item.getProduct().getId()}) }}">
+                  {{ item.getProductName() }}
+                </a>
+              </td>
+              <td>{{ item.getProduct().getSku() }}</td>
+              <td>{{ item.getQuantity() }}</td>
+              <td>
+                <span class="money" data-base="{{ unit }}">{{ money(unit) }}</span>
+              </td>
+              <td>
+                <span class="money" data-base="{{ total }}">{{ money(total) }}</span>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <div class="grid grid-2">
+    <section class="card">
+      <div class="section-title">
+        <h2>Delivery</h2>
+      </div>
+      <p>
+        <strong>Selected Method:</strong>
+        {% if order.getDeliveryMethod() == 'pickup' %}
+          <span style="color: green;">🏬 Pick Up at Store</span>
+        {% else %}
+          <span style="color: blue;">🚚 Home Delivery</span>
+        {% endif %}
+      </p>
+
+      <h3 class="subheading">Delivery Information</h3>
+      <p class="multiline">
+        {{ order.getAddress()|default('No address provided')|replace({'; ': "\n"}) }}
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="section-title">
+        <h2>Customer Note</h2>
+      </div>
+      <p class="multiline">
+        {{ order.getNotes()|default('No additional notes') }}
+      </p>
+    </section>
+  </div>
+
+  {% if order.getShipment() %}
+    <section class="card">
+      <div class="section-title">
+        <h2>Shipment</h2>
+        <span class="badge badge-secondary">
+          {{ order.getShipment().getStatus()|upper }}
+        </span>
+      </div>
+      <p>
+        <strong>Tracking #:</strong>
+        {{ order.getShipment().getTrackingNumber() ?? '—' }}
+      </p>
+
+      <div class="timeline">
+        {% for e in order.getShipment().getEvents() %}
+          <div class="timeline-item">
+            <div class="timeline-bullet"></div>
+            <div class="timeline-meta">
+              {{ e.getEventTime()|date('Y-m-d H:i') }}
+              · <strong>{{ e.getEventCode()|upper }}</strong>
+              {% if e.getLocation() %} · {{ e.getLocation() }}{% endif %}
+            </div>
+            {% if e.getDescription() %}
+              <div class="timeline-desc">{{ e.getDescription() }}</div>
+            {% endif %}
+          </div>
+        {% else %}
+          <p class="muted">No shipment events yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="card">
+    <div class="section-title">
+      <h2>Actions</h2>
+    </div>
+
+    <div class="actions">
+      {% if not order.getIsCompleted() %}
+        <button id="markAsCompletedBtn"
+                data-api="{{ localized_path('mark_order_completed', {'id': order.getId()}) }}"
+                data-redirect-url="{{ localized_path('app_order_management') }}">
+          Mark as Completed
+        </button>
+      {% endif %}
+
+      <form method="post"
+            action="{{ path('bms_order_shipment_advance', { id: order.getId() }) }}"
+            class="shipment-actions">
+        <input type="hidden" name="_token" value="{{ csrf_token('bms_order_shipment_advance') }}">
+
+        {% if order.getDeliveryMethod() == 'pickup' %}
+          <button class="btn btn-secondary" name="to" value="PACKED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Packed
+          </button>
+          <button class="btn btn-success" name="to" value="DELIVERED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Picked Up
+          </button>
+          <button class="btn btn-danger" name="to" value="RETURNED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Returned
+          </button>
+        {% else %}
+          <button class="btn btn-secondary" name="to" value="PACKED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Packed
+          </button>
+          <button class="btn btn-secondary" name="to" value="SHIPPED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Shipped
+          </button>
+          <button class="btn btn-secondary" name="to" value="IN_TRANSIT" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as In Transit
+          </button>
+          <button class="btn btn-secondary" name="to" value="OUT_FOR_DELIVERY" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Out for Delivery
+          </button>
+          <button class="btn btn-success" name="to" value="DELIVERED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Delivered
+          </button>
+          <button class="btn btn-danger" name="to" value="RETURNED" {{ disabledAll ? 'disabled' : '' }}>
+            Mark as Returned
+          </button>
+        {% endif %}
+      </form>
+    </div>
+  </section>
+
+  <div class="page-footer">
+    <a href="{{ localized_path('app_order_management') }}">← Back to Orders</a>
+  </div>
 </div>
 
-<h2>Order Items</h2>
-<table>
-    <tr>
-        <th>Product</th>
-        <th>SKU</th>
-        <th>Quantity</th>
-        <th>Unit Price</th>
-        <th>Total</th>
-    </tr>
-    {% for item in order.getOrderItems() %}
-        <tr>
-            <td>
-                <a href="{{ localized_path('show_product', {'id': item.getProduct().getId()}) }}">
-                    {{ item.getProductName() }}
-                </a>
-            </td>
-            <td>
-                <a href="{{ localized_path('show_product', {'id': item.getProduct().getId()}) }}">
-                    {{ item.getProduct().getSku() }}
-                </a>
-            </td>
-            <td>{{ item.getQuantity() }}</td>
-            <td>{{ item.getUnitPrice() }}</td>
-            <td>{{ item.getSubtotalWithTax()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</td>
-        </tr>
-    {% endfor %}
-</table>
-
-<h2>Delivery Method</h2>
-<p><strong>Selected Method:</strong> 
-    {% if order.getDeliveryMethod() == "pickup" %}
-        <span style="color: green;">🏬 Pick Up at Store</span>
-    {% else %}
-        <span style="color: blue;">🚚 Home Delivery</span>
-    {% endif %}
-</p>
-
-<h2>Delivery Information</h2>
-<p style="white-space: pre-line;">
-    {{ order.getAddress()|default('No address provided')|replace({'; ': "\n"}) }}
-</p>
-
-<h2>Customer Note</h2>
-<p style="white-space: pre-line;">
-    {{ order.getNotes()|default('No additional notes') }}
-</p>
-
-{% if not order.getIsCompleted() %}
-    <button id="markAsCompletedBtn"
-            data-api="{{ localized_path('mark_order_completed', {'id': order.getId()}) }}"
-            data-redirect-url="{{ localized_path('app_order_management') }}">
-        Mark as Completed
-    </button>
-{% endif %}
-
-<a href="{{ localized_path('app_order_management') }}">Back to Orders</a>
-
-<script src="{{ asset('../assets/markAsCompleted.js') }}"></script>
-
+<script src="{{ asset('assets/markAsCompleted.js') }}"></script>
 {% endblock %}

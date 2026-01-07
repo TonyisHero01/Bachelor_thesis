@@ -4,30 +4,33 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="security/login.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>Sign In</label>
-        <input type="hidden" name="original__auto_sign_in_1" value="Sign In">
-        <input type="text" name="field__auto_sign_in_1" placeholder="Sign In">
-    </div>
-    <div class="field-group">
-        <label>Email</label>
-        <input type="hidden" name="original__auto_email_5" value="Email">
-        <input type="text" name="field__auto_email_5" placeholder="Email">
-    </div>
-    <div class="field-group">
-        <label>Password</label>
-        <input type="hidden" name="original__auto_password_6" value="Password">
-        <input type="text" name="field__auto_password_6" placeholder="Password">
-    </div>
-    <div class="field-group">
-        <label>Login</label>
-        <input type="hidden" name="original__auto_login_7" value="Login">
-        <input type="text" name="field__auto_login_7" placeholder="Login">
-    </div>
+<div class="field-group">
+    <label>Sign In</label>
+    <input type="hidden" name="original__auto_sign_in_1" value="Sign In">
+    <input type="text" name="field__auto_sign_in_1" placeholder="Sign In">
+</div>
+<div class="field-group">
+    <label>Email</label>
+    <input type="hidden" name="original__auto_email_5" value="Email">
+    <input type="text" name="field__auto_email_5" placeholder="Email">
+</div>
+<div class="field-group">
+    <label>Password</label>
+    <input type="hidden" name="original__auto_password_6" value="Password">
+    <input type="text" name="field__auto_password_6" placeholder="Password">
+</div>
+<div class="field-group">
+    <label>Login</label>
+    <input type="hidden" name="original__auto_login_7" value="Login">
+    <input type="text" name="field__auto_login_7" placeholder="Login">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

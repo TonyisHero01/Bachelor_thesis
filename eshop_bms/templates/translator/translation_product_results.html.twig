@@ -4,70 +4,38 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
     <input type="hidden" name="original_path" value="product/results.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>Products List</label>
-        <input type="hidden" name="original__auto_products_list_0" value="Products List">
-        <input type="text" name="field__auto_products_list_0" placeholder="Products List">
-    </div>
-    <div class="field-group">
-        <label>Product List</label>
-        <input type="hidden" name="original__auto_product_list_1" value="Product List">
-        <input type="text" name="field__auto_product_list_1" placeholder="Product List">
-    </div>
-    <div class="field-group">
-        <label>Name</label>
-        <input type="hidden" name="original__auto_name_2" value="Name">
-        <input type="text" name="field__auto_name_2" placeholder="Name">
-    </div>
-    <div class="field-group">
-        <label>Category</label>
-        <input type="hidden" name="original__auto_category_3" value="Category">
-        <input type="text" name="field__auto_category_3" placeholder="Category">
-    </div>
-    <div class="field-group">
-        <label>Quantity</label>
-        <input type="hidden" name="original__auto_quantity_4" value="Quantity">
-        <input type="text" name="field__auto_quantity_4" placeholder="Quantity">
-    </div>
-    <div class="field-group">
-        <label>Add Time</label>
-        <input type="hidden" name="original__auto_add_time_5" value="Add Time">
-        <input type="text" name="field__auto_add_time_5" placeholder="Add Time">
-    </div>
-    <div class="field-group">
-        <label>Price</label>
-        <input type="hidden" name="original__auto_price_6" value="Price">
-        <input type="text" name="field__auto_price_6" placeholder="Price">
-    </div>
-    <div class="field-group">
-        <label>Edit</label>
-        <input type="hidden" name="original__auto_edit_7" value="Edit">
-        <input type="text" name="field__auto_edit_7" placeholder="Edit">
-    </div>
-    <div class="field-group">
-        <label>Delete</label>
-        <input type="hidden" name="original__auto_delete_8" value="Delete">
-        <input type="text" name="field__auto_delete_8" placeholder="Delete">
-    </div>
-    <div class="field-group">
-        <label>Previous</label>
-        <input type="hidden" name="original__auto_previous_16" value="Previous">
-        <input type="text" name="field__auto_previous_16" placeholder="Previous">
-    </div>
-    <div class="field-group">
-        <label>Next</label>
-        <input type="hidden" name="original__auto_next_17" value="Next">
-        <input type="text" name="field__auto_next_17" placeholder="Next">
-    </div>
-    <div class="field-group">
-        <label>Page Count</label>
-        <input type="hidden" name="original__auto_page_count_18" value="Page Count">
-        <input type="text" name="field__auto_page_count_18" placeholder="Page Count">
-    </div>
+<div class="field-group">
+    <label>Products List</label>
+    <input type="hidden" name="original__auto_products_list_0" value="Products List">
+    <input type="text" name="field__auto_products_list_0" placeholder="Products List">
+</div>
+<div class="field-group">
+    <label>Product List</label>
+    <input type="hidden" name="original__auto_product_list_1" value="Product List">
+    <input type="text" name="field__auto_product_list_1" placeholder="Product List">
+</div>
+<div class="field-group">
+    <label>Previous</label>
+    <input type="hidden" name="original__auto_previous_3" value="Previous">
+    <input type="text" name="field__auto_previous_3" placeholder="Previous">
+</div>
+<div class="field-group">
+    <label>Next</label>
+    <input type="hidden" name="original__auto_next_4" value="Next">
+    <input type="text" name="field__auto_next_4" placeholder="Next">
+</div>
+<div class="field-group">
+    <label>Page Count</label>
+    <input type="hidden" name="original__auto_page_count_5" value="Page Count">
+    <input type="text" name="field__auto_page_count_5" placeholder="Page Count">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

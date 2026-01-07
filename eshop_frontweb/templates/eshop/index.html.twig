@@ -1,73 +1,84 @@
 {% extends 'eshop_base.html.twig' %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/homepage.css') }}">
-    <div class="container">
-        <div class="bar" id="nav-menu">
-            {% for category in categories %}
-                <a href="{{ path('app_eshop_category', {'id': category.id}) }}">
-                    {{ category.getTranslatedName(locale) }}<span></span>
-                </a>
-            {% endfor %}
-        </div>
-        <div class="swiper-container">
-            <div class="swiper-wrapper">
-                {% for imageURL in shopInfo.carouselPictures %}
-                <div class="swiper-slide" style="background-image: url('{{BMS_URL}}/images/{{ imageURL }}');">
-                </div>
-                {% endfor %}
-            </div>
-            <div class="swiper-pagination"></div>
-            <div class="swiper-button-next"></div>
-            <div class="swiper-button-prev"></div>
-        </div>
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/homepage.css') }}">
+<div class="container">
+  <div class="bar" id="nav-menu">
+    {% for category in categories %}
+      <a href="{{ path('app_eshop_category', {'id': category.id}) }}">
+        {{ category.getTranslatedName(locale) }}<span></span>
+      </a>
+    {% endfor %}
+  </div>
 
-        
-        <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-
-        
-        <h2>New Products</h2>
-        <div class="new_products_grid">
-            {% for product in new_products %}
-                <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
-                    <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-                    <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
-                    <div class="product-price">
-                        {% if product.discount < 100 %}
-                            {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
-                            {% set currency = product.getCurrency().getName %}
-                            <div class="original-price"><span class="strikethrough">{{ product.price }} {{ currency }}</span></div>
-                            <div class="discounted-price">{{ discountedPrice }} {{ currency }}</div>
-                            <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
-                        {% else %}
-                            <div class="regular-price">{{ product.price }} {{ product.getCurrency().getName }}</div>
-                        {% endif %}
-                    </div>
-                </a>
-            {% endfor %}
-        </div>
-
-        <h2>Popular Products</h2>
-        <div class="popular_products_grid">
-            {% for product in popular_products %}
-                <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
-                    <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-                    <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
-                    <div class="product-price">
-                        {% if product.discount < 100 %}
-                            {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
-                            {% set currency = product.getCurrency().getName %}
-                            <div class="original-price"><span class="strikethrough">{{ product.price }} {{ currency }}</span></div>
-                            <div class="discounted-price">{{ discountedPrice }} {{ currency }}</div>
-                            <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
-                        {% else %}
-                            <div class="regular-price">{{ product.price }} {{ product.getCurrency().getName }}</div>
-                        {% endif %}
-                    </div>
-                </a>
-            {% endfor %}
-        </div>
+  <div class="swiper-container">
+    <div class="swiper-wrapper">
+      {% for imageURL in shopInfo.carouselPictures %}
+        <div class="swiper-slide" style="background-image: url('{{ BMS_URL }}/images/{{ imageURL }}');"></div>
+      {% endfor %}
     </div>
+    <div class="swiper-pagination"></div>
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+  </div>
 
-    <script src="{{ asset('../assets/eshopHome.js') }}"></script>
+  <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
+  <h2>New Products</h2>
+  <div class="new_products_grid">
+    {% for product in new_products %}
+      {% set hasDiscount = product.discount is not null and product.discount < 100 %}
+      {% set discountedRaw = (product.price * product.discount / 100) %}
+      <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+        <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
+        <div class="product-price">
+          {% if hasDiscount %}
+            <div class="original-price">
+              <span class="strikethrough">{{ money(product.price) }}</span>
+            </div>
+            <div class="discounted-price">
+              {{ money(discountedRaw) }}
+            </div>
+            <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
+          {% else %}
+            <div class="regular-price">{{ money(product.price) }}</div>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+
+  <h2>Popular Products</h2>
+  <div class="popular_products_grid">
+    {% for product in popular_products %}
+      {% set hasDiscount = product.discount is not null and product.discount < 100 %}
+      {% set discountedRaw = (product.price * product.discount / 100) %}
+      <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+        <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
+        <div class="product-price">
+          {% if hasDiscount %}
+            <div class="original-price">
+              <span class="strikethrough">{{ money(product.price) }}</span>
+            </div>
+            <div class="discounted-price">
+              {{ money(discountedRaw) }}
+            </div>
+            <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
+          {% else %}
+            <div class="regular-price">{{ money(product.price) }}</div>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+{# 给前端脚本一个实时汇率表（防止写死），如果 base 里没注入，这里兜底注入一次 #}
+<script>
+  window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
+</script>
+
+<script src="{{ asset('assets/eshopHome.js') }}"></script>
 {% endblock %}

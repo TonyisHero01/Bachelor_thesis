@@ -3,6 +3,7 @@
 echo "🚀 Frontweb container startup initiated."
 
 source /common_python_venv.sh
-create_venv_and_install "/var/www/html/python_scripts"
+
+echo "✅ Frontweb is ready."
 
 exec apache2-foreground

@@ -1,124 +1,145 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\Entity\ShopInfo;
-use App\Entity\Product;
-use App\Entity\Customer;
 use App\Entity\Cart;
 use App\Entity\Category;
+use App\Entity\Customer;
+use App\Entity\Product;
+use App\Entity\ShopInfo;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\ORM\EntityManagerInterface;
-use App\Controller\BaseController;
 use Twig\Environment;
-use Psr\Log\LoggerInterface;
 
 class EshopProductController extends BaseController
 {
-    private $shopInfo;
-    private $entityManager;
+    protected ?ShopInfo $shopInfo = null;
 
-    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
-    {
-        parent::__construct($twig, $logger);
-        $this->entityManager = $entityManager;
-        $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        Environment $twig,
+        LoggerInterface $logger,
+        ManagerRegistry $doctrine,
+    ) {
+        parent::__construct($twig, $logger, $doctrine);
+
+        $this->shopInfo = $this->entityManager
+            ->getRepository(ShopInfo::class)
+            ->findOneBy([], ['id' => 'DESC']);
     }
 
-    #[Route('/eshop/product', name: 'app_eshop_product')]
     /**
-     * Product overview page.
-     * Displays category list and renders a generic product entry point.
-     *
-     * @param Request $request HTTP request
-     * @return Response Rendered product index page
+     * Displays the product overview entry page.
      */
+    #[Route('/eshop/product', name: 'app_eshop_product', methods: ['GET'])]
     public function index(Request $request): Response
     {
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('eshop_product/index.html.twig', [
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_product/index.html.twig',
+            [
+                'shopInfo' => $this->shopInfo,
+                'locale' => (string) $request->getLocale(),
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/product/{id}', name: 'show_eshop_product')]
     /**
-     * Product detail page.
-     * Renders the product detail view for a given product ID.
-     *
-     * @param Request $request HTTP request object
-     * @param EntityManagerInterface $entityManager Doctrine ORM manager
-     * @param int $id Product ID to fetch and display
-     * @return Response Rendered product detail page
-     *
-     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException If product is not found
+     * Displays product detail page for the given product id.
      */
-    public function show(Request $request, EntityManagerInterface $entityManager, int $id): Response
+    #[Route('/product/{id}', name: 'show_eshop_product', methods: ['GET'])]
+    public function show(Request $request, int $id): Response
     {
-        $product = $entityManager->getRepository(Product::class)->findProductById($id);
-        if(!$product) {
-            throw $this->createNotFoundException('No product found for id ' . $id);
+        $productRepo = $this->entityManager->getRepository(Product::class);
+
+        $product = method_exists($productRepo, 'findProductById')
+            ? $productRepo->findProductById($id)
+            : $productRepo->find($id);
+
+        if (!$product instanceof Product) {
+            throw $this->createNotFoundException(sprintf('No product found for id %d', $id));
         }
 
-        $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([]);
-        $categories = $entityManager->getRepository(Category::class)->findAllCategories();
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
 
-        return $this->renderLocalized('eshop_product/index.html.twig', [
-            'shopInfo' => $shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'product' => $product,
-            'BMS_URL' => $this->getParameter('BMS_URL'),
-            'categories' => $categories
-        ], $request);
+        $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
+
+        return $this->renderLocalized(
+            'eshop_product/index.html.twig',
+            [
+                'shopInfo' => $shopInfo,
+                'locale' => (string) $request->getLocale(),
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+                'product' => $product,
+                'BMS_URL' => $this->getParameter('BMS_URL'),
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/cart/add', name: 'add_to_cart', methods: ['POST'])]
     /**
-     * Adds a product to the customer's cart.
-     * If the product already exists, its quantity is increased.
-     *
-     * @param Request $request HTTP request with JSON body: {"productId": int, "quantity": int}
-     * @param EntityManagerInterface $entityManager Doctrine ORM manager
-     * @return JsonResponse JSON response indicating success and updated cart count
-     *
-     * @throws JsonResponse 403 if user not authenticated
+     * Adds a product to the authenticated customer's cart.
+     * If the cart item already exists, its quantity is increased.
      */
-    public function addToCart(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/cart/add', name: 'add_to_cart', methods: ['POST'])]
+    public function addToCart(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode((string) $request->getContent(), true);
+
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON body'], 400);
+        }
+
         $productId = (int) ($data['productId'] ?? 0);
         $quantity = (int) ($data['quantity'] ?? 1);
+
+        if ($productId <= 0) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid productId'], 400);
+        }
 
         if ($quantity <= 0) {
             return new JsonResponse(['success' => false, 'message' => 'Invalid quantity'], 400);
         }
 
-        if (!$this->getUser()) {
+        $user = $this->getUser();
+        if (!$user instanceof Customer) {
             return new JsonResponse(['success' => false, 'message' => 'User not authenticated'], 403);
         }
 
-        $customer = $entityManager->getRepository(Customer::class)->find($this->getUser()->getId());
-        $product = $entityManager->getRepository(Product::class)->find($productId);
+        $customer = $this->entityManager->getRepository(Customer::class)->find($user->getId());
+        $product = $this->entityManager->getRepository(Product::class)->find($productId);
 
-        if (!$product || !$customer) {
+        if (!$customer instanceof Customer || !$product instanceof Product) {
             return new JsonResponse(['success' => false, 'message' => 'Invalid product or user'], 400);
         }
 
-        $cartItem = $entityManager->getRepository(Cart::class)->findOneBy([
+        $cartRepo = $this->entityManager->getRepository(Cart::class);
+        $cartItem = $cartRepo->findOneBy([
             'customer' => $customer,
-            'product' => $product
+            'product' => $product,
         ]);
 
-        if ($cartItem) {
+        if ($cartItem instanceof Cart) {
             $cartItem->setQuantity($cartItem->getQuantity() + $quantity);
         } else {
             $cartItem = new Cart();
@@ -126,13 +147,13 @@ class EshopProductController extends BaseController
             $cartItem->setProduct($product);
             $cartItem->setQuantity($quantity);
             $cartItem->setAddedAt(new \DateTime());
-            $entityManager->persist($cartItem);
+            $this->entityManager->persist($cartItem);
         }
 
-        $entityManager->flush();
+        $this->entityManager->flush();
 
-        $cartTotalQuantity = $entityManager->createQueryBuilder()
-            ->select('SUM(c.quantity)')
+        $cartTotalQuantity = $this->entityManager->createQueryBuilder()
+            ->select('COALESCE(SUM(c.quantity), 0)')
             ->from(Cart::class, 'c')
             ->where('c.customer = :customer')
             ->setParameter('customer', $customer)
@@ -142,34 +163,34 @@ class EshopProductController extends BaseController
         return new JsonResponse([
             'success' => true,
             'message' => 'Product added to cart',
-            'cartCount' => $cartTotalQuantity ?? 0
+            'cartCount' => (int) $cartTotalQuantity,
         ]);
     }
 
-    #[Route('/cart/count', name: 'cart_count', methods: ['GET'])]
     /**
-     * Returns the total number of items in the user's cart.
-     * Used to update cart icon or badge in frontend.
-     *
-     * @param EntityManagerInterface $entityManager Doctrine ORM
-     * @return JsonResponse JSON response: {"cartCount": int}
+     * Returns the total quantity of items in the authenticated customer's cart.
      */
-    public function getCartCount(EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/cart/count', name: 'cart_count', methods: ['GET'])]
+    public function getCartCount(): JsonResponse
     {
-        if (!$this->getUser()) {
+        $user = $this->getUser();
+        if (!$user instanceof Customer) {
             return new JsonResponse(['cartCount' => 0]);
         }
 
-        $customer = $entityManager->getRepository(Customer::class)->find($this->getUser()->getId());
+        $customer = $this->entityManager->getRepository(Customer::class)->find($user->getId());
+        if (!$customer instanceof Customer) {
+            return new JsonResponse(['cartCount' => 0]);
+        }
 
-        $cartTotalQuantity = $entityManager->createQueryBuilder()
-            ->select('SUM(c.quantity)')
+        $cartTotalQuantity = $this->entityManager->createQueryBuilder()
+            ->select('COALESCE(SUM(c.quantity), 0)')
             ->from(Cart::class, 'c')
             ->where('c.customer = :customer')
             ->setParameter('customer', $customer)
             ->getQuery()
             ->getSingleScalarResult();
 
-        return new JsonResponse(['cartCount' => $cartTotalQuantity ?? 0]);
+        return new JsonResponse(['cartCount' => (int) $cartTotalQuantity]);
     }
 }

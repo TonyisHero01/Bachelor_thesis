@@ -1,14 +1,12 @@
-
-
 services:
   db:
     image: postgres:14
     environment:
       POSTGRES_DB: app
       POSTGRES_USER: user
-      POSTGRES_PASSWORD: password 
-    volumes:
-      - db-data:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: password
+    tmpfs:
+      - /var/lib/postgresql/data
     networks:
       - backend
 
@@ -40,9 +38,6 @@ services:
       - db
     networks:
       - backend
-
-volumes:
-  db-data:
 
 networks:
   backend:

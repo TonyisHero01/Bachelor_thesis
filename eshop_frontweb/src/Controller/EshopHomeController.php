@@ -1,123 +1,133 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\Entity\ShopInfo;
 use App\Entity\Category;
 use App\Entity\Product;
-use App\Entity\Size;
-use App\Repository\ProductRepository;
+use App\Entity\ShopInfo;
 use App\Repository\ColorRepository;
-use App\Repository\SizeRepository;
+use App\Repository\ProductRepository;
 use App\Repository\ShopInfoRepository;
+use App\Repository\SizeRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
-use App\Controller\BaseController;
 use Twig\Environment;
-use Psr\Log\LoggerInterface;
 
 class EshopHomeController extends BaseController
 {
-    public $shopInfo;
-    private $entityManager;
+    protected ?ShopInfo $shopInfo = null;
 
-    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
-    {
-        parent::__construct($twig, $logger);
-        $this->entityManager = $entityManager;
-        $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        Environment $twig,
+        LoggerInterface $logger,
+        ManagerRegistry $doctrine,
+    ) {
+        parent::__construct($twig, $logger, $doctrine);
+
+        $this->shopInfo = $this->entityManager
+            ->getRepository(ShopInfo::class)
+            ->findOneBy([], ['id' => 'DESC']);
     }
 
-    #[Route('/homepage', name: 'app_eshop_home')]
     /**
-     * Homepage route.
-     * Displays the homepage with new arrivals, top-selling products, categories, shop information, and language options.
-     *
-     * @param Request $request HTTP request object
-     * @param ShopInfoRepository $shopInfoRepository Repository for accessing shop information
-     * @return Response
+     * Displays the e-shop homepage with categories and product highlights.
      */
+    #[Route('/homepage', name: 'app_eshop_home', methods: ['GET'])]
     public function index(Request $request, ShopInfoRepository $shopInfoRepository): Response
     {
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        $new_products = $this->entityManager->getRepository(Product::class)->findLastFourProducts();
-        $popularProducts = $this->entityManager->getRepository(Product::class)->findTopSellingProducts(10);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $productsRepo = $this->entityManager->getRepository(Product::class);
 
-        $shopInfo = $shopInfoRepository->findWithTranslations();
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
 
-        return $this->renderLocalized('eshop/index.html.twig', [
-            'show_sidebar' => false,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'languages' => $this->getAvailableLanguages(),
-            'new_products' => $new_products,
-            'popular_products' => $popularProducts,
-            'categories' => $categories
-        ], $request);
+        $newProducts = method_exists($productsRepo, 'findLastFourProducts')
+            ? $productsRepo->findLastFourProducts()
+            : [];
+
+        $popularProducts = method_exists($productsRepo, 'findTopSellingProducts')
+            ? $productsRepo->findTopSellingProducts(10)
+            : [];
+
+        $shopInfoWithI18n = $shopInfoRepository->findWithTranslations();
+
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
+
+        return $this->renderLocalized(
+            'eshop/index.html.twig',
+            [
+                'show_sidebar' => false,
+                'shopInfo' => $shopInfoWithI18n ?? $this->shopInfo,
+                'locale' => $locale,
+                'new_products' => $newProducts,
+                'popular_products' => $popularProducts,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/category/{id}', name: 'app_eshop_category')]
     /**
-     * Displays all products under a given category.
-     * Only shows visible products that contain image URLs.
-     * Ensures each SKU appears only once (removes duplicates by SKU, even if different sizes exist).
-     *
-     * @param Request $request HTTP request
-     * @param Category $category The selected category entity (automatically injected from route)
-     * @param ProductRepository $productRepository Repository for accessing product data
-     * @param ColorRepository $colorRepository Repository for color options
-     * @param SizeRepository $sizeRepository Repository for size options
-     * @return Response
+     * Displays a category page with products filtered to visible items with images,
+     * keeping only the latest version per SKU.
      */
+    #[Route('/category/{id}', name: 'app_eshop_category', methods: ['GET'])]
     public function showCategory(
         Request $request,
         Category $category,
         ProductRepository $productRepository,
         ColorRepository $colorRepository,
-        SizeRepository $sizeRepository
+        SizeRepository $sizeRepository,
     ): Response {
-        $categoryName = $category->getTranslatedName($request->getLocale());
-        $allProducts = $productRepository->findBy(['category' => $category]);
+        $locale = (string) $request->getLocale();
 
-        $filtered = array_filter($allProducts, fn($p) => !$p->getHidden() && !empty($p->getImageUrls()));
-        usort($filtered, fn($a, $b) => $b->getId() <=> $a->getId());
+        $categoryName = (string) ($category->getTranslatedName($locale) ?? $category->getName() ?? '');
 
-        $seenSkus = [];
-        $productsWithImages = [];
-        foreach ($filtered as $product) {
-            if (!in_array($product->getSku(), $seenSkus)) {
-                $seenSkus[] = $product->getSku();
-                $productsWithImages[] = $product;
-            }
-        }
+        $products = $productRepository->findLatestByCategory($category);
+
+        $productsWithImages = array_values(array_filter(
+            $products,
+            static fn (Product $p): bool => !$p->getHidden() && !empty($p->getImageUrls())
+        ));
 
         $translations = $this->getTranslations($request);
         $translations['base_template'] = 'eshop_base.html.twig';
 
-        $locale = $request->getLocale();
-        $localizedBasePath = "locale/{$locale}/eshop_base.html.twig";
-        $projectDir = $this->getParameter('kernel.project_dir');
-        $localizedBaseFullPath = $projectDir . "/templates/{$localizedBasePath}";
-        if (file_exists($localizedBaseFullPath)) {
+        $localizedBasePath = sprintf('locale/%s/eshop_base.html.twig', $locale);
+        $projectDir = (string) $this->getParameter('kernel.project_dir');
+        $localizedBaseFullPath = $projectDir . '/templates/' . $localizedBasePath;
+
+        if (is_file($localizedBaseFullPath)) {
             $translations['base_template'] = $localizedBasePath;
         }
 
-        return $this->renderLocalized('eshop/products.html.twig', [
-            'category' => $categoryName,
-            'products' => $productsWithImages,
-            'colors' => $colorRepository->findAll(),
-            'sizes' => $sizeRepository->findAll(),
-            'categories' => $this->entityManager->getRepository(Category::class)->findAllCategories(),
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => true,
-            'translations' => $translations,
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop/products.html.twig',
+            [
+                'category' => $categoryName,
+                'products' => $productsWithImages,
+                'colors' => $colorRepository->findAll(),
+                'sizes' => $sizeRepository->findAll(),
+                'categories' => $categories,
+                'shopInfo' => $this->shopInfo,
+                'locale' => $locale,
+                'show_sidebar' => false,
+                'translations' => $translations,
+            ],
+            $request,
+        );
     }
-
-
 }

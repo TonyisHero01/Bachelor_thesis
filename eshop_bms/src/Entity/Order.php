@@ -6,6 +6,8 @@ use App\Repository\OrderRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\Payment;
+use App\Entity\Shipment;
 
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: "orders")]
@@ -56,10 +58,18 @@ class Order
     #[ORM\Column(type: "string", length: 20, options: ["default" => "pickup"])]
     private string $deliveryMethod = "pickup";
 
+    #[ORM\OneToMany(mappedBy: "order", targetEntity: Payment::class, cascade: ["persist", "remove"])]
+    #[ORM\OrderBy(["createdAt" => "DESC"])]
+    private Collection $payments;
+
+    #[ORM\OneToOne(mappedBy: "order", targetEntity: Shipment::class, cascade: ["persist", "remove"])]
+    private ?Shipment $shipment = null;
+
     public function __construct()
     {
         $this->orderCreatedAt = new \DateTime();
         $this->orderItems = new ArrayCollection();
+        $this->payments = new ArrayCollection();
     }
 
     public function getId(): int
@@ -218,4 +228,23 @@ class Order
         $this->deliveryMethod = $deliveryMethod;
         return $this;
     }
+
+    public function getPayments(): Collection { return $this->payments; }
+
+    public function addPayment(Payment $payment): self
+    {
+        if (!$this->payments->contains($payment)) {
+            $this->payments->add($payment);
+            $payment->setOrder($this);
+        }
+        return $this;
+    }
+
+    public function getLatestPayment(): ?Payment
+    {
+        return $this->payments->first() ?: null;
+    }
+
+    public function getShipment(): ?Shipment { return $this->shipment; }
+    public function setShipment(Shipment $shipment): self { $this->shipment = $shipment; return $this; }
 }

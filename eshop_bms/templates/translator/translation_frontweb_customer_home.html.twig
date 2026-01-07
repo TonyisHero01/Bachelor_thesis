@@ -4,66 +4,71 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('frontweb_translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('frontweb_translation_submit') }}">
     <input type="hidden" name="original_path" value="customer/home.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>Welcome,</label>
-        <input type="hidden" name="original__auto_welcome__0" value="Welcome,">
-        <input type="text" name="field__auto_welcome__0" placeholder="Welcome,">
-    </div>
-    <div class="field-group">
-        <label>!</label>
-        <input type="hidden" name="original__auto___1" value="!">
-        <input type="text" name="field__auto___1" placeholder="!">
-    </div>
-    <div class="field-group">
-        <label>Wishlist</label>
-        <input type="hidden" name="original__auto_wishlist_4" value="Wishlist">
-        <input type="text" name="field__auto_wishlist_4" placeholder="Wishlist">
-    </div>
-    <div class="field-group">
-        <label>Cart</label>
-        <input type="hidden" name="original__auto_cart_5" value="Cart">
-        <input type="text" name="field__auto_cart_5" placeholder="Cart">
-    </div>
-    <div class="field-group">
-        <label>My Orders</label>
-        <input type="hidden" name="original__auto_my_orders_6" value="My Orders">
-        <input type="text" name="field__auto_my_orders_6" placeholder="My Orders">
-    </div>
-    <div class="field-group">
-        <label>My Return Requests</label>
-        <input type="hidden" name="original__auto_my_return_requests_7" value="My Return Requests">
-        <input type="text" name="field__auto_my_return_requests_7" placeholder="My Return Requests">
-    </div>
-    <div class="field-group">
-        <label>Home</label>
-        <input type="hidden" name="original__auto_home_9" value="Home">
-        <input type="text" name="field__auto_home_9" placeholder="Home">
-    </div>
-    <div class="field-group">
-        <label>Welcome to our shop!</label>
-        <input type="hidden" name="original__auto_welcome_to_our_shop__12" value="Welcome to our shop!">
-        <input type="text" name="field__auto_welcome_to_our_shop__12" placeholder="Welcome to our shop!">
-    </div>
-    <div class="field-group">
-        <label>Please</label>
-        <input type="hidden" name="original__auto_please_13" value="Please">
-        <input type="text" name="field__auto_please_13" placeholder="Please">
-    </div>
-    <div class="field-group">
-        <label>sign in</label>
-        <input type="hidden" name="original__auto_sign_in_14" value="sign in">
-        <input type="text" name="field__auto_sign_in_14" placeholder="sign in">
-    </div>
-    <div class="field-group">
-        <label>to access your account.</label>
-        <input type="hidden" name="original__auto_to_access_your_account__15" value="to access your account.">
-        <input type="text" name="field__auto_to_access_your_account__15" placeholder="to access your account.">
-    </div>
-<input type="hidden" name="original__template_extends" value="eyUgZXh0ZW5kcyAnZXNob3BfYmFzZS5odG1sLnR3aWcnICV9"><input type="hidden" name="field__template_extends" value="eyUgZXh0ZW5kcyAnbG9jYWxlL0NaL2VzaG9wX2Jhc2UuaHRtbC50d2lnJyAlfQ==">
+<div class="field-group">
+    <label>Welcome,</label>
+    <input type="hidden" name="original__auto_welcome__0" value="Welcome,">
+    <input type="text" name="field__auto_welcome__0" placeholder="Welcome,">
+</div>
+<div class="field-group">
+    <label>!</label>
+    <input type="hidden" name="original__auto___1" value="!">
+    <input type="text" name="field__auto___1" placeholder="!">
+</div>
+<div class="field-group">
+    <label>Wishlist</label>
+    <input type="hidden" name="original__auto_wishlist_4" value="Wishlist">
+    <input type="text" name="field__auto_wishlist_4" placeholder="Wishlist">
+</div>
+<div class="field-group">
+    <label>Cart</label>
+    <input type="hidden" name="original__auto_cart_5" value="Cart">
+    <input type="text" name="field__auto_cart_5" placeholder="Cart">
+</div>
+<div class="field-group">
+    <label>My Orders</label>
+    <input type="hidden" name="original__auto_my_orders_6" value="My Orders">
+    <input type="text" name="field__auto_my_orders_6" placeholder="My Orders">
+</div>
+<div class="field-group">
+    <label>My Return Requests</label>
+    <input type="hidden" name="original__auto_my_return_requests_7" value="My Return Requests">
+    <input type="text" name="field__auto_my_return_requests_7" placeholder="My Return Requests">
+</div>
+<div class="field-group">
+    <label>Home</label>
+    <input type="hidden" name="original__auto_home_9" value="Home">
+    <input type="text" name="field__auto_home_9" placeholder="Home">
+</div>
+<div class="field-group">
+    <label>Welcome to our shop!</label>
+    <input type="hidden" name="original__auto_welcome_to_our_shop__12" value="Welcome to our shop!">
+    <input type="text" name="field__auto_welcome_to_our_shop__12" placeholder="Welcome to our shop!">
+</div>
+<div class="field-group">
+    <label>Please</label>
+    <input type="hidden" name="original__auto_please_13" value="Please">
+    <input type="text" name="field__auto_please_13" placeholder="Please">
+</div>
+<div class="field-group">
+    <label>sign in</label>
+    <input type="hidden" name="original__auto_sign_in_14" value="sign in">
+    <input type="text" name="field__auto_sign_in_14" placeholder="sign in">
+</div>
+<div class="field-group">
+    <label>to access your account.</label>
+    <input type="hidden" name="original__auto_to_access_your_account__15" value="to access your account.">
+    <input type="text" name="field__auto_to_access_your_account__15" placeholder="to access your account.">
+</div>
+<input type="hidden" name="original__template_extends" value="eyUgZXh0ZW5kcyAnZXNob3BfYmFzZS5odG1sLnR3aWcnICV9">
+<input type="hidden" name="field__template_extends" value="eyUgZXh0ZW5kcyAnbG9jYWxlL2N6L2VzaG9wX2Jhc2UuaHRtbC50d2lnJyAlfQ==">
+
+
     <button type="submit">Generate Translated File</button>
 </form>
 {% endblock %}

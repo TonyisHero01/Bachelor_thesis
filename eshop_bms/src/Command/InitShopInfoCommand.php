@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Command;
 
 use App\Entity\ShopInfo;
@@ -12,41 +14,50 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:init-shopinfo',
-    description: 'Initialize default ShopInfo entry if not exists'
+    description: 'Initialize default ShopInfo entry if not exists',
 )]
 class InitShopInfoCommand extends Command
 {
-    private EntityManagerInterface $em;
-
-    public function __construct(EntityManagerInterface $em)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+    ) {
         parent::__construct();
-        $this->em = $em;
     }
 
+    /**
+     * Configures the command metadata and help text.
+     */
+    protected function configure(): void
+    {
+        $this->setHelp('Creates a default ShopInfo record if none exists yet.');
+    }
+
+    /**
+     * Executes the command and creates a default ShopInfo record when missing.
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
-        $repo = $this->em->getRepository(ShopInfo::class);
-        $existing = $repo->findOneBy([]);
-
-        if ($existing) {
+        $existing = $this->em->getRepository(ShopInfo::class)->findOneBy([]);
+        if ($existing !== null) {
             $io->warning('ShopInfo already exists. Aborting.');
+
             return Command::SUCCESS;
         }
 
         $io->title('Create default ShopInfo entry');
 
-        $eshopName = $io->ask('Shop name (e.g. Moda Vogue)');
-        $address = $io->ask('Address');
-        $telephone = $io->ask('Phone');
-        $email = $io->ask('Email');
-        $companyName = $io->ask('Company name');
-        $cin = $io->ask('CIN / IČ');
+        $eshopName = (string) $io->ask('Shop name (e.g. Moda Vogue)', '');
+        $address = (string) $io->ask('Address', '');
+        $telephone = (string) $io->ask('Phone', '');
+        $email = (string) $io->ask('Email', '');
+        $companyName = (string) $io->ask('Company name', '');
+        $cin = (string) $io->ask('CIN / IČ', '');
 
         $shopInfo = new ShopInfo();
-        $shopInfo->setEshopName($eshopName)
+        $shopInfo
+            ->setEshopName($eshopName)
             ->setAddress($address)
             ->setTelephone($telephone)
             ->setEmail($email)

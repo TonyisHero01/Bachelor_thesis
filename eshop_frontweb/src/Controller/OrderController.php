@@ -1,122 +1,141 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\Entity\ShopInfo;
-use App\Entity\Category;
-use App\Entity\Product;
-use App\Entity\Order;
 use App\Entity\Cart;
+use App\Entity\Category;
+use App\Entity\Customer;
+use App\Entity\Order;
 use App\Entity\OrderItem;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\HttpFoundation\Request;
-use App\Repository\ProductRepository;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
+use App\Entity\ShopInfo;
+use App\Entity\Product;
+use App\Service\ShipmentService;
 use Doctrine\ORM\EntityManagerInterface;
-use App\Controller\BaseController;
-use Twig\Environment;
 use Psr\Log\LoggerInterface;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Twig\Environment;
 
 class OrderController extends BaseController
 {
-    private $shopInfo;
-    private $entityManager;
+    private ?ShopInfo $shopInfo = null;
 
-    public function __construct(EntityManagerInterface $entityManager, Security $security, Environment $twig, LoggerInterface $logger)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly Security $security,
+        private readonly ShipmentService $shipmentService,
+        Environment $twig,
+        LoggerInterface $logger,
+    ) {
         parent::__construct($twig, $logger);
-        $this->entityManager = $entityManager;
-        $this->security = $security;
-        $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+
+        $this->shopInfo = $this->entityManager
+            ->getRepository(ShopInfo::class)
+            ->findOneBy([], ['id' => 'DESC']);
     }
 
-    #[Route('/order/confirm/{id}', name: 'confirm_order', methods: ['POST'])]
     /**
-     * Confirms an existing order.
-     * Currently a placeholder – assumes more business logic will be added later.
-     *
-     * @param int $id Order ID
-     * @return JsonResponse Confirmation result
+     * Confirms an order for the currently authenticated customer.
      */
+    #[Route('/order/confirm/{id}', name: 'confirm_order', methods: ['POST'])]
     public function confirmOrder(int $id): JsonResponse
     {
-        $order = $this->entityManager->getRepository(Order::class)->find($id);
-
-        if (!$order) {
-            return new JsonResponse(['success' => false, 'message' => 'Order not found.'], 404);
+        $customer = $this->getUser();
+        if (!$customer instanceof Customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
         }
 
-        $this->entityManager->persist($order);
-        $this->entityManager->flush();
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order instanceof Order || $order->getCustomer() !== $customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
+        }
 
         return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/order/cancel/{id}', name: 'cancel_order', methods: ['POST'])]
     /**
-     * Cancels and deletes the order with the given ID.
-     *
-     * @param int $id Order ID
-     * @return JsonResponse Deletion result
+     * Cancels an order and restores product stock when cancellation is allowed.
      */
+    #[Route('/order/cancel/{id}', name: 'cancel_order', methods: ['POST'])]
     public function cancelOrder(int $id): JsonResponse
     {
-        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        $customer = $this->getUser();
+        if (!$customer instanceof Customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
+        }
 
-        if (!$order) {
-            return new JsonResponse(["success" => false, "message" => "Order not found"], 404);
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order instanceof Order || $order->getCustomer() !== $customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        if ($order->getIsCompleted() || $order->getPaymentStatus() === 'COMPLETED') {
+            return new JsonResponse(['success' => false, 'message' => 'Order cannot be cancelled.'], 400);
+        }
+
+        foreach ($order->getOrderItems() as $item) {
+            $product = $item->getProduct();
+            if ($product) {
+                $product->setNumberInStock($product->getNumberInStock() + $item->getQuantity());
+                $this->entityManager->persist($product);
+            }
         }
 
         $this->entityManager->remove($order);
         $this->entityManager->flush();
 
-        return new JsonResponse(["success" => true]);
+        return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/order/success/{id}', name: 'order_success')]
     /**
-     * Displays the success page after an order is completed.
-     *
-     * @param int $id Order ID
-     * @param Request $request HTTP request
-     * @return Response Rendered success page
-     *
-     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException if order not found
+     * Renders the order success page for the authenticated customer.
      */
+    #[Route('/order/success/{id}', name: 'order_success', methods: ['GET'])]
     public function orderSuccess(int $id, Request $request): Response
     {
-        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        $customer = $this->getUser();
+        if (!$customer instanceof Customer) {
+            return $this->redirectToRoute('customer_login');
+        }
 
-        if (!$order) {
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order instanceof Order || $order->getCustomer() !== $customer) {
             throw $this->createNotFoundException('Order not found.');
         }
 
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('eshop_order/order_success.html.twig', [
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'order' => $order,
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_order/order_success.html.twig',
+            [
+                'shopInfo' => $this->shopInfo,
+                'locale' => (string) $request->getLocale(),
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+                'order' => $order,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/cart/clear_after_success', name: 'clear_cart_after_success', methods: ['POST'])]
     /**
-     * Clears the customer's cart after a successful order.
-     * Usually triggered via AJAX from the success page.
-     *
-     * @return JsonResponse Operation result
+     * Clears all cart items for the authenticated customer after a successful order.
      */
+    #[Route('/cart/clear_after_success', name: 'clear_cart_after_success', methods: ['POST'])]
     public function clearCartAfterSuccess(): JsonResponse
     {
         $customer = $this->getUser();
-
-        if (!$customer) {
-            return new JsonResponse(['success' => false, 'message' => 'User not authenticated'], 403);
+        if (!$customer instanceof Customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
         }
 
         $cartItems = $this->entityManager->getRepository(Cart::class)->findBy(['customer' => $customer]);
@@ -124,181 +143,212 @@ class OrderController extends BaseController
         foreach ($cartItems as $cartItem) {
             $this->entityManager->remove($cartItem);
         }
+
         $this->entityManager->flush();
 
         return new JsonResponse(['success' => true, 'message' => 'Cart has been cleared.']);
     }
 
-    #[Route('/order/delivery-options/{id}', name: 'order_delivery_options', methods: ['GET'])]
     /**
-     * Displays available delivery options for a given order.
-     * Ensures the order belongs to the current logged-in user.
-     *
-     * @param int $id Order ID
-     * @param Request $request HTTP request
-     * @return Response Rendered delivery options page
-     *
-     * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException if order not found or access denied
+     * Renders the delivery options page for an order owned by the authenticated customer.
      */
+    #[Route('/order/delivery-options/{id}', name: 'order_delivery_options', methods: ['GET'])]
     public function deliveryOptions(int $id, Request $request): Response
     {
-        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        $customer = $this->getUser();
+        if (!$customer instanceof Customer) {
+            return $this->redirectToRoute('customer_login');
+        }
 
-        if (!$order || $order->getCustomer() !== $this->getUser()) {
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order instanceof Order || $order->getCustomer() !== $customer) {
             throw $this->createNotFoundException('Order not found.');
         }
 
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
 
-        return $this->renderLocalized('eshop_order/order_delivery_options.html.twig', [
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'order' => $order,
-            'categories' => $categories
-        ], $request);
+        return $this->renderLocalized(
+            'eshop_order/order_delivery_options.html.twig',
+            [
+                'shopInfo' => $this->shopInfo,
+                'locale' => (string) $request->getLocale(),
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+                'order' => $order,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/order/select_delivery', name: 'order_select_delivery', methods: ['GET'])]
     /**
-     * Displays delivery method selection screen.
-     * Typically part of the checkout process.
-     *
-     * @param Request $request HTTP request
-     * @return Response Rendered delivery selection page
+     * Renders the delivery method selection page.
      */
+    #[Route('/order/select_delivery', name: 'order_select_delivery', methods: ['GET'])]
     public function selectDelivery(Request $request): Response
     {
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('eshop_order/select_delivery.html.twig', [
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_order/select_delivery.html.twig',
+            [
+                'shopInfo' => $this->shopInfo,
+                'locale' => (string) $request->getLocale(),
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/order/submit_delivery/{id}', name: 'order_submit_delivery', methods: ['POST'])]
     /**
-     * Submits the selected delivery method, address, and optional notes.
-     *
-     * @param int $id Order ID
-     * @param Request $request JSON body: {"deliveryMethod": string, "address": string, "notes": string}
-     * @return JsonResponse Success or validation error
+     * Updates delivery method, address and notes for a pending order owned by the authenticated customer.
      */
+    #[Route('/order/submit_delivery/{id}', name: 'order_submit_delivery', methods: ['POST'])]
     public function submitDelivery(int $id, Request $request): JsonResponse
     {
-        $order = $this->entityManager->getRepository(Order::class)->find($id);
-        if (!$order) {
-            return new JsonResponse(["success" => false, "message" => "Order not found."], 404);
+        $customer = $this->getUser();
+        if (!$customer instanceof Customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
         }
 
-        $data = json_decode($request->getContent(), true);
-        $deliveryMethod = $data['deliveryMethod'] ?? null;
-        $address = $data['address'] ?? "";
-        $notes = $data['notes'] ?? "";
+        $order = $this->entityManager->getRepository(Order::class)->find($id);
+        if (!$order instanceof Order || $order->getCustomer() !== $customer) {
+            return new JsonResponse(['success' => false, 'message' => 'Forbidden'], 403);
+        }
 
-        if (!$deliveryMethod) {
-            return new JsonResponse(["success" => false, "message" => "You must select a delivery method."], 400);
+        if ($order->getIsCompleted() || $order->getPaymentStatus() === 'COMPLETED') {
+            return new JsonResponse(['success' => false, 'message' => 'Order cannot be modified.'], 400);
+        }
+
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON body'], 400);
+        }
+
+        $deliveryMethod = $data['deliveryMethod'] ?? null;
+        $address = $data['address'] ?? '';
+        $notes = $data['notes'] ?? '';
+
+        if (!is_string($deliveryMethod) || !in_array($deliveryMethod, ['pickup', 'delivery'], true)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid delivery method.'], 400);
         }
 
         $order->setDeliveryMethod($deliveryMethod);
-        $order->setAddress($address);
-        $order->setNotes($notes);
+        $order->setAddress((string) $address);
+        $order->setNotes($notes !== null && (string) $notes !== '' ? (string) $notes : null);
 
-        $this->entityManager->persist($order);
         $this->entityManager->flush();
 
-        return new JsonResponse(["success" => true]);
+        return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/order/create', name: 'order_create', methods: ['POST'])]
     /**
-     * Creates a new order from the user's cart.
-     * Validates stock, applies discounts, calculates tax,
-     * saves order and associated order items.
-     *
-     * @param Request $request JSON body: {"deliveryMethod": string, "address": string, "notes": string}
-     * @return JsonResponse Result with order ID or error message
+     * Creates an order from the authenticated customer's cart and decrements stock.
      */
+    #[Route('/order/create', name: 'order_create', methods: ['POST'])]
     public function createOrder(Request $request): JsonResponse
     {
-        $user = $this->getUser();
 
-        if (!$user) {
-            return new JsonResponse(["success" => false, "message" => "User not logged in"], 403);
+        $this->logger->info('[OrderCreate] called', [
+            'user' => $this->getUser() ? get_class($this->getUser()) : null,
+            'content' => $request->getContent(),
+        ]);
+        $customer = $this->getUser();
+        if (!$customer instanceof Customer) {
+            return new JsonResponse(['success' => false, 'message' => 'User not logged in'], 403);
         }
 
-        $cartItems = $this->entityManager->getRepository(Cart::class)->findBy(['customer' => $user]);
-
-        if (empty($cartItems)) {
-            return new JsonResponse(["success" => false, "message" => "Your cart is empty"], 400);
+        $cartItems = $this->entityManager->getRepository(Cart::class)->findBy(['customer' => $customer]);
+        if ($cartItems === []) {
+            return new JsonResponse(['success' => false, 'message' => 'Your cart is empty'], 400);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON body'], 400);
+        }
+
         $deliveryMethod = $data['deliveryMethod'] ?? null;
-        $address = $data['address'] ?? '';
-        $orderNote = $data['notes'] ?? '';
+        $address = (string) ($data['address'] ?? '');
+        $orderNote = (string) ($data['notes'] ?? '');
 
-        $totalPrice = 0;
+        if (!is_string($deliveryMethod) || !in_array($deliveryMethod, ['pickup', 'delivery'], true)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid delivery method.'], 400);
+        }
 
+        $totalPrice = 0.0;
         foreach ($cartItems as $cartItem) {
             $product = $cartItem->getProduct();
-            $quantity = $cartItem->getQuantity();
-            $price = $product->getPrice();
-            $discount = $product->getDiscount();
-            $finalUnitPrice = $price * ($discount / 100);
+            if (!$product instanceof Product) {
+                return new JsonResponse(['success' => false, 'message' => 'Invalid cart item product'], 400);
+            }
+
+            $quantity = (int) $cartItem->getQuantity();
+            $price = (float) $product->getPrice();
+            $discount = (float) $product->getDiscount();
+            $finalUnitPrice = $price * ($discount / 100.0);
+
             $totalPrice += $finalUnitPrice * $quantity;
         }
 
         $order = new Order();
-        $order->setCustomer($user);
-        $order->setTotalPrice(round($totalPrice, 2));
+        $order->setCustomer($customer);
+        $order->setTotalPrice((string) round($totalPrice, 2));
         $order->setOrderCreatedAt(new \DateTime());
         $order->setIsCompleted(false);
-        $order->setPaymentStatus("PENDING");
-        $order->setDeliveryStatus("PENDING");
+        $order->setPaymentStatus('PENDING');
+        $order->setDeliveryStatus('PENDING');
         $order->setDeliveryMethod($deliveryMethod);
         $order->setAddress($address);
-        $order->setNotes($orderNote);
-        $order->setDiscount(0.0);
+        $order->setNotes($orderNote !== '' ? $orderNote : null);
+        $order->setDiscount('0.00');
 
         $this->entityManager->persist($order);
 
         foreach ($cartItems as $cartItem) {
             $product = $cartItem->getProduct();
-            $quantity = $cartItem->getQuantity();
-            $price = $product->getPrice();
-            $discount = $product->getDiscount();
-            $taxRate = $product->getTaxRate();
-        
-            $finalUnitPrice = $price * ($discount / 100);
+            if (!$product instanceof Product) {
+                return new JsonResponse(['success' => false, 'message' => 'Invalid cart item product'], 400);
+            }
+
+            $quantity = (int) $cartItem->getQuantity();
+
+            $currentStock = (int) $product->getNumberInStock();
+            $newStock = $currentStock - $quantity;
+            if ($newStock < 0) {
+                return new JsonResponse([
+                    'success' => false,
+                    'message' => 'Insufficient stock for product: ' . $product->getName(),
+                ], 400);
+            }
+
+            $price = (float) $product->getPrice();
+            $discount = (float) $product->getDiscount();
+            $taxRate = (float) $product->getTaxRate();
+
+            $finalUnitPrice = $price * ($discount / 100.0);
             $subtotal = $finalUnitPrice * $quantity;
-            $subtotalExclTax = $subtotal / (1 + $taxRate / 100);
-        
+            $subtotalExclTax = $taxRate > 0 ? ($subtotal / (1 + $taxRate / 100.0)) : $subtotal;
+
             $orderItem = new OrderItem();
             $orderItem->setOrder($order);
             $orderItem->setProduct($product);
-            $orderItem->setProductName($product->getName());
-            $orderItem->setSku($product->getSku());
+            $orderItem->setProductName((string) $product->getName());
+            $orderItem->setSku((string) $product->getSku());
             $orderItem->setQuantity($quantity);
-            $orderItem->setUnitPrice(round($finalUnitPrice, 2));
-            $orderItem->setSubtotal(round($subtotalExclTax, 2));
-        
+            $orderItem->setUnitPrice(number_format($finalUnitPrice, 2, '.', ''));
+            $orderItem->setSubtotal(number_format($subtotalExclTax, 2, '.', ''));
+
             $this->entityManager->persist($orderItem);
 
-            $currentStock = $product->getNumberInStock();
-            $newStock = $currentStock - $quantity;
-        
-            if ($newStock < 0) {
-                return new JsonResponse([
-                    "success" => false,
-                    "message" => "Insufficient stock for product: " . $product->getName()
-                ], 400);
-            }
-        
             $product->setNumberInStock($newStock);
             $this->entityManager->persist($product);
         }
@@ -306,8 +356,8 @@ class OrderController extends BaseController
         $this->entityManager->flush();
 
         return new JsonResponse([
-            "success" => true,
-            "orderId" => $order->getId()
+            'success' => true,
+            'orderId' => $order->getId(),
         ]);
     }
 }

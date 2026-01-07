@@ -2,193 +2,149 @@
 
 namespace App\Controller;
 
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
-use App\Entity\Product;
 use App\Entity\Category;
 use App\Entity\Color;
 use App\Entity\Currency;
+use App\Entity\Product;
 use App\Entity\Size;
 use App\Form\ProductType;
 use App\Service\TfidfTrainer;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Doctrine\Persistence\ManagerRegistry;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use App\Controller\ProductRepository;
-use Exception;
-use Twig\Environment;
-use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\Filesystem\Filesystem;
-function compareProductIds($a, $b) {
-    return $a['similarity'] <=> $b['similarity'];
-}
-class ProductController extends BaseController
+use Symfony\Component\Process\Process;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\String\Slugger\AsciiSlugger;
+use Twig\Environment;
+
+#[IsGranted('ROLE_WAREHOUSE_MANAGER')]
+final class ProductController extends BaseController
 {
-    private $params;
     public function __construct(
-        ParameterBagInterface $params,
-        EntityManagerInterface $em,
-        AuthorizationCheckerInterface $auth,
+        Environment $twig,
         LoggerInterface $logger,
-        Environment $twig
+        ManagerRegistry $doctrine,
     ) {
-        parent::__construct($twig, $logger);
-        $this->params = $params;
-        $this->em = $em;
-        $this->auth = $auth;
+        parent::__construct($twig, $logger, $doctrine);
     }
-    private $image_count = 1;
 
-    #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
     /**
-     * Creates a new product entry in the database.
-     * Validates SKU uniqueness and assigns default currency if none is provided.
+     * @param Product[] $products
      *
-     * @param EntityManagerInterface $entityManager
-     * @param AuthorizationCheckerInterface $authorizationChecker
-     * @return Response
+     * @return array<int, array<string, mixed>>
      */
-    public function createProduct(
-        EntityManagerInterface $entityManager,
-        AuthorizationCheckerInterface $authorizationChecker
-    ): Response {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
+    private function buildProductsForView(array $products, string $locale): array
+    {
+        return array_map(
+            static function (Product $product) use ($locale): array {
+                return [
+                    'id' => $product->getId(),
+                    'name' => $product->getTranslatedName($locale),
+                    'category' => $product->getCategory()?->getName() ?? '',
+                    'colorName' => $product->getColor()?->getTranslatedName($locale) ?? '',
+                    'sizeName' => $product->getSize()?->getName() ?? '',
+                    'numberInStock' => $product->getNumberInStock(),
+                    'createdAt' => $product->getCreatedAt(),
+                    'price' => $product->getPrice(),
+                    'hidden' => $product->getHidden(),
+                ];
+            },
+            $products
+        );
+    }
+
+    /**
+     * Creates a new product with a unique SKU and a valid currency.
+     */
+    #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
+    public function createProduct(Request $request, EntityManagerInterface $em): Response
+    {
+        $input = json_decode((string) $request->getContent(), true);
+        if (!is_array($input)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
         }
 
-        $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, true);
-
-        $name = $input["name"] ?? "Unnamed Product";
-        $number_in_stock = $input["number_in_stock"] ?? 0;
-        $price = $input["price"] ?? 0.00;
-        $sku = $input["sku"] ?? "UNKNOWN";
-        $currencyId = $input["currency_id"] ?? null;
-
-        $existing = $entityManager->getRepository(Product::class)->findOneBy(['sku' => $sku]);
-        if ($existing) {
-            return new JsonResponse([
-                'success' => false,
-                'message' => 'SKU already exists. Please use a unique SKU.'
-            ], 400);
+        $sku = trim((string) ($input['sku'] ?? ''));
+        if ($sku === '' || mb_strlen($sku) > 64) {
+            return new JsonResponse(['error' => 'Invalid SKU'], 400);
         }
 
-        if ($currencyId === null) {
-            $currency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
-        } else {
-            $currency = $entityManager->getRepository(Currency::class)->find($currencyId);
+        $existing = $em->getRepository(Product::class)->findOneBy(['sku' => $sku]);
+        if ($existing !== null) {
+            return new JsonResponse(['error' => 'SKU already exists'], 400);
         }
 
-        if (!$currency) {
-            return new JsonResponse(['success' => false, 'message' => 'Currency not found!'], 400);
+        $name = trim((string) ($input['name'] ?? 'Unnamed Product'));
+        $numberInStock = (int) ($input['number_in_stock'] ?? 0);
+        $price = (float) ($input['price'] ?? 0.0);
+        $currencyId = $input['currency_id'] ?? null;
+
+        $currency = $currencyId !== null
+            ? $em->getRepository(Currency::class)->find((int) $currencyId)
+            : $em->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
+
+        if ($currency === null) {
+            return new JsonResponse(['error' => 'Currency not found'], 400);
         }
 
-        $product = new Product();
-        $product->setName($name);
-        $product->setNumberInStock($number_in_stock);
-        $product->setPrice($price);
-        $product->setSku($sku);
-        $product->setCurrency($currency);
-        $product->setCreatedAt(new \DateTimeImmutable());
-        $product->setUpdatedAt(new \DateTimeImmutable());
-        $product->setVersion(1);
-        $product->setHidden(false);
+        $now = new DateTimeImmutable();
 
-        $entityManager->persist($product);
-        $entityManager->flush();
+        $product = (new Product())
+            ->setName($name)
+            ->setNumberInStock($numberInStock)
+            ->setPrice($price)
+            ->setSku($sku)
+            ->setCurrency($currency)
+            ->setCreatedAt($now)
+            ->setUpdatedAt($now)
+            ->setVersion(1)
+            ->setHidden(false);
+
+        $em->persist($product);
+        $em->flush();
 
         return new JsonResponse(['success' => true, 'id' => $product->getId()]);
     }
 
-    #[Route('/bms/product/{id}', name: 'show_product')]
     /**
      * Displays detailed information for a single product by ID.
-     * Throws 404 if product is not found.
-     *
-     * @param EntityManagerInterface $entityManager
-     * @param int $id Product ID
-     * @param AuthorizationCheckerInterface $authorizationChecker
-     * @return Response
      */
-    public function show(EntityManagerInterface $entityManager, int $id, AuthorizationCheckerInterface $authorizationChecker): Response
+    #[Route('/bms/product/{id}', name: 'show_product', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function show(EntityManagerInterface $em, int $id): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-        $product = $entityManager->getRepository(Product::class)->findProductById($id);
-        if(!$product)
-        {
-            throw $this->createNotFoundException(
-                'No product found for id '.$id
-            );
+        $product = $em->getRepository(Product::class)->findProductById($id);
+        if ($product === null) {
+            throw $this->createNotFoundException('No product found for id ' . $id);
         }
 
         return $this->renderLocalized('product/product_show.html.twig', [
-            'product' => $product
+            'product' => $product,
         ]);
     }
 
-    #[Route('/bms/product_list', name: 'show_All_products')]
     /**
-     * Lists all latest-version products for admin users.
-     * Displays product creation form, available colors, sizes, and categories.
-     * Logs user roles and rendered product preview.
-     *
-     * @param EntityManagerInterface $entityManager
-     * @param AuthorizationCheckerInterface $authorizationChecker
-     * @param LoggerInterface $logger
-     * @return Response
+     * Lists all latest-version products.
      */
-    public function showAllProducts(
-        EntityManagerInterface $entityManager,
-        AuthorizationCheckerInterface $authorizationChecker,
-        LoggerInterface $logger,
-        Request $request
-    ): Response
+    #[Route('/bms/product_list', name: 'show_All_products', methods: ['GET'])]
+    public function showAllProducts(EntityManagerInterface $em, Request $request): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-        $user = $this->getUser();
-        if ($authorizationChecker->isGranted('ROLE_CUSTOMER', $user)) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-        if ($user) {
-            $roles = $user->getRoles();
-        } else {
-            dump('User not logged in');
-        }
-        $products = $entityManager->getRepository(Product::class)->findLatestVersionProducts();
+        $products = $em->getRepository(Product::class)->findLatestVersionProducts();
         $form = $this->createForm(ProductType::class, new Product());
 
-        $product_list = '';
+        $colors = $em->getRepository(Color::class)->findAll();
+        $sizes = $em->getRepository(Size::class)->findAll();
+        $categories = $em->getRepository(Category::class)->findAll();
 
-        foreach ($products as $product) 
-        {
-            $product_list .= '<div>' . $product->getName() . ' ' . $product->getNumberInStock() . ' ' . $product->getCreatedAt()->format('Y-m-d H:i:s') . ' ' . $product->getPrice() . '</div>' . '<br>';
-        }
-        $colors = $entityManager->getRepository(Color::class)->findAll();
-        $sizes = $entityManager->getRepository(Size::class)->findAll();
-        $categories = $entityManager->getRepository(Category::class)->findAll();
         $locale = $request->getLocale();
-        $productsForView = array_map(function (Product $product) use ($locale) {
-            return [
-                'id' => $product->getId(),
-                'name' => $product->getTranslatedName($locale),
-                'category' => $product->getCategory()?->getName() ?? '',
-                'colorName' => $product->getColor()?->getTranslatedName($locale) ?? '',
-                'sizeName' => $product->getSize()?->getName() ?? '',
-                'numberInStock' => $product->getNumberInStock(),
-                'createdAt' => $product->getCreatedAt(),
-                'price' => $product->getPrice(),
-                'hidden' => $product->getHidden(),
-            ];
-        }, $products);
+        $productsForView = $this->buildProductsForView($products, $locale);
+
         return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $productsForView,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -201,115 +157,93 @@ class ProductController extends BaseController
         ]);
     }
 
-    #[Route('/bms/modify_category', name: 'modify_category', methods: ['POST'])]
     /**
-     * Modify the name of a category based on provided ID and new name.
-     *
-     * @param Request $request The HTTP request containing JSON with 'id' and 'new_name'.
-     * @param EntityManagerInterface $em Doctrine EntityManager for DB operations.
-     * @return JsonResponse Success or error message.
+     * Modifies the category name and triggers TF-IDF retraining.
      */
+    #[Route('/bms/modify_category', name: 'modify_category', methods: ['POST'])]
     public function modifyCategory(Request $request, EntityManagerInterface $em, TfidfTrainer $trainer): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON'], 400);
+        }
+
         $id = $data['id'] ?? null;
         $newName = $data['new_name'] ?? null;
 
-        if (!$id || !$newName) {
+        if ($id === null || $newName === null || trim((string) $newName) === '') {
             return new JsonResponse(['success' => false, 'message' => 'Missing ID or new name'], 400);
         }
 
-        $category = $em->getRepository(Category::class)->find($id);
-        if (!$category) {
+        $category = $em->getRepository(Category::class)->find((int) $id);
+        if ($category === null) {
             return new JsonResponse(['success' => false, 'message' => 'Category not found'], 404);
         }
 
-        $category->setName($newName);
+        $category->setName((string) $newName);
         $em->flush();
         $trainer->retrain();
+
         return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/bms/product_edit/{id}', name: 'edit_product')]
     /**
-     * Displays the product edit form and product history based on SKU.
-     *
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param int $id Product ID to edit.
-     * @param Request $request HTTP request object.
-     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
-     * @param LoggerInterface $logger Logger instance.
-     * @return Response Rendered edit product page.
+     * Displays the product edit page and product history by SKU.
      */
-    public function edit(
-        EntityManagerInterface $entityManager,
-        $id,
-        Request $request,
-        AuthorizationCheckerInterface $authorizationChecker,
-        LoggerInterface $logger
-    ): Response {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-
-        $productRepository = $entityManager->getRepository(Product::class);
+    #[Route('/bms/product_edit/{id}', name: 'edit_product', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function edit(EntityManagerInterface $em, int $id): Response
+    {
+        $productRepository = $em->getRepository(Product::class);
         $product = $productRepository->find($id);
 
-        if (!$product) {
+        if ($product === null) {
             throw $this->createNotFoundException('Product not found');
         }
 
-        $productsWithSameSku = $productRepository->findBy(['sku' => $product->getSku()], ['version' => 'DESC']);
+        $productsWithSameSku = $productRepository->findBy(
+            ['sku' => $product->getSku()],
+            ['version' => 'DESC']
+        );
 
-        $categories = $entityManager->getRepository(Category::class)->findAllCategories();
-        $colors = $entityManager->getRepository(Color::class)->findAll();
-        $sizes = $entityManager->getRepository(Size::class)->findAll();
+        $categories = $em->getRepository(Category::class)->findAllCategories();
+        $colors = $em->getRepository(Color::class)->findAll();
+        $sizes = $em->getRepository(Size::class)->findAll();
 
         return $this->renderLocalized('product/product_edit.html.twig', [
             'product' => $product,
             'productsWithSameSku' => $productsWithSameSku,
-            'MAX_ARTICLES_COUNT_PER_PAGE' => $this->params->get('MAX_ARTICLES_COUNT_PER_PAGE'),
-            'NAME_MAX_LENGTH' => $this->params->get('NAME_MAX_LENGTH'),
-            'CONTENT_MAX_LENGTH' => $this->params->get('CONTENT_MAX_LENGTH'),
+            'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
+            'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
+            'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
             'categories' => $categories,
             'colors' => $colors,
             'sizes' => $sizes,
         ]);
     }
-    #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'])]
+
     /**
-     * Handles product saving logic. Supports both:
-     * - Updating current version (when no_version_update is true).
-     * - Creating new version with incremented version number.
-     *
-     * @param Request $request HTTP request with product data in JSON.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param int $id Product ID to update.
-     * @param LoggerInterface $logger Logger for error reporting.
-     * @param AuthorizationCheckerInterface $authorizationChecker Auth checker.
-     * @return Response JSON response indicating success or error.
+     * Saves product changes. Updates current version if no_version_update=true, otherwise creates a new version.
      */
+    #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function saveProduct(
         Request $request,
-        EntityManagerInterface $entityManager,
-        $id,
+        EntityManagerInterface $em,
+        int $id,
         LoggerInterface $logger,
-        AuthorizationCheckerInterface $authorizationChecker,
         TfidfTrainer $trainer
     ): Response {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-
         try {
-            $productRepository = $entityManager->getRepository(Product::class);
+            $productRepository = $em->getRepository(Product::class);
             $currentProduct = $productRepository->find($id);
 
-            if (!$currentProduct) {
-                return new JsonResponse(["status" => "Error", "message" => "Product not found"], 404);
+            if ($currentProduct === null) {
+                return new JsonResponse(['status' => 'Error', 'message' => 'Product not found'], 404);
             }
 
-            $data = json_decode($request->getContent(), true);
+            $data = json_decode((string) $request->getContent(), true);
+            if (!is_array($data)) {
+                return new JsonResponse(['status' => 'Error', 'message' => 'Invalid JSON'], 400);
+            }
 
             $noVersionUpdate = filter_var($data['no_version_update'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -323,59 +257,61 @@ class ProductController extends BaseController
                 $currentProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
                 $currentProduct->setAttributes($data['attributes'] ?? $currentProduct->getAttributes());
 
-                $currentProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
-                $currentProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
-                $currentProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
-                $currentProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
+                $currentProduct->setWidth(isset($data['width']) ? (float) $data['width'] : $currentProduct->getWidth());
+                $currentProduct->setHeight(isset($data['height']) ? (float) $data['height'] : $currentProduct->getHeight());
+                $currentProduct->setLength(isset($data['length']) ? (float) $data['length'] : $currentProduct->getLength());
+                $currentProduct->setWeight(isset($data['weight']) ? (float) $data['weight'] : $currentProduct->getWeight());
 
                 if (!empty($data['size'])) {
-                    $size = $entityManager->getRepository(Size::class)->find($data['size']);
-                    if ($size) {
+                    $size = $em->getRepository(Size::class)->find((int) $data['size']);
+                    if ($size !== null) {
                         $currentProduct->setSize($size);
                     }
                 }
 
                 if (!empty($data['color'])) {
-                    $color = $entityManager->getRepository(Color::class)->find($data['color']);
-                    if ($color) {
+                    $color = $em->getRepository(Color::class)->find((int) $data['color']);
+                    if ($color !== null) {
                         $currentProduct->setColor($color);
                     }
                 }
 
                 if (!empty($data['category'])) {
-                    $category = $entityManager->getRepository(Category::class)->find($data['category']);
-                    if ($category) {
+                    $category = $em->getRepository(Category::class)->find((int) $data['category']);
+                    if ($category !== null) {
                         $currentProduct->setCategory($category);
                     }
                 }
 
-                if (isset($data['image_urls'])) {
-                    $validUrls = array_filter($data['image_urls'], fn($url) => !empty($url));
+                if (array_key_exists('image_urls', $data)) {
+                    $validUrls = array_values(array_filter(
+                        (array) $data['image_urls'],
+                        static fn ($url): bool => !empty($url)
+                    ));
                     $currentProduct->setImageUrls($validUrls);
                 }
 
-                if (isset($data['hidden'])) {
-                    $currentProduct->setHidden((bool)$data['hidden']);
+                if (array_key_exists('hidden', $data)) {
+                    $currentProduct->setHidden((bool) $data['hidden']);
                 }
 
-                $currentProduct->setUpdatedAt(new \DateTimeImmutable());
-                $entityManager->flush();
+                $currentProduct->setUpdatedAt(new DateTimeImmutable());
+                $em->flush();
 
-                return new JsonResponse(["status" => "Success", "message" => "Updated current version"]);
+                return new JsonResponse(['status' => 'Success', 'message' => 'Updated current version']);
             }
 
-            $maxVersion = $entityManager->createQueryBuilder()
+            $maxVersion = (int) $em->createQueryBuilder()
                 ->select('MAX(p.version)')
                 ->from(Product::class, 'p')
                 ->where('p.sku = :sku')
                 ->setParameter('sku', $currentProduct->getSku())
                 ->getQuery()
                 ->getSingleScalarResult();
-            $newVersion = $maxVersion + 1;
 
             $newProduct = new Product();
             $newProduct->setSku($currentProduct->getSku());
-            $newProduct->setVersion($newVersion);
+            $newProduct->setVersion($maxVersion + 1);
             $newProduct->setCreatedAt($currentProduct->getCreatedAt());
 
             $newProduct->setName($data['name'] ?? $currentProduct->getName());
@@ -387,263 +323,267 @@ class ProductController extends BaseController
             $newProduct->setMaterial($data['material'] ?? $currentProduct->getMaterial());
             $newProduct->setAttributes($data['attributes'] ?? []);
 
-            $newProduct->setWidth(isset($data['width']) ? (float)$data['width'] : $currentProduct->getWidth());
-            $newProduct->setHeight(isset($data['height']) ? (float)$data['height'] : $currentProduct->getHeight());
-            $newProduct->setLength(isset($data['length']) ? (float)$data['length'] : $currentProduct->getLength());
-            $newProduct->setWeight(isset($data['weight']) ? (float)$data['weight'] : $currentProduct->getWeight());
+            $newProduct->setWidth(isset($data['width']) ? (float) $data['width'] : $currentProduct->getWidth());
+            $newProduct->setHeight(isset($data['height']) ? (float) $data['height'] : $currentProduct->getHeight());
+            $newProduct->setLength(isset($data['length']) ? (float) $data['length'] : $currentProduct->getLength());
+            $newProduct->setWeight(isset($data['weight']) ? (float) $data['weight'] : $currentProduct->getWeight());
 
             if (!empty($data['category'])) {
-                $category = $entityManager->getRepository(Category::class)->find($data['category']);
+                $category = $em->getRepository(Category::class)->find((int) $data['category']);
                 $newProduct->setCategory($category);
             } else {
                 $newProduct->setCategory($currentProduct->getCategory());
             }
 
             if (!empty($data['size'])) {
-                $size = $entityManager->getRepository(Size::class)->find($data['size']);
+                $size = $em->getRepository(Size::class)->find((int) $data['size']);
                 $newProduct->setSize($size);
             } else {
                 $newProduct->setSize($currentProduct->getSize());
             }
 
             if (!empty($data['color'])) {
-                $color = $entityManager->getRepository(Color::class)->find($data['color']);
+                $color = $em->getRepository(Color::class)->find((int) $data['color']);
                 $newProduct->setColor($color);
             } else {
                 $newProduct->setColor($currentProduct->getColor());
             }
 
-            $currency = $entityManager->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
+            $currency = $em->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
             $newProduct->setCurrency($currency);
 
-            $newProduct->setHidden($data['hidden'] ?? false);
+            $newProduct->setHidden((bool) ($data['hidden'] ?? false));
 
-            $imageUrls = array_filter($data['image_urls'] ?? [], fn($url) => !empty($url));
+            $imageUrls = array_values(array_filter((array) ($data['image_urls'] ?? []), static fn ($u): bool => !empty($u)));
             $existingUrls = $currentProduct->getImageUrls() ?? [];
-            $newProduct->setImageUrls(array_merge($existingUrls, $imageUrls));
+            $newProduct->setImageUrls(array_values(array_merge($existingUrls, $imageUrls)));
 
             $newProduct->setUpdatedAt(
-                isset($data['edit_time'])
-                    ? new \DateTimeImmutable($data['edit_time'])
-                    : new \DateTimeImmutable()
+                isset($data['edit_time']) ? new DateTimeImmutable((string) $data['edit_time']) : new DateTimeImmutable()
             );
 
-            $entityManager->persist($newProduct);
-            $entityManager->flush();
+            $em->persist($newProduct);
+            $em->flush();
             $trainer->retrain();
-            return new JsonResponse(["status" => "Success", "new_product_id" => $newProduct->getId()]);
-        } catch (\Exception $e) {
-            $logger->error('❌ Error in saveProduct: ' . $e->getMessage());
-            return new JsonResponse(["status" => "Error", "message" => $e->getMessage()], 500);
+
+            return new JsonResponse(['status' => 'Success', 'new_product_id' => $newProduct->getId()]);
+        } catch (\Throwable $e) {
+            $logger->error('Error in saveProduct: ' . $e->getMessage());
+            return new JsonResponse(['status' => 'Error', 'message' => $e->getMessage()], 500);
         }
     }
-    #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'])]
-    /**
-     * Deletes a product and all its versions sharing the same SKU.
-     *
-     * @param int $id The ID of one version of the product to delete.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
-     * @return Response JSON response indicating success or failure.
-     */
-    public function deleteProduct(
-        $id,  
-        EntityManagerInterface $entityManager, 
-        AuthorizationCheckerInterface $authorizationChecker,
-        TfidfTrainer $trainer
-    ): Response {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
 
-        $productRepository = $entityManager->getRepository(Product::class);
+    /**
+     * Deletes a product and all its versions sharing the same SKU, then triggers TF-IDF retraining.
+     */
+    #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'], requirements: ['id' => '\d+'])]
+    public function deleteProduct(int $id, EntityManagerInterface $em, TfidfTrainer $trainer): Response
+    {
+        $productRepository = $em->getRepository(Product::class);
         $product = $productRepository->find($id);
 
-        if ($product) {
-            $sku = $product->getSku();
-
-            $productsWithSameSku = $productRepository->findBy(['sku' => $sku]);
-
-            foreach ($productsWithSameSku as $productToDelete) {
-                $entityManager->remove($productToDelete);
-            }
-
-            $entityManager->flush();
-            $trainer->retrain();
-            return new JsonResponse(['success' => true]);
-        } else {
+        if ($product === null) {
             return new JsonResponse(['success' => false, 'message' => 'Product not found'], 404);
         }
+
+        $productsWithSameSku = $productRepository->findBy(['sku' => $product->getSku()]);
+        foreach ($productsWithSameSku as $productToDelete) {
+            $em->remove($productToDelete);
+        }
+
+        $em->flush();
+        $trainer->retrain();
+
+        return new JsonResponse(['success' => true]);
     }
-    #[Route('/image_save/{id}', name: 'save_image')]
+
     /**
-     * Saves uploaded images for a specific product.
-     *
-     * @param int $id Product ID.
-     * @param Request $request HTTP request with uploaded files.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param AuthorizationCheckerInterface $authorizationChecker Access checker.
-     * @param LoggerInterface $logger Logger for logging upload info.
-     * @return Response JSON with list of saved file names or error.
+     * Uploads product images and appends filenames to product imageUrls.
      */
-    public function saveImage($id, Request $request, EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker, LoggerInterface $logger): Response
-    {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
+    #[Route('/image_save/{id}', name: 'save_image', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function saveImage(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        LoggerInterface $logger
+    ): Response {
+        $product = $em->getRepository(Product::class)->find($id);
+        if ($product === null) {
+            return new JsonResponse(['error' => 'Product not found'], 404);
         }
 
-        $product = $entityManager->getRepository(Product::class)->find($id);
-        if (!$product) {
-            $logger->error("Product not found. ID: ".$id);
-            return new JsonResponse(['status' => 'Product not found'], 404);
+        $files = $request->files->all('images');
+        if (empty($files)) {
+            return new JsonResponse(['error' => 'No files received'], 400);
         }
 
-        $name = $product->getName();
-        $files = $request->files->get('images');
-        $existingImageUrls = $product->getImageUrls() ?? [];
+        $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
+        $imagesDir = (string) $this->getParameter('images_directory');
 
-        $this->image_count = count($existingImageUrls) + 1;
-        $newImageUrls = [];
+        $slugger = new AsciiSlugger();
+        $safeBase = strtolower((string) $slugger->slug((string) ($product->getSku() ?: ('product-' . $product->getId()))));
 
-        if (!$files) {
-            return new JsonResponse(['status' => 'No files received'], 400);
-        }
+        $existing = $product->getImageUrls() ?? [];
+        $new = [];
 
         foreach ($files as $file) {
-            $newFilename = $name . $this->image_count . '.' . $file->guessExtension();
-            $file->move($this->getParameter('images_directory'), $newFilename);
-            
-            $newImageUrls[] = $newFilename;
-            $this->image_count++;
-        }
-
-        $product->setImageUrls(array_merge($existingImageUrls, $newImageUrls));
-        $entityManager->persist($product);
-        $entityManager->flush();
-
-        return new JsonResponse(['filePaths' => $newImageUrls]);
-    }
-
-    #[Route('/delete_image/{id}', name: 'delete_image', methods: ['POST'])]
-    /**
-     * Deletes a specific image from a product's image list and filesystem.
-     *
-     * @param int $id Product ID.
-     * @param Request $request JSON with 'imageUrl' to delete.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @return JsonResponse JSON status message.
-     */
-    public function deleteImage($id, Request $request, EntityManagerInterface $entityManager): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $imageUrl = $data['imageUrl'] ?? null;
-
-        if ($imageUrl) {
-            $product = $entityManager->getRepository(Product::class)->find($id);
-            if ($product) {
-                $imageUrls = $product->getImageUrls();
-                $updatedUrls = array_filter($imageUrls, fn($url) => $url !== $imageUrl);
-                $product->setImageUrls($updatedUrls);
-
-                $entityManager->persist($product);
-                $entityManager->flush();
-
-                $fileSystem = new Filesystem();
-                $filePath = $this->getParameter('images_directory') . '/' . $imageUrl;
-                if ($fileSystem->exists($filePath)) {
-                    $fileSystem->remove($filePath);
-                }
-
-                return new JsonResponse(['status' => 'success']);
+            if ($file === null) {
+                continue;
             }
+
+            $ext = strtolower((string) $file->guessExtension());
+            if (!in_array($ext, $allowedExt, true)) {
+                return new JsonResponse(['error' => 'Unsupported file type'], 400);
+            }
+
+            $filename = sprintf('%s_%s.%s', $safeBase, bin2hex(random_bytes(8)), $ext);
+
+            try {
+                $file->move($imagesDir, $filename);
+            } catch (\Throwable $e) {
+                $logger->error('saveImage failed: ' . $e->getMessage());
+                return new JsonResponse(['error' => 'Upload failed'], 500);
+            }
+
+            $new[] = $filename;
         }
 
-        return new JsonResponse(['status' => 'error', 'message' => 'Image not found'], 400);
+        if ($new === []) {
+            return new JsonResponse(['error' => 'No valid files uploaded'], 400);
+        }
+
+        $product->setImageUrls(array_values(array_merge($existing, $new)));
+        $em->flush();
+
+        return new JsonResponse(['filePaths' => $new]);
     }
+
     /**
-     * @Route("/search", name="search")
-     * @IsGranted("ROLE_WAREHOUSE_MANAGER")
+     * Removes an image filename from the product and deletes the file from disk.
+     */
+    #[Route('/delete_image/{id}', name: 'delete_image', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function deleteImage(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+        }
+
+        $imageUrl = (string) ($data['imageUrl'] ?? '');
+        if ($imageUrl === '') {
+            return new JsonResponse(['error' => 'Missing imageUrl'], 400);
+        }
+
+        if (!preg_match('/^[a-zA-Z0-9._-]+\.(jpg|jpeg|png|webp)$/', $imageUrl)) {
+            return new JsonResponse(['error' => 'Invalid filename'], 400);
+        }
+
+        $product = $em->getRepository(Product::class)->find($id);
+        if ($product === null) {
+            return new JsonResponse(['error' => 'Product not found'], 404);
+        }
+
+        $imageUrls = $product->getImageUrls() ?? [];
+        if (!in_array($imageUrl, $imageUrls, true)) {
+            return new JsonResponse(['error' => 'Image not attached to product'], 404);
+        }
+
+        $product->setImageUrls(array_values(array_filter(
+            $imageUrls,
+            static fn (string $u): bool => $u !== $imageUrl
+        )));
+        $em->flush();
+
+        $imagesDir = (string) $this->getParameter('images_directory');
+        $fullPath = $imagesDir . DIRECTORY_SEPARATOR . $imageUrl;
+
+        $filesystem = new Filesystem();
+        if ($filesystem->exists($fullPath)) {
+            $filesystem->remove($fullPath);
+        }
+
+        return new JsonResponse(['status' => 'success']);
+    }
+
+    /**
+     * Executes TF-IDF search via a Python script and stores ranked results in session.
      */
     #[Route('/bms/search', name: 'bms_search', methods: ['POST'])]
-    /**
-     * Performs a product search using an external TF-IDF Python script.
-     * Saves results to session for further display or filtering.
-     *
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param SessionInterface $session Symfony session for caching results.
-     * @param AuthorizationCheckerInterface $authChecker Role access checker.
-     * @param LoggerInterface $logger Logger for tracking command and output.
-     * @param Request $request JSON request containing search query.
-     * @return Response JSON containing search results (latest version product IDs and similarity scores).
-     */
     public function search(
-        EntityManagerInterface $entityManager,
+        EntityManagerInterface $em,
         SessionInterface $session,
-        AuthorizationCheckerInterface $authChecker,
         LoggerInterface $logger,
         Request $request
     ): Response {
-
-        if (!$authChecker->isGranted('ROLE_WAREHOUSE_MANAGER')) {
-            throw new AccessDeniedException('You do not have permission to perform this action.');
+        $payload = json_decode((string) $request->getContent(), true);
+        if (!is_array($payload)) {
+            return new JsonResponse(['error' => 'Invalid JSON'], 400);
         }
 
-        if (!$authChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-
-        $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, true);
-        $query = $input['query'] ?? '';
-
-        if (empty($query)) {
+        $query = trim((string) ($payload['query'] ?? ''));
+        if ($query === '') {
             return new JsonResponse(['error' => 'Empty search query'], 400);
         }
 
-        $escapedQuery = escapeshellarg($query);
-        $projectRoot = $this->getParameter('kernel.project_dir');
-        $pythonPath = $projectRoot . '/python_scripts/venv/bin/python';
-        $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
-        $command = "$pythonPath $scriptPath $escapedQuery 2>&1";
-
-        $output = shell_exec($command);
-
-        if ($output === null) {
-            $logger->error("Python script execution failed with no output");
-            return new JsonResponse(['error' => 'Search command failed'], 500);
+        if (mb_strlen($query) > 200) {
+            return new JsonResponse(['error' => 'Query too long'], 400);
         }
 
-        $searchResults = json_decode($output, true);
+        $projectRoot = (string) $this->getParameter('kernel.project_dir');
+        $pythonPath = $projectRoot . '/python_scripts/venv/bin/python';
+        $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
+
+        if (!is_file($pythonPath) || !is_file($scriptPath)) {
+            $logger->error('search python/script not found');
+            return new JsonResponse(['error' => 'Search backend not available'], 500);
+        }
+
+        $process = new Process([$pythonPath, $scriptPath, $query], $projectRoot);
+        $process->setTimeout(5);
+
+        try {
+            $process->mustRun();
+        } catch (\Throwable $e) {
+            $logger->error('search process failed: ' . $e->getMessage());
+            return new JsonResponse(['error' => 'Search system error'], 500);
+        }
+
+        $output = $process->getOutput();
+        $searchResults = json_decode((string) $output, true);
+
         if (!is_array($searchResults)) {
-            $logger->error("Python script output: $output");
+            $logger->error('search invalid output: ' . $output);
             return new JsonResponse(['error' => 'Search system error'], 500);
         }
 
         $skuToSimilarity = [];
         foreach ($searchResults as $result) {
-            $skuToSimilarity[$result['product_sku']] = $result['similarity'];
+            if (!isset($result['product_sku'], $result['similarity'])) {
+                continue;
+            }
+            $skuToSimilarity[(string) $result['product_sku']] = (float) $result['similarity'];
         }
 
         $productSkus = array_keys($skuToSimilarity);
-
-        if (empty($productSkus)) {
+        if ($productSkus === []) {
+            $session->set('search_results', []);
             return new JsonResponse(['results' => []]);
         }
 
-        $queryBuilder = $entityManager->createQueryBuilder();
-        $queryBuilder
-            ->select('p.id, p.sku')
+        $qb = $em->createQueryBuilder();
+        $qb->select('p.id, p.sku')
             ->from(Product::class, 'p')
-            ->where($queryBuilder->expr()->in('p.sku', ':skus'))
+            ->where($qb->expr()->in('p.sku', ':skus'))
             ->setParameter('skus', $productSkus)
             ->orderBy('p.id', 'DESC');
 
-        $products = $queryBuilder->getQuery()->getResult();
+        $rows = $qb->getQuery()->getArrayResult();
 
         $skuToLatestId = [];
-        foreach ($products as $product) {
-            if (!isset($skuToLatestId[$product['sku']])) {
-                $skuToLatestId[$product['sku']] = $product['id'];
+        foreach ($rows as $row) {
+            $sku = (string) $row['sku'];
+            if (!isset($skuToLatestId[$sku])) {
+                $skuToLatestId[$sku] = (int) $row['id'];
             }
         }
 
@@ -662,34 +602,21 @@ class ProductController extends BaseController
         return new JsonResponse(['results' => $sortedResults]);
     }
 
-    #[Route('/bms/results', name: 'results')]
     /**
-     * Displays the product search results from session.
-     *
-     * @param SessionInterface $session Session storage for search results.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
-     * @return Response Rendered product results page or no-results page.
+     * Displays the product search results stored in session.
      */
-    public function results(
-        SessionInterface $session,
-        EntityManagerInterface $entityManager,
-        AuthorizationCheckerInterface $authorizationChecker
-    ): Response {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-
+    #[Route('/bms/results', name: 'results', methods: ['GET'])]
+    public function results(SessionInterface $session, EntityManagerInterface $em, Request $request): Response
+    {
         $searchResults = $session->get('search_results', []);
-
         if (empty($searchResults)) {
             return $this->renderLocalized('product/no_results.html.twig', []);
         }
 
         $ids = array_column($searchResults, 'id');
 
-        $productRepository = $entityManager->getRepository(Product::class);
-        $products = $productRepository->findBy(['id' => $ids]);
+        /** @var Product[] $products */
+        $products = $em->getRepository(Product::class)->findBy(['id' => $ids]);
 
         $productsById = [];
         foreach ($products as $product) {
@@ -704,161 +631,143 @@ class ProductController extends BaseController
         }
 
         $form = $this->createForm(ProductType::class, new Product());
-        $colors = $entityManager->getRepository(Color::class)->findAll();
-        $sizes = $entityManager->getRepository(Size::class)->findAll();
+        $colors = $em->getRepository(Color::class)->findAll();
+        $sizes = $em->getRepository(Size::class)->findAll();
+        $categories = $em->getRepository(Category::class)->findAll();
 
-        return $this->renderLocalized('product/results.html.twig', [
-            'products' => $sortedProducts,
+        $locale = $request->getLocale();
+        $productsForView = $this->buildProductsForView($sortedProducts, $locale);
+
+        return $this->renderLocalized('product/product_list.html.twig', [
+            'products' => $productsForView,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
             'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
             'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
+            'form' => $form,
             'colors' => $colors,
             'sizes' => $sizes,
-            'form' => $form
+            'categories' => $categories,
         ]);
     }
 
-    #[Route('/bms/save_category', name: 'save_category')]
     /**
-     * Creates a new category based on JSON input.
-     *
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
-     * @return Response Empty JSON response or login redirect.
+     * Creates a new category.
      */
-    public function createCategory(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    #[Route('/bms/save_category', name: 'save_category', methods: ['POST'])]
+    public function createCategory(Request $request, EntityManagerInterface $em): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data) || empty($data['name'])) {
+            return new JsonResponse(['error' => 'Invalid JSON or missing name'], 400);
         }
-        $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, TRUE);
-        $name = $input["name"];
 
-        $category = new Category();
-        $category->setName($name);
+        $category = (new Category())->setName((string) $data['name']);
 
-        $entityManager->persist($category);
-
-        $entityManager->flush();
+        $em->persist($category);
+        $em->flush();
 
         return new JsonResponse([]);
     }
 
-    #[Route('/bms/save_color', name: 'save_color')]
     /**
-     * Creates a new color entity with name and hex value from JSON input.
-     *
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @param AuthorizationCheckerInterface $authorizationChecker Access control checker.
-     * @return Response Empty JSON response or login redirect.
+     * Creates a new color.
      */
-    public function createColor(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    #[Route('/bms/save_color', name: 'save_color', methods: ['POST'])]
+    public function createColor(Request $request, EntityManagerInterface $em): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data) || empty($data['name']) || empty($data['hex'])) {
+            return new JsonResponse(['error' => 'Invalid JSON or missing fields'], 400);
         }
-        $inputJSON = file_get_contents('php://input');
-        $input = json_decode($inputJSON, TRUE);
-        $name = $input["name"];
-        $hex = $input["hex"];
 
-        $color = new Color();
-        $color->setName($name);
-        $color->setHex($hex);
+        $color = (new Color())
+            ->setName((string) $data['name'])
+            ->setHex((string) $data['hex']);
 
-        $entityManager->persist($color);
-
-        $entityManager->flush();
+        $em->persist($color);
+        $em->flush();
 
         return new JsonResponse([]);
     }
 
+    /**
+     * Modifies an existing color.
+     */
     #[Route('/bms/modify_color', name: 'modify_color', methods: ['POST'])]
-    /**
-     * Modifies the name and hex value of an existing color.
-     *
-     * @param Request $request JSON request containing 'id', 'new_name', and 'new_hex'.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @return JsonResponse Success or error message.
-     */
-    public function modifyColor(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function modifyColor(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['status' => 'error', 'message' => 'Invalid JSON'], 400);
+        }
+
         $colorId = $data['id'] ?? null;
         $newName = $data['new_name'] ?? null;
         $newHex = $data['new_hex'] ?? null;
 
-        if (!$colorId || !$newName || !$newHex) {
+        if ($colorId === null || $newName === null || $newHex === null) {
             return new JsonResponse(['status' => 'error', 'message' => 'Invalid data'], 400);
         }
 
-        $colorRepository = $entityManager->getRepository(Color::class);
-        $color = $colorRepository->find($colorId);
-
-        if (!$color) {
+        $color = $em->getRepository(Color::class)->find((int) $colorId);
+        if ($color === null) {
             return new JsonResponse(['status' => 'error', 'message' => 'Color not found'], 404);
         }
 
-        $color->setName($newName);
-        $color->setHex($newHex);
-
-        $entityManager->flush();
+        $color->setName((string) $newName);
+        $color->setHex((string) $newHex);
+        $em->flush();
 
         return new JsonResponse(['status' => 'success']);
     }
 
-    #[Route('/bms/create_size', name: 'size_create', methods: ['POST'])]
     /**
-     * Creates a new size entity.
-     *
-     * @param Request $request JSON request containing 'name'.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @return JsonResponse Success or error message.
+     * Creates a new size.
      */
-    public function createSize(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/bms/create_size', name: 'size_create', methods: ['POST'])]
+    public function createSize(Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $sizeName = $data['name'] ?? '';
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON.'], 400);
+        }
 
-        if (empty($sizeName)) {
+        $sizeName = trim((string) ($data['name'] ?? ''));
+        if ($sizeName === '') {
             return new JsonResponse(['success' => false, 'message' => 'Size name cannot be empty.'], 400);
         }
 
-        $size = new Size();
-        $size->setName($sizeName);
-        $entityManager->persist($size);
-        $entityManager->flush();
+        $size = (new Size())->setName($sizeName);
+
+        $em->persist($size);
+        $em->flush();
 
         return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/bms/modify_size/{id}', name: 'size_modify', methods: ['POST'])]
     /**
      * Modifies an existing size name.
-     *
-     * @param int $id Size ID.
-     * @param Request $request JSON request with new size name.
-     * @param EntityManagerInterface $entityManager Doctrine EntityManager.
-     * @return JsonResponse Success or error message.
      */
-    public function modifySize(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/bms/modify_size/{id}', name: 'size_modify', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function modifySize(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $newSizeName = $data['name'] ?? '';
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON.'], 400);
+        }
 
-        if (empty($newSizeName)) {
+        $newSizeName = trim((string) ($data['name'] ?? ''));
+        if ($newSizeName === '') {
             return new JsonResponse(['success' => false, 'message' => 'New size name cannot be empty.'], 400);
         }
 
-        $size = $entityManager->getRepository(Size::class)->find($id);
-        if (!$size) {
+        $size = $em->getRepository(Size::class)->find($id);
+        if ($size === null) {
             return new JsonResponse(['success' => false, 'message' => 'Size not found.'], 404);
         }
 
         $size->setName($newSizeName);
-        $entityManager->flush();
+        $em->flush();
 
         return new JsonResponse(['success' => true]);
     }

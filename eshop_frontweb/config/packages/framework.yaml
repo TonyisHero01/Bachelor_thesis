@@ -1,19 +1,19 @@
-# see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:
-    secret: '%env(APP_SECRET)%'
+  secret: '%env(APP_SECRET)%'
+  default_locale: 'en'
 
-    default_locale: '%locale%'
-
-    session:
-        handler_id: null
-        cookie_lifetime: 7200
-        gc_maxlifetime: 7200
-        cookie_secure: auto
-        cookie_samesite: lax
-
+  session:
+    # 每个项目务必不同
+    name: FRONTWEBSESSID
+    handler_id: null                  # 文件型 session
+    save_path: '%kernel.project_dir%/var/sessions_front/%kernel.environment%'
+    cookie_lifetime: 86400            # 1天（按需）
+    gc_maxlifetime: 86400
+    cookie_secure: auto               # https 环境自动 secure
+    cookie_samesite: lax
 
 when@test:
-    framework:
-        test: true
-        session:
-            storage_factory_id: session.storage.factory.mock_file
+  framework:
+    test: true
+    session:
+      storage_factory_id: session.storage.factory.mock_file

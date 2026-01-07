@@ -1,117 +1,147 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\Entity\ReturnRequest;
-use App\Entity\Order;
-use App\Entity\ShopInfo;
 use App\Entity\Category;
-use App\Repository\OrderRepository;
+use App\Entity\Order;
+use App\Entity\ReturnRequest;
+use App\Entity\ShopInfo;
 use App\Repository\OrderItemRepository;
+use App\Repository\OrderRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpFoundation\Request;
-use App\Controller\BaseController;
-use Twig\Environment;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Twig\Environment;
 
 class ReturnController extends BaseController
 {
-    public function __construct(EntityManagerInterface $entityManager, Environment $twig, LoggerInterface $logger)
-    {
+    private ?ShopInfo $shopInfo = null;
+
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        Environment $twig,
+        LoggerInterface $logger,
+    ) {
         parent::__construct($twig, $logger);
-        $this->entityManager = $entityManager;
-        $this->shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
+
+        $this->shopInfo = $this->entityManager
+            ->getRepository(ShopInfo::class)
+            ->findOneBy([], ['id' => 'DESC']);
     }
 
-    #[Route('/order/{id}/return-form', name: 'return_form')]
     /**
-     * Displays the return form for a completed order.
-     *
-     * @param int $id Order ID
-     * @param OrderRepository $orderRepository Repository for Order entity
-     * @param OrderItemRepository $orderItemRepository Repository for OrderItem entity
-     * @param Request $request Symfony HTTP request
-     * @return Response Return form page or redirect to order list if order is invalid
+     * Renders the return request form for a completed order.
      */
-    public function returnForm(int $id, OrderRepository $orderRepository, OrderItemRepository $orderItemRepository, Request $request): \Symfony\Component\HttpFoundation\Response
-    {
+    #[Route('/order/{id}/return-form', name: 'return_form', methods: ['GET'])]
+    public function returnForm(
+        int $id,
+        OrderRepository $orderRepository,
+        OrderItemRepository $orderItemRepository,
+        Request $request,
+    ): Response {
         $order = $orderRepository->find($id);
-        if (!$order || !$order->getIsCompleted()) {
+        if (!$order instanceof Order || !$order->getIsCompleted()) {
             return $this->redirectToRoute('customer_orders');
         }
 
-        $categories = $this->entityManager->getRepository(Category::class)->findAllCategories();
-        return $this->renderLocalized('eshop_order/return_form.html.twig', [
-            'show_sidebar' => false,
-            'shopInfo' => $this->shopInfo,
-            'locale' => $request->getLocale(),
-            'languages' => $this->getAvailableLanguages(),
-            'order' => $order,
-            'orderItems' => $orderItemRepository->findBy(['order' => $order]),
-            'user' => $this->getUser(),
-            'categories' => $categories
-        ], $request);
+        $categoriesRepo = $this->entityManager->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'eshop_order/return_form.html.twig',
+            [
+                'show_sidebar' => false,
+                'shopInfo' => $this->shopInfo,
+                'locale' => (string) $request->getLocale(),
+                'languages' => $this->getAvailableLanguages(),
+                'order' => $order,
+                'orderItems' => $orderItemRepository->findBy(['order' => $order]),
+                'user' => $this->getUser(),
+                'categories' => $categories,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/order/{id}/submit-return', name: 'submit_return', methods: ['POST'])]
     /**
-     * Handles submission of a return request.
-     *
-     * Validates the order, parses the input data, and stores a ReturnRequest entry.
-     *
-     * Expected JSON payload:
-     * {
-     *   "email": "string",
-     *   "phone": "string",
-     *   "name": "string",
-     *   "items": ["SKU123", "SKU456"],
-     *   "reason": "string",
-     *   "message": "string"
-     * }
-     *
-     * @param int $id Order ID
-     * @param Request $request HTTP request containing JSON payload
-     * @param EntityManagerInterface $entityManager Doctrine entity manager
-     * @param OrderRepository $orderRepository Repository to fetch Order entity
-     * @return JsonResponse JSON response with success/failure status and message
+     * Creates a return request for a completed order.
      */
+    #[Route('/order/{id}/submit-return', name: 'submit_return', methods: ['POST'])]
     public function submitReturn(
-        int $id, 
-        Request $request, 
-        EntityManagerInterface $entityManager, 
-        OrderRepository $orderRepository
+        int $id,
+        Request $request,
+        EntityManagerInterface $entityManager,
+        OrderRepository $orderRepository,
     ): JsonResponse {
         $order = $orderRepository->find($id);
-        if (!$order || !$order->getIsCompleted()) {
-            return new JsonResponse(["success" => false, "message" => "Invalid order"], 400);
+        if (!$order instanceof Order || !$order->getIsCompleted()) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid order'], 400);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data = json_decode((string) $request->getContent(), true);
+        if (!is_array($data)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON body'], 400);
+        }
 
-        if (!isset($data['items']) || !is_array($data['items']) || empty($data['items'])) {
-            return new JsonResponse(["success" => false, "message" => "No items selected for return"], 400);
+        if (!isset($data['items']) || !is_array($data['items']) || $data['items'] === []) {
+            return new JsonResponse(['success' => false, 'message' => 'No items selected for return'], 400);
+        }
+
+        $email = trim((string) ($data['email'] ?? ''));
+        $phone = trim((string) ($data['phone'] ?? ''));
+        $name = trim((string) ($data['name'] ?? ''));
+
+        if ($email === '') {
+            return new JsonResponse(['success' => false, 'message' => 'Email is required'], 400);
+        }
+
+        if ($phone === '') {
+            return new JsonResponse(['success' => false, 'message' => 'Phone is required'], 400);
+        }
+
+        if ($name === '') {
+            return new JsonResponse(['success' => false, 'message' => 'Name is required'], 400);
+        }
+
+        $items = array_values(array_filter(array_map(
+            static fn ($v): string => trim((string) $v),
+            $data['items'],
+        ), static fn (string $v): bool => $v !== ''));
+
+        if ($items === []) {
+            return new JsonResponse(['success' => false, 'message' => 'No items selected for return'], 400);
         }
 
         try {
-            $formattedSkus = implode(', ', $data['items']);
-
             $returnRequest = new ReturnRequest();
-            $returnRequest->setUserEmail($data['email'] ?? '');
-            $returnRequest->setUserPhone($data['phone'] ?? '');
-            $returnRequest->setUserName($data['name'] ?? '');
             $returnRequest->setOrder($order);
-            $returnRequest->setProductSkus($formattedSkus);
-            $returnRequest->setReturnReason($data['reason'] ?? null);
-            $returnRequest->setUserMessage($data['message'] ?? null);
+            $returnRequest->setUserEmail($email);
+            $returnRequest->setUserPhone($phone);
+            $returnRequest->setUserName($name);
+            $returnRequest->setProductSkus(implode(',', $items));
+            $returnRequest->setReturnReason(
+                array_key_exists('reason', $data) ? ($data['reason'] === null ? null : (string) $data['reason']) : null
+            );
+            $returnRequest->setUserMessage(
+                array_key_exists('message', $data) ? ($data['message'] === null ? null : (string) $data['message']) : null
+            );
 
             $entityManager->persist($returnRequest);
             $entityManager->flush();
 
-            return new JsonResponse(["success" => true, "message" => "Return request submitted"]);
-        } catch (\Exception $e) {
-            return new JsonResponse(["success" => false, "message" => "Error processing return request: " . $e->getMessage()], 500);
+            return new JsonResponse(['success' => true, 'message' => 'Return request submitted']);
+        } catch (\Throwable $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Error processing return request',
+            ], 500);
         }
     }
 }

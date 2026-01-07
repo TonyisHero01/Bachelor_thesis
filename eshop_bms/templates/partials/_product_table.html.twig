@@ -1,0 +1,95 @@
+{# templates/partials/_product_table.html.twig #}
+<table>
+  <thead>
+    <tr id="product_list_header">
+      <th>Name</th>
+      <th>Category</th>
+      <th>Color</th>
+      <th>Size</th>
+      <th>Quantity</th>
+      <th>Add Time</th>
+      <th>Price</th>
+      <th>Edit</th>
+      <th>Delete</th>
+    </tr>
+    <tr class="filter-row">
+      <th></th>
+      <th>
+        <select id="filter-category">
+          <option value="">All</option>
+          {% for category in categories %}
+            <option value="{{ category.name }}">{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </th>
+      <th>
+        <select id="filter-color">
+          <option value="">All</option>
+          {% for color in colors %}
+            <option value="{{ color.name }}">{{ color.name }}</option>
+          {% endfor %}
+        </select>
+      </th>
+      <th>
+        <select id="filter-size">
+          <option value="">All</option>
+          {% for size in sizes %}
+            <option value="{{ size.name }}">{{ size.name }}</option>
+          {% endfor %}
+        </select>
+      </th>
+      <th><input type="number" id="filter-quantity" placeholder="Min qty"></th>
+      <th></th>
+      <th><input type="number" id="filter-price" placeholder="Max price"></th>
+      <th>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" onclick="applyFilters()">Filter</button>
+        </div>
+      </th>
+      <th>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" onclick="resetFilters()">Reset</button>
+        </div>
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% set ids = '' %}
+    {% for product in products %}
+      {% set ids = ids ~ product.id ~ ',' %}
+      <tr id="{{ product.id }}"
+          data-edit-route="{{ localized_path('edit_product', { id: product.id }) }}"
+          class="{% if product.hidden %}hidden-product{% endif %}"
+          data-hidden="{{ product.hidden ? 'true' : 'false' }}">
+        <td>{{ product.name }}</td>
+        <td>{{ product.category }}</td>
+        <td>{{ product.colorName }}</td>
+        <td>{{ product.sizeName }}</td>
+        <td>{{ product.numberInStock }}</td>
+        <td>{{ product.createdAt|date('Y-m-d H:i') }}</td>
+
+        {# ✅ 使用 money + data-base 以便切换货币 #}
+        <td>
+          <span class="money" data-base="{{ product.price }}">
+            {{ money(product.price) }}
+          </span>
+        </td>
+
+        <td>
+          <span class="edit-button" onclick="edit({{ product.id }})">
+            <i class="fa-regular fa-pen-to-square" style="color: green;"></i>
+          </span>
+        </td>
+        <td>
+          <span class="delete-button" onclick="delete_({{ product.id }})">
+            <i class="fas fa-trash" style="color: red;"></i>
+          </span>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# 供前端脚本使用的 id 集合 #}
+<div id="ids" data-ids="{{ ids|trim(',') }}" style="display: none;"></div>

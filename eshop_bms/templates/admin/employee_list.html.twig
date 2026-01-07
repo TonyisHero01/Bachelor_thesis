@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Employee List</title>
-    <link rel="stylesheet" href="{{ asset('../assets/styles/employee_list.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/styles/employee_list.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
@@ -16,7 +16,7 @@
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
     {% if app.user %}
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
-    {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
+    {% endif %}
     <h1>Employee List</h1>
     <button id="addEmployee" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Employee</button>
     <div class="filter-container">
@@ -70,10 +70,10 @@
         <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
         <span id="pageCount">Page Count </span>
     </div>
-    <script src="{{ asset('../assets/showPage.js') }}"></script>
-    <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
-    <script src="{{ asset('../assets/employeeEdit.js') }}"></script>
-    <script src="{{ asset('../assets/employeeFilter.js') }}"></script>
+    <script src="{{ asset('assets/showPage.js') }}"></script>
+    <script src="{{ asset('assets/employeeDelete.js') }}"></script>
+    <script src="{{ asset('assets/employeeEdit.js') }}"></script>
+    <script src="{{ asset('assets/employeeFilter.js') }}"></script>
 </body>
 </html>
 {% endblock %}

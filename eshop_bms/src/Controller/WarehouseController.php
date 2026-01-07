@@ -14,30 +14,27 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
+use App\Service\ShipmentService;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
+#[IsGranted('ROLE_WAREHOUSEMAN')]
 class WarehouseController extends BaseController
 {
-    #[Route('/warehouse', name: 'app_warehouse')]
     /**
-     * Displays the warehouse dashboard if the user is authenticated.
-     *
-     * @param AuthorizationCheckerInterface $authorizationChecker
-     * @return Response
+     * Displays the warehouse dashboard with pending orders and low-stock products.
      */
-    public function index(AuthorizationCheckerInterface $authorizationChecker, EntityManagerInterface $entityManager): Response
+    #[Route('/warehouse', name: 'app_warehouse', methods: ['GET'])]
+    public function index(EntityManagerInterface $em): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->Localized('employee/employee_not_logged.html.twig', []);
-        }
 
-        $pendingOrders = $entityManager->getRepository(Order::class)->createQueryBuilder('o')
+        $pendingOrders = $em->getRepository(Order::class)->createQueryBuilder('o')
             ->where('o.isCompleted = false')
             ->orderBy('o.orderCreatedAt', 'DESC')
             ->setMaxResults(10)
             ->getQuery()
             ->getResult();
 
-        $lowStockProducts = $entityManager->getRepository(\App\Entity\Product::class)->createQueryBuilder('p')
+        $lowStockProducts = $em->getRepository(\App\Entity\Product::class)->createQueryBuilder('p')
         ->where('p.number_in_stock < :threshold')
         ->setParameter('threshold', 5)
         ->orderBy('p.number_in_stock', 'ASC')
@@ -52,10 +49,13 @@ class WarehouseController extends BaseController
         ]);
     }
 
-    #[Route('/warehouse/low-stock', name: 'all_low_stock_products')]
-    public function showAllLowStockProducts(EntityManagerInterface $entityManager): Response
+    /**
+     * Displays all products with low stock (below configured threshold).
+     */
+    #[Route('/warehouse/low-stock', name: 'all_low_stock_products', methods: ['GET'])]
+    public function showAllLowStockProducts(EntityManagerInterface $em): Response
     {
-        $lowStockProducts = $entityManager->getRepository(Product::class)->createQueryBuilder('p')
+        $lowStockProducts = $em->getRepository(Product::class)->createQueryBuilder('p')
             ->where('p.number_in_stock < :threshold')
             ->setParameter('threshold', 5)
             ->orderBy('p.number_in_stock', 'ASC')
@@ -67,8 +67,11 @@ class WarehouseController extends BaseController
         ]);
     }
 
+    /**
+     * Batch updates stock for selected products.
+     */
     #[Route('/warehouse/update-stocks', name: 'batch_update_product_stock', methods: ['POST'])]
-    public function batchUpdateStock(Request $request, EntityManagerInterface $entityManager): Response
+    public function batchUpdateStock(Request $request, EntityManagerInterface $em): Response
     {
         $ids = $request->request->all('selected_products');
         $newStock = (int) $request->request->get('new_stock');
@@ -78,66 +81,59 @@ class WarehouseController extends BaseController
             return $this->redirectToRoute('all_low_stock_products');
         }
 
-        $products = $entityManager->getRepository(Product::class)->findBy(['id' => $ids]);
+        $products = $em->getRepository(Product::class)->findBy(['id' => $ids]);
 
         foreach ($products as $product) {
             $product->setNumberInStock($newStock);
         }
 
-        $entityManager->flush();
+        $em->flush();
 
         $this->addFlash('success', count($products) . ' products updated successfully.');
         return $this->redirectToRoute('all_low_stock_products');
     }
 
-    #[Route('/warehouse/product/{id}/update-stock', name: 'update_product_stock', methods: ['POST'])]
-    public function updateProductStock(int $id, Request $request, EntityManagerInterface $entityManager): Response
+    /**
+     * Updates stock for a single product.
+     */
+    #[Route('/warehouse/product/{id}/update-stock', name: 'update_product_stock', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function updateProductStock(int $id, Request $request, EntityManagerInterface $em): Response
     {
-        $product = $entityManager->getRepository(Product::class)->find($id);
+        $product = $em->getRepository(Product::class)->find($id);
         if (!$product) {
             throw $this->createNotFoundException('Product not found.');
         }
 
         $newStock = (int) $request->request->get('new_stock');
         $product->setNumberInStock($newStock);
-        $entityManager->flush();
+        $em->flush();
 
         return $this->redirectToRoute('app_warehouse');
     }
 
-    #[Route('/warehouse/order_management', name: 'app_order_management')]
     /**
-     * Displays the order management page with a list of all orders and the default currency.
-     *
-     * @param EntityManagerInterface $entityManager
-     * @param AuthorizationCheckerInterface $authorizationChecker
-     * @return Response
+     * Displays the order management page with all orders and the default currency.
      */
-    public function redirectToOrderTracking(EntityManagerInterface $entityManager, AuthorizationCheckerInterface $authorizationChecker): Response
+    #[Route('/warehouse/order_management', name: 'app_order_management', methods: ['GET'])]
+    public function orderManagement(EntityManagerInterface $em): Response
     {
-        if (!$authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY')) {
-            return $this->renderLocalized('employee/employee_not_logged.html.twig', []);
-        }
-        $orders = $entityManager->getRepository(Order::class)->findAllOrders();
+        $orders = $em->getRepository(Order::class)->findAllOrders();
 
-        $currency = $entityManager->getRepository(Currency::class)->findDefaultCurrency();
+        $currency = $em->getRepository(Currency::class)->findDefaultCurrency();
 
         return $this->renderLocalized('warehouse/order_management.html.twig',[
             'orders' => $orders,
             'currency' => $currency
         ]);
     }
-    #[Route('/warehouse/order/{id}', name: 'order_detail')]
+
     /**
-     * Shows detailed information about a specific order.
-     *
-     * @param int $id Order ID.
-     * @param EntityManagerInterface $entityManager
-     * @return Response
+     * Displays details for a specific order.
      */
-    public function orderDetail(int $id, EntityManagerInterface $entityManager): Response
+    #[Route('/warehouse/order/{id}', name: 'order_detail', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function orderDetail(int $id, EntityManagerInterface $em): Response
     {
-        $order = $entityManager->getRepository(Order::class)->find($id);
+        $order = $em->getRepository(Order::class)->find($id);
 
         if (!$order) {
             throw $this->createNotFoundException('Order not found.');
@@ -147,63 +143,50 @@ class WarehouseController extends BaseController
             'order' => $order
         ]);
     }
-    #[Route('/order/mark_completed/{id}', name: 'mark_order_completed', methods: ['POST'])]
+
     /**
-     * Marks a specific order as completed via POST request.
-     *
-     * @param int $id Order ID.
-     * @param EntityManagerInterface $entityManager
-     * @return JsonResponse JSON response with success status.
+     * Marks an order as completed.
      */
-    public function markAsCompleted(int $id, EntityManagerInterface $entityManager): JsonResponse
+    #[Route('/order/mark_completed/{id}', name: 'mark_order_completed', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function markAsCompleted(int $id, EntityManagerInterface $em): JsonResponse
     {
-        $order = $entityManager->getRepository(Order::class)->find($id);
+        $order = $em->getRepository(Order::class)->find($id);
 
         if (!$order) {
             return new JsonResponse(['success' => false, 'message' => 'Order not found.'], 404);
         }
 
         $order->setIsCompleted(true);
-        $entityManager->persist($order);
-        $entityManager->flush();
+        $em->persist($order);
+        $em->flush();
 
         return new JsonResponse(['success' => true]);
     }
 
-    #[Route('/warehouse/return-requests', name: 'app_return_requests')]
     /**
-     * Displays all return requests with support for localized templates.
-     *
-     * @param Request $request HTTP request containing locale info.
-     * @param EntityManagerInterface $entityManager
-     * @param LoggerInterface $logger Logger to debug locale and path info.
-     * @return Response
+     * Displays all return requests.
      */
-    public function returnRequests(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        LoggerInterface $logger
-    ): Response {
-        $locale = $request->get('_locale') ?? $request->query->get('_locale') ?? $request->getLocale();
+    #[Route('/warehouse/return-requests', name: 'app_return_requests', methods: ['GET'])]
+    public function returnRequests(Request $request, EntityManagerInterface $em): Response
+    {
+        $returnRequests = $em->getRepository(ReturnRequest::class)->findAll();
 
-        $returnRequests = $entityManager->getRepository(ReturnRequest::class)->findAll();
-
-        return $this->renderLocalized('warehouse/return_requests.html.twig', [
-            'returnRequests' => $returnRequests,
-        ], $request);
+        return $this->renderLocalized(
+            'warehouse/return_requests.html.twig',
+            [
+                'returnRequests' => $returnRequests,
+            ],
+            $request
+        );
     }
 
-    #[Route('/warehouse/return-request/{id}', name: 'return_request_detail')]
     /**
-     * Shows detailed information about a specific return request.
-     *
-     * @param int $id Return request ID.
-     * @param EntityManagerInterface $entityManager
-     * @return Response
+     * Displays details for a specific return request.
      */
-    public function returnRequestDetail(int $id, EntityManagerInterface $entityManager): Response
+    #[Route('/warehouse/return-request/{id}', name: 'return_request_detail', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function returnRequestDetail(int $id, EntityManagerInterface $em): Response
     {
-        $returnRequest = $entityManager->getRepository(ReturnRequest::class)->find($id);
+        $returnRequest = $em->getRepository(ReturnRequest::class)->find($id);
 
         if (!$returnRequest) {
             throw $this->createNotFoundException('Return request not found.');
@@ -214,18 +197,13 @@ class WarehouseController extends BaseController
         ]);
     }
 
-    #[Route('/warehouse/return-request/{id}/process', name: 'process_return_request', methods: ['POST'])]
     /**
-     * Updates the status of a return request to either 'accepted' or 'rejected'.
-     *
-     * @param int $id Return request ID.
-     * @param EntityManagerInterface $entityManager
-     * @param Request $request JSON POST body containing new status.
-     * @return JsonResponse JSON response indicating success or error.
+     * Updates the status of a return request.
      */
-    public function processReturnRequest(int $id, EntityManagerInterface $entityManager, Request $request): JsonResponse
+    #[Route('/warehouse/return-request/{id}/process', name: 'process_return_request', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function processReturnRequest(int $id, Request $request, EntityManagerInterface $em): JsonResponse
     {
-        $returnRequest = $entityManager->getRepository(ReturnRequest::class)->find($id);
+        $returnRequest = $em->getRepository(ReturnRequest::class)->find($id);
 
         if (!$returnRequest) {
             return new JsonResponse(['success' => false, 'message' => 'Return request not found.'], 404);
@@ -239,9 +217,40 @@ class WarehouseController extends BaseController
         }
 
         $returnRequest->setStatus($status);
-        $entityManager->persist($returnRequest);
-        $entityManager->flush();
+        $em->persist($returnRequest);
+        $em->flush();
 
         return new JsonResponse(['success' => true]);
+    }
+
+    /**
+     * Advances shipment status for an order.
+     */
+    #[Route('/warehouse/{id}/shipment/advance', name: 'order_shipment_advance', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function advance(int $id, Request $request, ShipmentService $svc): RedirectResponse
+    {
+
+        $token = (string) $req->request->get('_token');
+        if (!$this->isCsrfTokenValid('ship-advance-'.$id, $token)) {
+            $this->addFlash('error', 'Invalid CSRF token.');
+            return $this->redirectToRoute('order_detail', ['id' => $id]);
+        }
+
+        $to = strtoupper((string) $req->request->get('to')); 
+        $allowed = ['PACKED','SHIPPED','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','RETURNED'];
+        if (!in_array($to, $allowed, true)) {
+            $this->addFlash('error', 'Invalid target status.');
+            return $this->redirectToRoute('order_detail', ['id' => $id]);
+        }
+
+        try {
+            $svc->advanceTo($id, $to, $this->getUser()->getUserIdentifier());
+            $this->addFlash('success', "Shipment advanced to {$to}.");
+        } catch (\Throwable $e) {
+            $this->addFlash('error', 'Failed to advance shipment: '.$e->getMessage());
+        }
+
+        $back = $req->headers->get('referer');
+        return $back ? $this->redirect($back) : $this->redirectToRoute('order_detail', ['id' => $id]);
     }
 }

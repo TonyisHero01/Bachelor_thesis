@@ -1,7 +1,7 @@
 {# templates/admin/employee_list.html.twig #}
 {% extends 'base.html.twig' %}
 {% block stylesheets %}
-    <link rel="stylesheet" href="{{ asset('../assets/styles/employee_list.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/styles/employee_list.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {% endblock %}
 {% block body %}
@@ -11,7 +11,7 @@
     <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
     {% if app.user %}
         {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
-    {% endif %} <a href="/{{ app.user ? 'logout' : 'login' }}">{{ app.user ? 'Logout' : 'Login' }}</a>
+    {% endif %}
     <h1>Admin List</h1>
     <button id="addEmployee" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Administrator</button>
     <table>
@@ -19,8 +19,6 @@
         {% for employee in employees %}
             {% set ids = ids ~ employee.id ~ ',' %}
             <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('admin_edit', {'id': employee.id}) }}"> 
-            {#<tr>#}
-            {# <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('save_employee') }}"> #}
                 </div>
                 <td class="employee-name">{{ employee.name }}</td> 
                 <td class="employee-surname">{{ employee.surname }}</td>
@@ -36,8 +34,8 @@
         <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
         <span id="pageCount">Page Count </span>
     </div>
-    <script src="{{ asset('../assets/search.js') }}"></script>
-    <script src="{{ asset('../assets/showPage.js') }}"></script>
-    <script src="{{ asset('../assets/employeeDelete.js') }}"></script>
-    <script src="{{ asset('../assets/adminEdit.js') }}"></script>
+    <script src="{{ asset('assets/search.js') }}"></script>
+    <script src="{{ asset('assets/showPage.js') }}"></script>
+    <script src="{{ asset('assets/employeeDelete.js') }}"></script>
+    <script src="{{ asset('assets/adminEdit.js') }}"></script>
 {% endblock %}

@@ -2,83 +2,92 @@
 
 {% block title %}{{ product.name }} - Product Details{% endblock %}
 
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/product_edit.css') }}">
+{% endblock %}
+
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/styles/product_edit.css') }}">
-
 <div id="body">
-    <h1>Product Detail</h1>
+  <h1>Product Detail</h1>
 
-    <form>
-        <label>Name</label>
-        <input type="text" value="{{ product.name }}" readonly><br>
+  <form>
+    <label>Name</label>
+    <input type="text" value="{{ product.name }}" readonly><br>
 
-        <label>SKU</label>
-        <input type="text" value="{{ product.sku }}" readonly><br>
+    <label>SKU</label>
+    <input type="text" value="{{ product.sku }}" readonly><br>
 
-        <label>Category</label>
-        <input type="text" value="{{ product.category ?: 'No category' }}" readonly><br>
+    <label>Category</label>
+    <input type="text" value="{{ product.category ?: 'No category' }}" readonly><br>
 
-        <label>Description</label><br>
-        <textarea rows="10" readonly>{{ product.description ?: 'No description available' }}</textarea><br>
+    <label>Description</label><br>
+    <textarea rows="10" readonly>{{ product.description ?: 'No description available' }}</textarea><br>
 
-        <label>Size</label>
-        <input type="text" value="{{ product.size ? product.size.name : 'N/A' }}" readonly><br>
+    <label>Size</label>
+    <input type="text" value="{{ product.size ? product.size.name : 'N/A' }}" readonly><br>
 
-        <label>Dimensions (W x H x L)</label><br>
-        <input type="text" value="{{ product.width ?: 'N/A' }} x {{ product.height ?: 'N/A' }} x {{ product.length ?: 'N/A' }} cm" readonly><br>
+    <label>Dimensions (W x H x L)</label><br>
+    <input type="text" value="{{ product.width ?: 'N/A' }} x {{ product.height ?: 'N/A' }} x {{ product.length ?: 'N/A' }} cm" readonly><br>
 
-        <label>Weight</label>
-        <input type="text" value="{{ product.weight ?: 'N/A' }} kg" readonly><br>
+    <label>Weight</label>
+    <input type="text" value="{{ product.weight ?: 'N/A' }} kg" readonly><br>
 
-        <label>Material</label>
-        <input type="text" value="{{ product.material ?: 'N/A' }}" readonly><br>
+    <label>Material</label>
+    <input type="text" value="{{ product.material ?: 'N/A' }}" readonly><br>
 
-        <label>Color</label>
-        <input type="text" value="{{ product.color ?: 'N/A' }}" readonly><br>
+    <label>Color</label>
+    <input type="text" value="{{ product.color ?: 'N/A' }}" readonly><br>
 
-        <label>Stock</label>
-        <input type="text" value="{{ product.numberInStock > 0 ? product.numberInStock ~ ' Available' : 'Out of Stock' }}" readonly><br>
+    <label>Stock</label>
+    <input type="text" value="{{ product.numberInStock > 0 ? product.numberInStock ~ ' Available' : 'Out of Stock' }}" readonly><br>
 
-        <label>Price</label>
-        <input type="text" value="{{ product.price|number_format(2) }} {{ product.currency.getName() }}" readonly><br>
+    <label>Price</label><br>
+    <div>
+      <span class="money" data-base="{{ product.price }}">{{ money(product.price) }}</span>
+    </div><br>
 
-        {% if product.discount < 100 %}
-            <label>Discount</label>
-            <input type="text" value="{{ product.discount }}%" readonly><br>
+    {# final = price * (discount / 100) #}
+    {% if product.discount is defined and product.discount is not null and product.discount < 100 %}
+      <label>Discount</label>
+      <input type="text" value="{{ product.discount }}%" readonly><br>
 
-            <label>Final Price</label>
-            <input type="text" value="{{ (product.price * product.discount / 100)|number_format(2) }} {{ product.currency.getName() }}" readonly><br>
-        {% endif %}
+      <label>Final Price</label><br>
+      {% set finalPrice = product.price * (product.discount / 100) %}
+      <div>
+        <span class="money" data-base="{{ finalPrice }}">{{ money(finalPrice) }}</span>
+      </div><br>
+    {% endif %}
 
-        <label>Tax Rate</label>
-        <input type="text" value="{{ product.taxRate }}%" readonly><br>
+    <label>Tax Rate</label>
+    <input type="text" value="{{ product.taxRate }}%" readonly><br>
 
-        <label>Added Time</label>
-        <input type="text" value="{{ product.createdAt|date('Y-m-d H:i') }}" readonly><br>
+    <label>Added Time</label>
+    <input type="text" value="{{ product.createdAt|date('Y-m-d H:i') }}" readonly><br>
 
-        <label>Images</label><br>
-        <div id="image_container">
-            {% if product.imageUrls is not empty %}
-                {% for imageUrl in product.imageUrls %}
-                    <div class="image_upload_section">
-                        <img src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" width="304" height="228"><br>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <p>No images uploaded.</p>
-            {% endif %}
-        </div>
+    <label>Images</label><br>
+    <div id="image_container">
+      {% if product.imageUrls is not empty %}
+        {% for imageUrl in product.imageUrls %}
+          <div class="image_upload_section">
+            <img src="{{ asset('images/' ~ imageUrl) }}" alt="{{ product.name }}" width="304" height="228"><br>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No images uploaded.</p>
+      {% endif %}
+    </div>
 
-        <label>Attributes</label><br>
-        {% if product.attributes is not empty %}
-            {% for key, value in product.attributes %}
-                <input type="text" value="{{ key }}: {{ value }}" readonly><br>
-            {% endfor %}
-        {% else %}
-            <p>No extra attributes.</p>
-        {% endif %}
+    <label>Attributes</label><br>
+    {% if product.attributes is not empty %}
+      {% for key, value in product.attributes %}
+        <input type="text" value="{{ key }}: {{ value }}" readonly><br>
+      {% endfor %}
+    {% else %}
+      <p>No extra attributes.</p>
+    {% endif %}
 
-        <button type="button" onclick="window.history.back()">Back</button>
-    </form>
+    <button type="button" onclick="window.history.back()">Back</button>
+  </form>
 </div>
 {% endblock %}

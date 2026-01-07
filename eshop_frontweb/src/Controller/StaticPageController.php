@@ -1,9 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
-use App\Entity\ShopInfo;
 use App\Entity\Category;
+use App\Entity\ShopInfo;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,190 +13,239 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class StaticPageController extends BaseController
 {
+    /**
+     * Loads the latest ShopInfo record with translations (if available).
+     */
     private function getShopInfo(EntityManagerInterface $em): ?ShopInfo
     {
-        return $em->getRepository(ShopInfo::class)->findWithTranslations();
+        $repo = $em->getRepository(ShopInfo::class);
+
+        if (method_exists($repo, 'findWithTranslations')) {
+            /** @var ShopInfo|null $shopInfo */
+            $shopInfo = $repo->findWithTranslations();
+            return $shopInfo;
+        }
+
+        /** @var ShopInfo|null $shopInfo */
+        $shopInfo = $repo->findOneBy([], ['id' => 'DESC']);
+
+        return $shopInfo;
     }
 
-    #[Route('/about-us', name: 'page_about_us')]
     /**
-     * Displays the "About Us" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "About Us" static page.
      */
+    #[Route('/about-us', name: 'page_about_us', methods: ['GET'])]
     public function aboutUs(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('aboutUs', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'About Us';
+        $title = (string) ($request->query->get('title') ?? 'About Us');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/how-to-order', name: 'page_how_to_order')]
     /**
-     * Displays the "How To Order" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "How To Order" static page.
      */
+    #[Route('/how-to-order', name: 'page_how_to_order', methods: ['GET'])]
     public function howToOrder(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('howToOrder', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'How To Order';
+        $title = (string) ($request->query->get('title') ?? 'How To Order');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/business-conditions', name: 'page_business_conditions')]
     /**
-     * Displays the "Business Conditions" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "Business Conditions" static page.
      */
+    #[Route('/business-conditions', name: 'page_business_conditions', methods: ['GET'])]
     public function businessConditions(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('businessConditions', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'Business Conditions';
+        $title = (string) ($request->query->get('title') ?? 'Business Conditions');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/privacy-policy', name: 'page_privacy_policy')]
     /**
-     * Displays the "Privacy Policy" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "Privacy Policy" static page.
      */
+    #[Route('/privacy-policy', name: 'page_privacy_policy', methods: ['GET'])]
     public function privacyPolicy(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('privacyPolicy', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'Privacy Policy';
+        $title = (string) ($request->query->get('title') ?? 'Privacy Policy');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/shipping-info', name: 'page_shipping_info')]
     /**
-     * Displays the "Shipping Info" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "Shipping Info" static page.
      */
+    #[Route('/shipping-info', name: 'page_shipping_info', methods: ['GET'])]
     public function shippingInfo(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('shippingInfo', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'Shipping Info';
+        $title = (string) ($request->query->get('title') ?? 'Shipping Info');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/payment', name: 'page_payment')]
     /**
-     * Displays the "Payment" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "Payment" static page.
      */
+    #[Route('/payment', name: 'page_payment', methods: ['GET'])]
     public function payment(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('payment', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'Payment';
+        $title = (string) ($request->query->get('title') ?? 'Payment');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 
-    #[Route('/refund', name: 'page_refund')]
     /**
-     * Displays the "Refund" static page.
-     *
-     * @param EntityManagerInterface $em Doctrine entity manager
-     * @param Request $request Symfony HTTP request
-     * @return Response Rendered HTML response
+     * Renders the "Refund" static page.
      */
+    #[Route('/refund', name: 'page_refund', methods: ['GET'])]
     public function refund(EntityManagerInterface $em, Request $request): Response
     {
         $shopInfo = $this->getShopInfo($em);
-        $locale = $request->get('_locale') ?? $request->getLocale();
+        $locale = (string) ($request->get('_locale') ?? $request->getLocale());
         $content = $shopInfo?->getTranslatedField('refund', $locale) ?? '';
-        $title = $request->query->get('title') ?? 'Refund';
+        $title = (string) ($request->query->get('title') ?? 'Refund');
 
-        return $this->renderLocalized('static_page.html.twig', [
-            'title' => $title,
-            'content' => $content,
-            'shopInfo' => $shopInfo,
-            'locale' => $locale,
-            'categories' => $em->getRepository(Category::class)->findAllCategories(),
-            'languages' => $this->getAvailableLanguages(),
-            'show_sidebar' => false,
-        ], $request);
+        $categoriesRepo = $em->getRepository(Category::class);
+        $categories = method_exists($categoriesRepo, 'findAllCategories')
+            ? $categoriesRepo->findAllCategories()
+            : $categoriesRepo->findAll();
+
+        return $this->renderLocalized(
+            'static_page.html.twig',
+            [
+                'title' => $title,
+                'content' => $content,
+                'shopInfo' => $shopInfo,
+                'locale' => $locale,
+                'categories' => $categories,
+                'languages' => $this->getAvailableLanguages(),
+                'show_sidebar' => false,
+            ],
+            $request,
+        );
     }
 }

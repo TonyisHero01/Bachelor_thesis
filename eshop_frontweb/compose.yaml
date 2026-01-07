@@ -15,6 +15,7 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
+
 volumes:
 ###> doctrine/doctrine-bundle ###
   database_data:

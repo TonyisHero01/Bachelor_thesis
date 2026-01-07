@@ -3,7 +3,7 @@
 {% block title %}Customer Registration{% endblock %}
 
 {% block body %}
-<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/register.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/register.css') }}">
     <div class="registration-container">
         <h1>📝 Create Your Account</h1>
 
@@ -19,9 +19,19 @@
                 </div>
 
                 <div class="form-group">
-                    {{ form_label(registrationForm.password_hash, 'Password') }}
-                    {{ form_widget(registrationForm.password_hash, { 'attr': {'placeholder': 'Create a password'} }) }}
-                    {{ form_errors(registrationForm.password_hash) }}
+                    {{ form_label(registrationForm.plainPassword.first) }}
+                    {{ form_widget(registrationForm.plainPassword.first, {
+                        'attr': {'placeholder': 'Create a password'}
+                    }) }}
+                    {{ form_errors(registrationForm.plainPassword.first) }}
+                </div>
+
+                <div class="form-group">
+                    {{ form_label(registrationForm.plainPassword.second) }}
+                    {{ form_widget(registrationForm.plainPassword.second, {
+                        'attr': {'placeholder': 'Repeat password'}
+                    }) }}
+                    {{ form_errors(registrationForm.plainPassword.second) }}
                 </div>
 
                 <div class="form-buttons">

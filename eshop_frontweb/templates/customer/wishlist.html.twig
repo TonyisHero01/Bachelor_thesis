@@ -2,8 +2,8 @@
 
 {% block stylesheets %}
     {{ parent() }}
-    <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/product-page.css') }}">
-    <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/wishlist.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/eshop_styles/product-page.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/eshop_styles/wishlist.css') }}">
 {% endblock %}
 
 {% block body %}
@@ -46,6 +46,6 @@
     {% endfor %}
 </table>
 
-<script src="{{ asset('../assets/eshopWishlist.js') }}"></script>
+<script src="{{ asset('assets/eshopWishlist.js') }}"></script>
 
 {% endblock %}

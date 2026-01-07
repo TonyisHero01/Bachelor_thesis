@@ -1,0 +1,67 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Order Tracking{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/tracking.css') }}">
+
+<div class="page">
+  <div class="header">
+    <div class="title-group">
+      <h1>Order Tracking</h1>
+      {% if order %}
+        <span class="subtitle">Order #{{ order.id }}</span>
+      {% endif %}
+    </div>
+
+    {% if shipment %}
+      <div class="status" data-status="{{ shipment.status|upper }}">
+        <span class="badge">{{ shipment.status|replace({'_':' '})|title }}</span>
+      </div>
+    {% else %}
+      <span class="badge badge-secondary">Shipment Not Created</span>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    {% if shipment %}
+      <p><strong>Tracking Number:</strong> {{ shipment.trackingNumber ?? '—' }}</p>
+      <p><strong>Current Status:</strong> {{ shipment.status|replace({'_':' '})|title }}</p>
+
+      {# ✅ Only show timeline if NOT public view (backend view only) #}
+      {% if not public %}
+        <h2>Shipment Timeline (Internal)</h2>
+        <div class="timeline">
+          {% for e in shipment.events %}
+            <div class="timeline-item">
+              <span class="timeline-bullet"></span>
+              <div class="timeline-meta">
+                {{ e.eventTime|date('Y-m-d H:i') }}
+                {% if e.location %} · {{ e.location }}{% endif %}
+              </div>
+              <div class="timeline-title">{{ e.eventCode|upper }}</div>
+              {% if e.description %}
+                <div class="timeline-desc">{{ e.description }}</div>
+              {% endif %}
+            </div>
+          {% else %}
+            <p>No shipment events recorded.</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    {% else %}
+      <p>This order does not have a shipment yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="page-footer">
+    {% if public %}
+      <a href="{{ path('eshop_index', {'_locale': locale}) }}">Back to Home</a>
+    {% else %}
+      <a href="{{ path('customer_orders', {'_locale': locale}) }}">Back to My Orders</a>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

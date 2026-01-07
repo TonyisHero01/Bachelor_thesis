@@ -4,135 +4,143 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
 <form method="post" action="{{ path('frontweb_translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('frontweb_translation_submit') }}">
     <input type="hidden" name="original_path" value="eshop_base.html.twig">
     <input type="hidden" name="target_language" value="{{ lang }}">
 
-    <div class="field-group">
-        <label>☎</label>
-        <input type="hidden" name="original__auto___4" value="☎">
-        <input type="text" name="field__auto___4" placeholder="☎">
-    </div>
-    <div class="field-group">
-        <label>✉</label>
-        <input type="hidden" name="original__auto___5" value="✉">
-        <input type="text" name="field__auto___5" placeholder="✉">
-    </div>
-    <div class="field-group">
-        <label>📞</label>
-        <input type="hidden" name="original__auto___6" value="📞">
-        <input type="text" name="field__auto___6" placeholder="📞">
-    </div>
-    <div class="field-group">
-        <label>✉️</label>
-        <input type="hidden" name="original__auto___7" value="✉️">
-        <input type="text" name="field__auto___7" placeholder="✉️">
-    </div>
-    <div class="field-group">
-        <label>©</label>
-        <input type="hidden" name="original__auto___8" value="©">
-        <input type="text" name="field__auto___8" placeholder="©">
-    </div>
-    <div class="field-group">
-        <label>⚫️</label>
-        <input type="hidden" name="original__auto___11" value="⚫️">
-        <input type="text" name="field__auto___11" placeholder="⚫️">
-    </div>
-    <div class="field-group">
-        <label>sf</label>
-        <input type="hidden" name="original__auto_sf_12" value="sf">
-        <input type="text" name="field__auto_sf_12" placeholder="sf">
-    </div>
-    <div class="field-group">
-        <label>You are not logged in!</label>
-        <input type="hidden" name="original__auto_you_are_not_logged_in__24" value="You are not logged in!">
-        <input type="text" name="field__auto_you_are_not_logged_in__24" placeholder="You are not logged in!">
-    </div>
-    <div class="field-group">
-        <label>EN</label>
-        <input type="hidden" name="original__auto_en_26" value="EN">
-        <input type="text" name="field__auto_en_26" placeholder="EN">
-    </div>
-    <div class="field-group">
-        <label>Filters</label>
-        <input type="hidden" name="original__auto_filters_34" value="Filters">
-        <input type="text" name="field__auto_filters_34" placeholder="Filters">
-    </div>
-    <div class="field-group">
-        <label>Price</label>
-        <input type="hidden" name="original__auto_price_36" value="Price">
-        <input type="text" name="field__auto_price_36" placeholder="Price">
-    </div>
-    <div class="field-group">
-        <label>-</label>
-        <input type="hidden" name="original__auto___37" value="-">
-        <input type="text" name="field__auto___37" placeholder="-">
-    </div>
-    <div class="field-group">
-        <label>1000</label>
-        <input type="hidden" name="original__auto_1000_38" value="1000">
-        <input type="text" name="field__auto_1000_38" placeholder="1000">
-    </div>
-    <div class="field-group">
-        <label>Color</label>
-        <input type="hidden" name="original__auto_color_39" value="Color">
-        <input type="text" name="field__auto_color_39" placeholder="Color">
-    </div>
-    <div class="field-group">
-        <label>Size</label>
-        <input type="hidden" name="original__auto_size_42" value="Size">
-        <input type="text" name="field__auto_size_42" placeholder="Size">
-    </div>
-    <div class="field-group">
-        <label>Reset Filters</label>
-        <input type="hidden" name="original__auto_reset_filters_45" value="Reset Filters">
-        <input type="text" name="field__auto_reset_filters_45" placeholder="Reset Filters">
-    </div>
-    <div class="field-group">
-        <label>Apply Filters</label>
-        <input type="hidden" name="original__auto_apply_filters_46" value="Apply Filters">
-        <input type="text" name="field__auto_apply_filters_46" placeholder="Apply Filters">
-    </div>
-    <div class="field-group">
-        <label>Information</label>
-        <input type="hidden" name="original__auto_information_52" value="Information">
-        <input type="text" name="field__auto_information_52" placeholder="Information">
-    </div>
-    <div class="field-group">
-        <label>About Us</label>
-        <input type="hidden" name="original__auto_about_us_53" value="About Us">
-        <input type="text" name="field__auto_about_us_53" placeholder="About Us">
-    </div>
-    <div class="field-group">
-        <label>How To Order</label>
-        <input type="hidden" name="original__auto_how_to_order_54" value="How To Order">
-        <input type="text" name="field__auto_how_to_order_54" placeholder="How To Order">
-    </div>
-    <div class="field-group">
-        <label>Business Conditions</label>
-        <input type="hidden" name="original__auto_business_conditions_55" value="Business Conditions">
-        <input type="text" name="field__auto_business_conditions_55" placeholder="Business Conditions">
-    </div>
-    <div class="field-group">
-        <label>Privacy Policy</label>
-        <input type="hidden" name="original__auto_privacy_policy_56" value="Privacy Policy">
-        <input type="text" name="field__auto_privacy_policy_56" placeholder="Privacy Policy">
-    </div>
-    <div class="field-group">
-        <label>Shipping Info</label>
-        <input type="hidden" name="original__auto_shipping_info_57" value="Shipping Info">
-        <input type="text" name="field__auto_shipping_info_57" placeholder="Shipping Info">
-    </div>
-    <div class="field-group">
-        <label>Payment</label>
-        <input type="hidden" name="original__auto_payment_58" value="Payment">
-        <input type="text" name="field__auto_payment_58" placeholder="Payment">
-    </div>
-    <div class="field-group">
-        <label>Refund</label>
-        <input type="hidden" name="original__auto_refund_59" value="Refund">
-        <input type="text" name="field__auto_refund_59" placeholder="Refund">
-    </div>
+<div class="field-group">
+    <label>☎</label>
+    <input type="hidden" name="original__auto___4" value="☎">
+    <input type="text" name="field__auto___4" placeholder="☎">
+</div>
+<div class="field-group">
+    <label>✉</label>
+    <input type="hidden" name="original__auto___5" value="✉">
+    <input type="text" name="field__auto___5" placeholder="✉">
+</div>
+<div class="field-group">
+    <label>📞</label>
+    <input type="hidden" name="original__auto___6" value="📞">
+    <input type="text" name="field__auto___6" placeholder="📞">
+</div>
+<div class="field-group">
+    <label>✉️</label>
+    <input type="hidden" name="original__auto___7" value="✉️">
+    <input type="text" name="field__auto___7" placeholder="✉️">
+</div>
+<div class="field-group">
+    <label>©</label>
+    <input type="hidden" name="original__auto___8" value="©">
+    <input type="text" name="field__auto___8" placeholder="©">
+</div>
+<div class="field-group">
+    <label>⚫️</label>
+    <input type="hidden" name="original__auto___11" value="⚫️">
+    <input type="text" name="field__auto___11" placeholder="⚫️">
+</div>
+<div class="field-group">
+    <label>sf</label>
+    <input type="hidden" name="original__auto_sf_12" value="sf">
+    <input type="text" name="field__auto_sf_12" placeholder="sf">
+</div>
+<div class="field-group">
+    <label>You are not logged in!</label>
+    <input type="hidden" name="original__auto_you_are_not_logged_in__25" value="You are not logged in!">
+    <input type="text" name="field__auto_you_are_not_logged_in__25" placeholder="You are not logged in!">
+</div>
+<div class="field-group">
+    <label>EN</label>
+    <input type="hidden" name="original__auto_en_26" value="EN">
+    <input type="text" name="field__auto_en_26" placeholder="EN">
+</div>
+<div class="field-group">
+    <label>Filters</label>
+    <input type="hidden" name="original__auto_filters_38" value="Filters">
+    <input type="text" name="field__auto_filters_38" placeholder="Filters">
+</div>
+<div class="field-group">
+    <label>Price</label>
+    <input type="hidden" name="original__auto_price_40" value="Price">
+    <input type="text" name="field__auto_price_40" placeholder="Price">
+</div>
+<div class="field-group">
+    <label>0</label>
+    <input type="hidden" name="original__auto_text_41" value="0">
+    <input type="text" name="field__auto_text_41" placeholder="0">
+</div>
+<div class="field-group">
+    <label>-</label>
+    <input type="hidden" name="original__auto___42" value="-">
+    <input type="text" name="field__auto___42" placeholder="-">
+</div>
+<div class="field-group">
+    <label>1000</label>
+    <input type="hidden" name="original__auto_1000_43" value="1000">
+    <input type="text" name="field__auto_1000_43" placeholder="1000">
+</div>
+<div class="field-group">
+    <label>Color</label>
+    <input type="hidden" name="original__auto_color_44" value="Color">
+    <input type="text" name="field__auto_color_44" placeholder="Color">
+</div>
+<div class="field-group">
+    <label>Size</label>
+    <input type="hidden" name="original__auto_size_47" value="Size">
+    <input type="text" name="field__auto_size_47" placeholder="Size">
+</div>
+<div class="field-group">
+    <label>Reset Filters</label>
+    <input type="hidden" name="original__auto_reset_filters_50" value="Reset Filters">
+    <input type="text" name="field__auto_reset_filters_50" placeholder="Reset Filters">
+</div>
+<div class="field-group">
+    <label>Apply Filters</label>
+    <input type="hidden" name="original__auto_apply_filters_51" value="Apply Filters">
+    <input type="text" name="field__auto_apply_filters_51" placeholder="Apply Filters">
+</div>
+<div class="field-group">
+    <label>Information</label>
+    <input type="hidden" name="original__auto_information_56" value="Information">
+    <input type="text" name="field__auto_information_56" placeholder="Information">
+</div>
+<div class="field-group">
+    <label>About Us</label>
+    <input type="hidden" name="original__auto_about_us_57" value="About Us">
+    <input type="text" name="field__auto_about_us_57" placeholder="About Us">
+</div>
+<div class="field-group">
+    <label>How To Order</label>
+    <input type="hidden" name="original__auto_how_to_order_58" value="How To Order">
+    <input type="text" name="field__auto_how_to_order_58" placeholder="How To Order">
+</div>
+<div class="field-group">
+    <label>Business Conditions</label>
+    <input type="hidden" name="original__auto_business_conditions_59" value="Business Conditions">
+    <input type="text" name="field__auto_business_conditions_59" placeholder="Business Conditions">
+</div>
+<div class="field-group">
+    <label>Privacy Policy</label>
+    <input type="hidden" name="original__auto_privacy_policy_60" value="Privacy Policy">
+    <input type="text" name="field__auto_privacy_policy_60" placeholder="Privacy Policy">
+</div>
+<div class="field-group">
+    <label>Shipping Info</label>
+    <input type="hidden" name="original__auto_shipping_info_61" value="Shipping Info">
+    <input type="text" name="field__auto_shipping_info_61" placeholder="Shipping Info">
+</div>
+<div class="field-group">
+    <label>Payment</label>
+    <input type="hidden" name="original__auto_payment_62" value="Payment">
+    <input type="text" name="field__auto_payment_62" placeholder="Payment">
+</div>
+<div class="field-group">
+    <label>Refund</label>
+    <input type="hidden" name="original__auto_refund_63" value="Refund">
+    <input type="text" name="field__auto_refund_63" placeholder="Refund">
+</div>
+
 
     <button type="submit">Generate Translated File</button>
 </form>

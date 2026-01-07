@@ -1,43 +1,107 @@
 {% extends 'base.html.twig' %}
 
 {% block title %}All Low Stock Products{% endblock %}
+
 {% block stylesheets %}
-    <link rel="stylesheet" href="{{ asset('../assets/styles/low_stock_all.css') }}">
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('assets/styles/low_stock_all.css') }}">
 {% endblock %}
+
 {% block body %}
-<h2>📦 All Low Stock Products</h2>
-<p>Select products and enter a new stock value to update in batch.</p>
+<div class="low-stock-page">
+  <header class="low-stock-header">
+    <div class="low-stock-header-main">
+      <h1>📦 All Low Stock Products</h1>
+      <p class="low-stock-subtitle">
+        Select one or more products and set a new stock value to update them in batch.
+      </p>
+    </div>
+    <div class="low-stock-header-side">
+      <span class="count-pill">
+        {{ lowStockProducts|length }} item{{ lowStockProducts|length == 1 ? '' : 's' }}
+      </span>
+      <a href="{{ path('app_warehouse') }}" class="back-link">⬅ Back to Dashboard</a>
+    </div>
+  </header>
 
-<form method="post" action="{{ path('batch_update_product_stock') }}">
-  <table class="dashboard-table">
-    <thead>
-      <tr>
-        <th>Select</th>
-        <th>Product Name</th>
-        <th>Current Stock</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for product in lowStockProducts %}
-        <tr>
-          <td>
-            <input type="checkbox" name="selected_products[]" value="{{ product.id }}">
-          </td>
-          <td>{{ product.name }}</td>
-          <td>{{ product.numberInStock }}</td>
-        </tr>
-      {% else %}
-        <tr><td colspan="3">No low stock products 🎉</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <section class="card">
+    {% if lowStockProducts is empty %}
+      <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <div class="empty-text">
+          <h2>No low stock products</h2>
+          <p>All products are sufficiently stocked at the moment.</p>
+          <a href="{{ path('app_warehouse') }}" class="back-link-secondary">
+            ⬅ Back to Warehouse Overview
+          </a>
+        </div>
+      </div>
+    {% else %}
+      <form method="post" action="{{ path('batch_update_product_stock') }}" class="low-stock-form">
+        <div class="table-wrap">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">
+                  <label class="select-all-label">
+                    <input type="checkbox" id="select_all">
+                    <span>Select</span>
+                  </label>
+                </th>
+                <th>Product Name</th>
+                <th style="width: 160px;">Current Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for product in lowStockProducts %}
+                <tr>
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="product-checkbox"
+                      name="selected_products[]"
+                      value="{{ product.id }}"
+                    >
+                  </td>
+                  <td>
+                    <div class="product-name-cell">
+                      <span class="product-name">{{ product.name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="stock-badge">
+                      {{ product.numberInStock }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
 
-  <div class="batch-controls">
-    <label for="batch_stock">New stock for selected products:</label>
-    <input type="number" name="new_stock" id="batch_stock" required min="0">
-    <button type="submit">✔ Update Selected</button>
-  </div>
-</form>
+        <div class="batch-controls">
+          <div class="batch-info">
+            <span id="selected-count">0 selected</span>
+            <span class="hint">
+              Choose products above, then set a new stock value for all selected.
+            </span>
+          </div>
 
-<p><a href="{{ path('app_warehouse') }}">⬅ Back to Dashboard</a></p>
+          <div class="batch-inputs">
+            <label for="batch_stock">New stock for selected products:</label>
+            <input
+              type="number"
+              name="new_stock"
+              id="batch_stock"
+              required
+              min="0"
+            >
+            <button type="submit" id="batch_submit">✔ Update Selected</button>
+          </div>
+        </div>
+      </form>
+    {% endif %}
+  </section>
+</div>
+<script src="{{ asset('assets/low_stock.js') }}"></script>
 {% endblock %}
