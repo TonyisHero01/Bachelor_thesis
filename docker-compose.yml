@@ -5,8 +5,13 @@ services:
       POSTGRES_DB: app
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-    tmpfs:
-      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     networks:
       - backend
 
@@ -21,7 +26,8 @@ services:
       - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
       - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - backend
 
@@ -35,9 +41,13 @@ services:
       - ./eshop_frontweb:/var/www/html
       - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - backend
 
 networks:
   backend:
+
+volumes:
+  pgdata:
