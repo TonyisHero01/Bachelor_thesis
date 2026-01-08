@@ -1,0 +1,150 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background-color: #f7f9fc;
+}
+
+.warehouse-page {
+    width: 100%;
+    margin: 1.5rem auto 2rem;
+    padding: 0 1rem;
+}
+
+.warehouse-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+}
+
+.warehouse-sidebar {
+    flex: 0 0 220px;
+    background: #ffffff;
+    padding: 1rem 1.25rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.warehouse-sidebar h3 {
+    font-size: 1.2rem;
+    margin: 0 0 1rem;
+}
+
+.warehouse-sidebar ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.warehouse-sidebar li {
+    margin-bottom: 0.5rem;
+}
+
+.warehouse-sidebar a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+.warehouse-sidebar a:hover {
+    text-decoration: underline;
+}
+
+.warehouse-content {
+    flex: 1;
+    min-width: 0;
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.warehouse-heading {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.warehouse-subtitle {
+    margin-top: 0.35rem;
+    margin-bottom: 1rem;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.table-card {
+    margin-top: 0.5rem;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.95rem;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.dashboard-table th {
+    background-color: #f0f4f8;
+    font-weight: bold;
+}
+
+.dashboard-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.empty-row {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.badge {
+    display: inline-block;
+    padding: .2rem .55rem;
+    border-radius: .4rem;
+    font-size: .85rem;
+    color: #fff;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.badge--pending   { background: #6c757d; }
+.badge--completed { background: #28a745; }
+.badge--failed    { background: #dc3545; }
+.badge--refunded  { background: #6f42c1; }
+
+button {
+    background-color: #2ecc71;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #27ae60;
+}
+
+@media (max-width: 900px) {
+    .warehouse-page {
+        padding: 0 0.75rem;
+    }
+
+    .warehouse-layout {
+        flex-direction: column;
+    }
+
+    .warehouse-content {
+        padding: 1.25rem 1.25rem;
+    }
+}

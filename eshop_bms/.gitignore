@@ -9,10 +9,9 @@
 /vendor/
 ###< symfony/framework-bundle ###
 
-###> symfony/asset-mapper ###
-/public/assets/
+/public/images/
 /assets/vendor/
-###< symfony/asset-mapper ###
+
 # macOS .DS_Store files
 .DS_Store
 ###> phpunit/phpunit ###
@@ -30,3 +29,5 @@
 !/templates/translation/translation_center.html.twig
 
 /templates/translator/*.html.twig
+/python_scripts/__pycache__/
+/python_scripts/venv/

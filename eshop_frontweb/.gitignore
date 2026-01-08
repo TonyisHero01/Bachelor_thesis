@@ -4,13 +4,11 @@
 /.env.local.php
 /.env.*.local
 /config/secrets/prod/prod.decrypt.private.php
-/public/bundles/
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
 
 ###> symfony/asset-mapper ###
-/public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
 # macOS .DS_Store files
@@ -19,3 +17,6 @@
 /phpunit.xml
 /.phpunit.cache/
 ###< phpunit/phpunit ###
+
+/python_scripts/__pycache__/
+/python_scripts/venv/

@@ -1,0 +1,250 @@
+.low-stock-page {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem 5.5rem;
+    font-size: 0.95rem;
+}
+
+.low-stock-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.low-stock-header-main h1 {
+    margin: 0;
+    font-size: 1.6rem;
+}
+
+.low-stock-subtitle {
+    margin: 0.35rem 0 0;
+    color: #666;
+}
+
+.low-stock-header-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.count-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    background: #f7f7f7;
+    border: 1px solid #eee;
+    font-size: 0.85rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.back-link,
+.back-link-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.9rem;
+    text-decoration: none;
+    color: #007bff;
+}
+
+.back-link:hover,
+.back-link-secondary:hover {
+    text-decoration: underline;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1.25rem 1.25rem 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+}
+
+.empty-state {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem 0.5rem;
+}
+
+.empty-icon {
+    font-size: 2.2rem;
+}
+
+.empty-text h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.2rem;
+}
+
+.empty-text p {
+    margin: 0 0 0.75rem;
+    color: #666;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    margin-top: 0.5rem;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.75rem;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.95rem;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+.dashboard-table th {
+    background-color: #f7f7f7;
+    font-weight: 600;
+}
+
+.dashboard-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.select-all-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+}
+
+.product-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.product-name {
+    font-weight: 500;
+}
+
+.stock-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: #f7f7f7;
+    border: 1px solid #eee;
+    font-size: 0.85rem;
+}
+
+.low-stock-form {
+    margin: 0;
+}
+
+.batch-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 1000px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #fdfdfd;
+    padding: 0.8rem 1rem;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -2px 6px rgba(0,0,0,0.08);
+    border-radius: 12px 12px 0 0;
+    z-index: 50;
+}
+
+.batch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+#selected-count {
+    font-weight: 600;
+}
+
+.batch-info .hint {
+    font-size: 0.85rem;
+    color: #777;
+}
+
+.batch-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.batch-inputs label {
+    font-weight: 600;
+}
+
+.batch-inputs input[type="number"] {
+    width: 120px;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.batch-inputs button {
+    background-color: #007bff;
+    color: white;
+    padding: 0.55rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.batch-inputs button:hover {
+    background-color: #0056b3;
+}
+
+.batch-inputs button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .low-stock-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .low-stock-header-side {
+        align-items: flex-start;
+    }
+
+    .dashboard-table {
+        font-size: 0.9rem;
+    }
+
+    .low-stock-page {
+        padding: 0 0.75rem 6rem;
+    }
+
+    .batch-controls {
+        max-width: 100%;
+        padding: 0.8rem 0.75rem;
+    }
+}

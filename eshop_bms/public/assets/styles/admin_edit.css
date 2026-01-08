@@ -1,0 +1,115 @@
+h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #222;
+}
+
+#body {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 700px;
+    margin: 2rem auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+form label {
+    display: block;
+    font-weight: 600;
+    margin-top: 1rem;
+    color: #333;
+}
+
+form input[type="text"],
+form input[type="number"],
+form input[type="email"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem;
+    margin-top: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.2s ease-in-out;
+}
+
+form input:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+fieldset {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 2rem;
+}
+
+legend {
+    font-weight: bold;
+    padding: 0 0.5rem;
+    color: #444;
+}
+
+fieldset label {
+    display: block;
+    margin: 0.5rem 0;
+    font-weight: normal;
+    font-size: 0.95rem;
+}
+
+input[type="checkbox"] {
+    margin-right: 0.5rem;
+    transform: scale(1.2);
+}
+
+.buttons {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+#saveButton {
+    background-color: #28a745;
+}
+
+#backButton {
+    background-color: #6c757d;
+}
+
+#saveButton, #backButton {
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.4rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+#saveButton:hover {
+    background-color: #218838;
+}
+
+#backButton:hover {
+    background-color: #5a6268;
+}
+
+@media (max-width: 768px) {
+    #body {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+
+    .buttons {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    #saveButton,
+    #backButton {
+        width: 100%;
+    }
+}
