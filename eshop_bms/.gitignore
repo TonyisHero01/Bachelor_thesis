@@ -8,8 +8,8 @@
 /var/
 /vendor/
 ###< symfony/framework-bundle ###
-
-/public/images/
+public/images/*
+!public/images/.gitignore
 /assets/vendor/
 
 # macOS .DS_Store files
