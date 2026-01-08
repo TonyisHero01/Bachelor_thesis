@@ -1,18 +1,23 @@
 FROM php:8.2-apache-bookworm
-
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends ca-certificates gnupg debian-archive-keyring; \
-    rm -rf /var/lib/apt/lists/*; \
-    sed -i 's|http://deb.debian.org|https://deb.debian.org|g' /etc/apt/sources.list; \
-    sed -i 's|http://security.debian.org|https://security.debian.org|g' /etc/apt/sources.list || true
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+RUN set -eux; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do \
+      [ -f "$f" ] || continue; \
+      sed -i 's|http://deb.debian.org|https://deb.debian.org|g' "$f" || true; \
+      sed -i 's|http://security.debian.org|https://security.debian.org|g' "$f" || true; \
+    done
 
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
         python3.11 python3.11-venv python3-pip \
         libpq-dev gcc \
-        git unzip libzip-dev; \
+        git unzip libzip-dev \
+    ; \
     ln -sf /usr/bin/python3.11 /usr/local/bin/python; \
     ln -sf /usr/bin/python3.11 /usr/bin/python3; \
     docker-php-ext-install pdo pdo_pgsql zip; \
