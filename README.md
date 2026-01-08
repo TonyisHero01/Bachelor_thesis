@@ -28,7 +28,7 @@ All future development assumes Docker-based environments.
 #### Clone the repository
 
 ```sh
-git clone https://github.com/TonyisHero01/Bachelor_thesis.git
+git clone -b Symfony_Version --single-branch https://github.com/TonyisHero01/Bachelor_thesis.git
 ```
 
 #### Start with Docker
