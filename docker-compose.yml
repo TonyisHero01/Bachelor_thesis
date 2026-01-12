@@ -15,6 +15,20 @@ services:
     networks:
       - backend
 
+  python-api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://user:password@db:5432/app"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8000"
+    networks:
+      - backend
+
   bms:
     build:
       context: .
@@ -25,9 +39,13 @@ services:
       - ./eshop_bms:/var/www/html
       - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
       - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
+    environment:
+      PYTHON_API_BASE_URL: "http://python-api:8000"
     depends_on:
       db:
         condition: service_healthy
+      python-api:
+        condition: service_started
     networks:
       - backend
 
@@ -40,9 +58,13 @@ services:
     volumes:
       - ./eshop_frontweb:/var/www/html
       - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
+    environment:
+      PYTHON_API_BASE_URL: "http://python-api:8000"
     depends_on:
       db:
         condition: service_healthy
+      python-api:
+        condition: service_started
     networks:
       - backend
 

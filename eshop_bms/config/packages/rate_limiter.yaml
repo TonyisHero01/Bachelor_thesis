@@ -2,7 +2,5 @@ framework:
   rate_limiter:
     api_per_token:
       policy: 'token_bucket'
-      limit: 60        # 桶容量
-      rate: { interval: '1 minute', amount: 60 } # 每分钟 60 次
-      # 使用请求头中的 publicId 作为 key；若没有则按 IP
-      # 在 authenticator 里你也可以将 key 设置到请求属性，再用自定义 key_resolver
+      limit: 60
+      rate: { interval: '1 minute', amount: 60 }

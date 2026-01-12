@@ -16,16 +16,6 @@
   <div id="NAME_MAX_LENGTH" data-value="{{ NAME_MAX_LENGTH }}"></div>
   <div id="CONTENT_MAX_LENGTH" data-value="{{ CONTENT_MAX_LENGTH }}"></div>
 
-  <div style="margin: .5rem 0 1rem;">
-    {% if app.user %}
-      {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
-    {% endif %}
-    <a href="{{ app.user ? path('app_logout') : path('login') }}"
-       style="margin-left: .75rem;">
-      {{ app.user ? 'Logout' : 'Login' }}
-    </a>
-  </div>
-
   <h1>Product List</h1>
 
   <form id="search" style="margin: .5rem 0 1rem;">

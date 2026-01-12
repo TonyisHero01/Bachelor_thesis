@@ -1,39 +1,60 @@
 const searchInputElement = document.getElementById('searchInput');
 
-/**
- * Sends a search request to the server and redirects to the results page.
- *
- * @returns {Promise<void>}
- */
 async function search_() {
-    const spinner = document.getElementById('loadingSpinner');
-    const locale = document.getElementById('current-locale').value;
+  const spinner = document.getElementById('loadingSpinner');
+  const localeEl = document.getElementById('current-locale');
+  const locale = (localeEl && localeEl.value) ? localeEl.value : 'en';
 
-    try {
-        spinner.style.display = 'block';
-
-        const response = await fetch('/bms/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                query: searchInputElement.value,
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const jsonResponse = await response.json();
-        const results = jsonResponse.results;
-
-        window.location.href = `/bms/results?_locale=${locale}`;
-    } catch (error) {
-        console.error('Search failed:', error);
-        alert('Search failed. Please try again.');
-    } finally {
-        spinner.style.display = 'none';
+  try {
+    if (!searchInputElement) {
+      throw new Error('searchInput element not found');
     }
+
+    const query = (searchInputElement.value || '').trim();
+    if (!query) {
+      alert('Please enter a search query.');
+      return;
+    }
+
+    if (spinner) spinner.style.display = 'block';
+
+    const url = `/bms/search?_locale=${encodeURIComponent(locale)}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+
+    const text = await response.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (_) {
+      // ignore JSON parse error
+    }
+
+    if (!response.ok) {
+      console.error('Search failed response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: text,
+      });
+      alert(data?.error || `Search failed (${response.status}). See console for details.`);
+      return;
+    }
+
+    if (!data || !Array.isArray(data.results)) {
+      console.error('Unexpected search response:', text);
+      alert('Search failed: unexpected response format.');
+      return;
+    }
+
+    window.location.href = `/bms/results?_locale=${encodeURIComponent(locale)}`;
+  } catch (error) {
+    console.error('Search failed:', error);
+    alert('Search failed. Please try again.');
+  } finally {
+    if (spinner) spinner.style.display = 'none';
+  }
 }

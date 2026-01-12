@@ -23,6 +23,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 use Twig\Environment;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[IsGranted('ROLE_WAREHOUSE_MANAGER')]
 final class ProductController extends BaseController
@@ -60,12 +61,13 @@ final class ProductController extends BaseController
         );
     }
 
-    /**
-     * Creates a new product with a unique SKU and a valid currency.
-     */
     #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
-    public function createProduct(Request $request, EntityManagerInterface $em): Response
-    {
+    public function createProduct(
+        Request $request,
+        EntityManagerInterface $em,
+        LoggerInterface $logger,
+        HttpClientInterface $httpClient,
+    ): Response {
         $input = json_decode((string) $request->getContent(), true);
         if (!is_array($input)) {
             return new JsonResponse(['error' => 'Invalid JSON'], 400);
@@ -109,6 +111,11 @@ final class ProductController extends BaseController
 
         $em->persist($product);
         $em->flush();
+
+        $this->notifyReindex($httpClient, $logger, 'product_create', [
+            'sku' => $sku,
+            'productId' => $product->getId(),
+        ]);
 
         return new JsonResponse(['success' => true, 'id' => $product->getId()]);
     }
@@ -161,8 +168,12 @@ final class ProductController extends BaseController
      * Modifies the category name and triggers TF-IDF retraining.
      */
     #[Route('/bms/modify_category', name: 'modify_category', methods: ['POST'])]
-    public function modifyCategory(Request $request, EntityManagerInterface $em, TfidfTrainer $trainer): JsonResponse
-    {
+    public function modifyCategory(
+        Request $request,
+        EntityManagerInterface $em,
+        LoggerInterface $logger,
+        HttpClientInterface $httpClient,
+    ): JsonResponse {
         $data = json_decode((string) $request->getContent(), true);
         if (!is_array($data)) {
             return new JsonResponse(['success' => false, 'message' => 'Invalid JSON'], 400);
@@ -180,9 +191,16 @@ final class ProductController extends BaseController
             return new JsonResponse(['success' => false, 'message' => 'Category not found'], 404);
         }
 
+        $oldName = (string) $category->getName();
         $category->setName((string) $newName);
         $em->flush();
-        $trainer->retrain();
+
+        // ✅ notify reindex
+        $this->notifyReindex($httpClient, $logger, 'category_modify', [
+            'categoryId' => (int) $id,
+            'oldName' => $oldName,
+            'newName' => (string) $newName,
+        ]);
 
         return new JsonResponse(['success' => true]);
     }
@@ -221,16 +239,13 @@ final class ProductController extends BaseController
         ]);
     }
 
-    /**
-     * Saves product changes. Updates current version if no_version_update=true, otherwise creates a new version.
-     */
     #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function saveProduct(
         Request $request,
         EntityManagerInterface $em,
         int $id,
         LoggerInterface $logger,
-        TfidfTrainer $trainer
+        HttpClientInterface $httpClient,
     ): Response {
         try {
             $productRepository = $em->getRepository(Product::class);
@@ -298,6 +313,13 @@ final class ProductController extends BaseController
                 $currentProduct->setUpdatedAt(new DateTimeImmutable());
                 $em->flush();
 
+                // ✅ notify reindex
+                $this->notifyReindex($httpClient, $logger, 'product_update_in_place', [
+                    'id' => $currentProduct->getId(),
+                    'sku' => $currentProduct->getSku(),
+                    'noVersionUpdate' => true,
+                ]);
+
                 return new JsonResponse(['status' => 'Success', 'message' => 'Updated current version']);
             }
 
@@ -364,7 +386,14 @@ final class ProductController extends BaseController
 
             $em->persist($newProduct);
             $em->flush();
-            $trainer->retrain();
+
+            // ✅ notify reindex
+            $this->notifyReindex($httpClient, $logger, 'product_new_version', [
+                'oldId' => $currentProduct->getId(),
+                'newId' => $newProduct->getId(),
+                'sku' => $currentProduct->getSku(),
+                'noVersionUpdate' => false,
+            ]);
 
             return new JsonResponse(['status' => 'Success', 'new_product_id' => $newProduct->getId()]);
         } catch (\Throwable $e) {
@@ -373,12 +402,13 @@ final class ProductController extends BaseController
         }
     }
 
-    /**
-     * Deletes a product and all its versions sharing the same SKU, then triggers TF-IDF retraining.
-     */
     #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'], requirements: ['id' => '\d+'])]
-    public function deleteProduct(int $id, EntityManagerInterface $em, TfidfTrainer $trainer): Response
-    {
+    public function deleteProduct(
+        int $id,
+        EntityManagerInterface $em,
+        LoggerInterface $logger,
+        HttpClientInterface $httpClient,
+    ): Response {
         $productRepository = $em->getRepository(Product::class);
         $product = $productRepository->find($id);
 
@@ -386,13 +416,19 @@ final class ProductController extends BaseController
             return new JsonResponse(['success' => false, 'message' => 'Product not found'], 404);
         }
 
-        $productsWithSameSku = $productRepository->findBy(['sku' => $product->getSku()]);
+        $sku = (string) $product->getSku();
+
+        $productsWithSameSku = $productRepository->findBy(['sku' => $sku]);
         foreach ($productsWithSameSku as $productToDelete) {
             $em->remove($productToDelete);
         }
 
         $em->flush();
-        $trainer->retrain();
+
+        $this->notifyReindex($httpClient, $logger, 'product_delete', [
+            'sku' => $sku,
+            'deletedVersions' => count($productsWithSameSku),
+        ]);
 
         return new JsonResponse(['success' => true]);
     }
@@ -506,14 +542,15 @@ final class ProductController extends BaseController
     }
 
     /**
-     * Executes TF-IDF search via a Python script and stores ranked results in session.
+     * Executes TF-IDF search via python-api and stores ranked results in session.
      */
     #[Route('/bms/search', name: 'bms_search', methods: ['POST'])]
     public function search(
         EntityManagerInterface $em,
         SessionInterface $session,
         LoggerInterface $logger,
-        Request $request
+        Request $request,
+        HttpClientInterface $httpClient,
     ): Response {
         $payload = json_decode((string) $request->getContent(), true);
         if (!is_array($payload)) {
@@ -529,39 +566,43 @@ final class ProductController extends BaseController
             return new JsonResponse(['error' => 'Query too long'], 400);
         }
 
-        $projectRoot = (string) $this->getParameter('kernel.project_dir');
-        $pythonPath = $projectRoot . '/python_scripts/venv/bin/python';
-        $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
-
-        if (!is_file($pythonPath) || !is_file($scriptPath)) {
-            $logger->error('search python/script not found');
+        $baseUrl = (string) $this->getParameter('python_api_base_url');
+        $baseUrl = rtrim($baseUrl, '/');
+        if ($baseUrl === '') {
+            $logger->error('PYTHON_API_BASE_URL is empty');
             return new JsonResponse(['error' => 'Search backend not available'], 500);
         }
 
-        $process = new Process([$pythonPath, $scriptPath, $query], $projectRoot);
-        $process->setTimeout(5);
-
         try {
-            $process->mustRun();
+            $response = $httpClient->request('POST', $baseUrl . '/search', [
+                'json' => [
+                    'query' => $query,
+                    'limit' => 200,
+                ],
+                'timeout' => 5,
+            ]);
+            $data = $response->toArray(false);
         } catch (\Throwable $e) {
-            $logger->error('search process failed: ' . $e->getMessage());
+            $logger->error('python-api request failed: ' . $e->getMessage());
             return new JsonResponse(['error' => 'Search system error'], 500);
         }
 
-        $output = $process->getOutput();
-        $searchResults = json_decode((string) $output, true);
-
-        if (!is_array($searchResults)) {
-            $logger->error('search invalid output: ' . $output);
+        if (!is_array($data) || !isset($data['results']) || !is_array($data['results'])) {
+            $logger->error('python-api invalid response: ' . json_encode($data));
             return new JsonResponse(['error' => 'Search system error'], 500);
         }
 
         $skuToSimilarity = [];
-        foreach ($searchResults as $result) {
+        foreach ($data['results'] as $result) {
+            if (!is_array($result)) {
+                continue;
+            }
             if (!isset($result['product_sku'], $result['similarity'])) {
                 continue;
             }
-            $skuToSimilarity[(string) $result['product_sku']] = (float) $result['similarity'];
+            $sku = (string) $result['product_sku'];
+            $sim = (float) $result['similarity'];
+            $skuToSimilarity[$sku] = $sim;
         }
 
         $productSkus = array_keys($skuToSimilarity);
@@ -569,7 +610,6 @@ final class ProductController extends BaseController
             $session->set('search_results', []);
             return new JsonResponse(['results' => []]);
         }
-
         $qb = $em->createQueryBuilder();
         $qb->select('p.id, p.sku')
             ->from(Product::class, 'p')
@@ -654,17 +694,31 @@ final class ProductController extends BaseController
      * Creates a new category.
      */
     #[Route('/bms/save_category', name: 'save_category', methods: ['POST'])]
-    public function createCategory(Request $request, EntityManagerInterface $em): Response
-    {
+    public function createCategory(
+        Request $request,
+        EntityManagerInterface $em,
+        LoggerInterface $logger,
+        HttpClientInterface $httpClient,
+    ): Response {
         $data = json_decode((string) $request->getContent(), true);
         if (!is_array($data) || empty($data['name'])) {
             return new JsonResponse(['error' => 'Invalid JSON or missing name'], 400);
         }
 
-        $category = (new Category())->setName((string) $data['name']);
+        $name = trim((string) $data['name']);
+        if ($name === '') {
+            return new JsonResponse(['error' => 'Category name cannot be empty'], 400);
+        }
+
+        $category = (new Category())->setName($name);
 
         $em->persist($category);
         $em->flush();
+
+        $this->notifyReindex($httpClient, $logger, 'category_create', [
+            'categoryId' => $category->getId(),
+            'name' => $name,
+        ]);
 
         return new JsonResponse([]);
     }
@@ -770,5 +824,56 @@ final class ProductController extends BaseController
         $em->flush();
 
         return new JsonResponse(['success' => true]);
+    }
+
+    /**
+     * Notify python-api to rebuild TF-IDF vectors.
+     * Failure should NOT break main business flow.
+     */
+    private function notifyReindex(HttpClientInterface $httpClient, LoggerInterface $logger, string $reason, array $context = []): void
+    {
+        $baseUrl = (string) $this->getParameter('python_api_base_url');
+        $baseUrl = rtrim($baseUrl, '/');
+
+        if ($baseUrl === '') {
+            $logger->warning('[TFIDF] python_api_base_url is empty, skip reindex', [
+                'reason' => $reason,
+                'context' => $context,
+            ]);
+            return;
+        }
+
+        try {
+            $resp = $httpClient->request('POST', $baseUrl . '/reindex', [
+                'json' => ['mode' => 'full'],
+                'timeout' => 10,
+            ]);
+
+            $status = $resp->getStatusCode();
+            $body = $resp->toArray(false);
+
+            if ($status < 200 || $status >= 300) {
+                $logger->error('[TFIDF] reindex non-2xx', [
+                    'status' => $status,
+                    'body' => $body,
+                    'reason' => $reason,
+                    'context' => $context,
+                ]);
+                return;
+            }
+
+            $logger->info('[TFIDF] reindex ok', [
+                'status' => $status,
+                'body' => $body,
+                'reason' => $reason,
+                'context' => $context,
+            ]);
+        } catch (\Throwable $e) {
+            $logger->error('[TFIDF] reindex request failed', [
+                'msg' => $e->getMessage(),
+                'reason' => $reason,
+                'context' => $context,
+            ]);
+        }
     }
 }
