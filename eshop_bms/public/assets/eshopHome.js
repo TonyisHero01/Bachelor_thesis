@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', function () {
-    // eslint-disable-next-line no-new
     new Swiper('.swiper-container', {
         slidesPerView: 1,
         spaceBetween: 0,

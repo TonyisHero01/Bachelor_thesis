@@ -23,6 +23,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 use Twig\Environment;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 #[IsGranted('ROLE_WAREHOUSE_MANAGER')]
 final class ProductController extends BaseController
@@ -60,12 +61,13 @@ final class ProductController extends BaseController
         );
     }
 
-    /**
-     * Creates a new product with a unique SKU and a valid currency.
-     */
     #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
-    public function createProduct(Request $request, EntityManagerInterface $em): Response
-    {
+    public function createProduct(
+        Request $request,
+        EntityManagerInterface $em,
+        LoggerInterface $logger,
+        HttpClientInterface $httpClient,
+    ): Response {
         $input = json_decode((string) $request->getContent(), true);
         if (!is_array($input)) {
             return new JsonResponse(['error' => 'Invalid JSON'], 400);
@@ -109,6 +111,11 @@ final class ProductController extends BaseController
 
         $em->persist($product);
         $em->flush();
+
+        $this->notifyReindex($httpClient, $logger, 'product_create', [
+            'sku' => $sku,
+            'productId' => $product->getId(),
+        ]);
 
         return new JsonResponse(['success' => true, 'id' => $product->getId()]);
     }
@@ -158,36 +165,6 @@ final class ProductController extends BaseController
     }
 
     /**
-     * Modifies the category name and triggers TF-IDF retraining.
-     */
-    #[Route('/bms/modify_category', name: 'modify_category', methods: ['POST'])]
-    public function modifyCategory(Request $request, EntityManagerInterface $em, TfidfTrainer $trainer): JsonResponse
-    {
-        $data = json_decode((string) $request->getContent(), true);
-        if (!is_array($data)) {
-            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON'], 400);
-        }
-
-        $id = $data['id'] ?? null;
-        $newName = $data['new_name'] ?? null;
-
-        if ($id === null || $newName === null || trim((string) $newName) === '') {
-            return new JsonResponse(['success' => false, 'message' => 'Missing ID or new name'], 400);
-        }
-
-        $category = $em->getRepository(Category::class)->find((int) $id);
-        if ($category === null) {
-            return new JsonResponse(['success' => false, 'message' => 'Category not found'], 404);
-        }
-
-        $category->setName((string) $newName);
-        $em->flush();
-        $trainer->retrain();
-
-        return new JsonResponse(['success' => true]);
-    }
-
-    /**
      * Displays the product edit page and product history by SKU.
      */
     #[Route('/bms/product_edit/{id}', name: 'edit_product', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -221,16 +198,13 @@ final class ProductController extends BaseController
         ]);
     }
 
-    /**
-     * Saves product changes. Updates current version if no_version_update=true, otherwise creates a new version.
-     */
     #[Route('/bms/product_save/{id}', name: 'save_product', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function saveProduct(
         Request $request,
         EntityManagerInterface $em,
         int $id,
         LoggerInterface $logger,
-        TfidfTrainer $trainer
+        HttpClientInterface $httpClient,
     ): Response {
         try {
             $productRepository = $em->getRepository(Product::class);
@@ -298,6 +272,13 @@ final class ProductController extends BaseController
                 $currentProduct->setUpdatedAt(new DateTimeImmutable());
                 $em->flush();
 
+                // ✅ notify reindex
+                $this->notifyReindex($httpClient, $logger, 'product_update_in_place', [
+                    'id' => $currentProduct->getId(),
+                    'sku' => $currentProduct->getSku(),
+                    'noVersionUpdate' => true,
+                ]);
+
                 return new JsonResponse(['status' => 'Success', 'message' => 'Updated current version']);
             }
 
@@ -364,7 +345,14 @@ final class ProductController extends BaseController
 
             $em->persist($newProduct);
             $em->flush();
-            $trainer->retrain();
+
+            // ✅ notify reindex
+            $this->notifyReindex($httpClient, $logger, 'product_new_version', [
+                'oldId' => $currentProduct->getId(),
+                'newId' => $newProduct->getId(),
+                'sku' => $currentProduct->getSku(),
+                'noVersionUpdate' => false,
+            ]);
 
             return new JsonResponse(['status' => 'Success', 'new_product_id' => $newProduct->getId()]);
         } catch (\Throwable $e) {
@@ -373,12 +361,13 @@ final class ProductController extends BaseController
         }
     }
 
-    /**
-     * Deletes a product and all its versions sharing the same SKU, then triggers TF-IDF retraining.
-     */
     #[Route('/bms/product_delete/{id}', name: 'delete_product', methods: ['DELETE'], requirements: ['id' => '\d+'])]
-    public function deleteProduct(int $id, EntityManagerInterface $em, TfidfTrainer $trainer): Response
-    {
+    public function deleteProduct(
+        int $id,
+        EntityManagerInterface $em,
+        LoggerInterface $logger,
+        HttpClientInterface $httpClient,
+    ): Response {
         $productRepository = $em->getRepository(Product::class);
         $product = $productRepository->find($id);
 
@@ -386,13 +375,19 @@ final class ProductController extends BaseController
             return new JsonResponse(['success' => false, 'message' => 'Product not found'], 404);
         }
 
-        $productsWithSameSku = $productRepository->findBy(['sku' => $product->getSku()]);
+        $sku = (string) $product->getSku();
+
+        $productsWithSameSku = $productRepository->findBy(['sku' => $sku]);
         foreach ($productsWithSameSku as $productToDelete) {
             $em->remove($productToDelete);
         }
 
         $em->flush();
-        $trainer->retrain();
+
+        $this->notifyReindex($httpClient, $logger, 'product_delete', [
+            'sku' => $sku,
+            'deletedVersions' => count($productsWithSameSku),
+        ]);
 
         return new JsonResponse(['success' => true]);
     }
@@ -505,270 +500,4 @@ final class ProductController extends BaseController
         return new JsonResponse(['status' => 'success']);
     }
 
-    /**
-     * Executes TF-IDF search via a Python script and stores ranked results in session.
-     */
-    #[Route('/bms/search', name: 'bms_search', methods: ['POST'])]
-    public function search(
-        EntityManagerInterface $em,
-        SessionInterface $session,
-        LoggerInterface $logger,
-        Request $request
-    ): Response {
-        $payload = json_decode((string) $request->getContent(), true);
-        if (!is_array($payload)) {
-            return new JsonResponse(['error' => 'Invalid JSON'], 400);
-        }
-
-        $query = trim((string) ($payload['query'] ?? ''));
-        if ($query === '') {
-            return new JsonResponse(['error' => 'Empty search query'], 400);
-        }
-
-        if (mb_strlen($query) > 200) {
-            return new JsonResponse(['error' => 'Query too long'], 400);
-        }
-
-        $projectRoot = (string) $this->getParameter('kernel.project_dir');
-        $pythonPath = $projectRoot . '/python_scripts/venv/bin/python';
-        $scriptPath = $projectRoot . '/python_scripts/tf-idf.py';
-
-        if (!is_file($pythonPath) || !is_file($scriptPath)) {
-            $logger->error('search python/script not found');
-            return new JsonResponse(['error' => 'Search backend not available'], 500);
-        }
-
-        $process = new Process([$pythonPath, $scriptPath, $query], $projectRoot);
-        $process->setTimeout(5);
-
-        try {
-            $process->mustRun();
-        } catch (\Throwable $e) {
-            $logger->error('search process failed: ' . $e->getMessage());
-            return new JsonResponse(['error' => 'Search system error'], 500);
-        }
-
-        $output = $process->getOutput();
-        $searchResults = json_decode((string) $output, true);
-
-        if (!is_array($searchResults)) {
-            $logger->error('search invalid output: ' . $output);
-            return new JsonResponse(['error' => 'Search system error'], 500);
-        }
-
-        $skuToSimilarity = [];
-        foreach ($searchResults as $result) {
-            if (!isset($result['product_sku'], $result['similarity'])) {
-                continue;
-            }
-            $skuToSimilarity[(string) $result['product_sku']] = (float) $result['similarity'];
-        }
-
-        $productSkus = array_keys($skuToSimilarity);
-        if ($productSkus === []) {
-            $session->set('search_results', []);
-            return new JsonResponse(['results' => []]);
-        }
-
-        $qb = $em->createQueryBuilder();
-        $qb->select('p.id, p.sku')
-            ->from(Product::class, 'p')
-            ->where($qb->expr()->in('p.sku', ':skus'))
-            ->setParameter('skus', $productSkus)
-            ->orderBy('p.id', 'DESC');
-
-        $rows = $qb->getQuery()->getArrayResult();
-
-        $skuToLatestId = [];
-        foreach ($rows as $row) {
-            $sku = (string) $row['sku'];
-            if (!isset($skuToLatestId[$sku])) {
-                $skuToLatestId[$sku] = (int) $row['id'];
-            }
-        }
-
-        $sortedResults = [];
-        foreach ($productSkus as $sku) {
-            if (isset($skuToLatestId[$sku])) {
-                $sortedResults[] = [
-                    'id' => $skuToLatestId[$sku],
-                    'similarity' => $skuToSimilarity[$sku],
-                ];
-            }
-        }
-
-        $session->set('search_results', $sortedResults);
-
-        return new JsonResponse(['results' => $sortedResults]);
-    }
-
-    /**
-     * Displays the product search results stored in session.
-     */
-    #[Route('/bms/results', name: 'results', methods: ['GET'])]
-    public function results(SessionInterface $session, EntityManagerInterface $em, Request $request): Response
-    {
-        $searchResults = $session->get('search_results', []);
-        if (empty($searchResults)) {
-            return $this->renderLocalized('product/no_results.html.twig', []);
-        }
-
-        $ids = array_column($searchResults, 'id');
-
-        /** @var Product[] $products */
-        $products = $em->getRepository(Product::class)->findBy(['id' => $ids]);
-
-        $productsById = [];
-        foreach ($products as $product) {
-            $productsById[$product->getId()] = $product;
-        }
-
-        $sortedProducts = [];
-        foreach ($ids as $id) {
-            if (isset($productsById[$id])) {
-                $sortedProducts[] = $productsById[$id];
-            }
-        }
-
-        $form = $this->createForm(ProductType::class, new Product());
-        $colors = $em->getRepository(Color::class)->findAll();
-        $sizes = $em->getRepository(Size::class)->findAll();
-        $categories = $em->getRepository(Category::class)->findAll();
-
-        $locale = $request->getLocale();
-        $productsForView = $this->buildProductsForView($sortedProducts, $locale);
-
-        return $this->renderLocalized('product/product_list.html.twig', [
-            'products' => $productsForView,
-            'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
-            'NAME_MAX_LENGTH' => $this->getParameter('NAME_MAX_LENGTH'),
-            'CONTENT_MAX_LENGTH' => $this->getParameter('CONTENT_MAX_LENGTH'),
-            'form' => $form,
-            'colors' => $colors,
-            'sizes' => $sizes,
-            'categories' => $categories,
-        ]);
-    }
-
-    /**
-     * Creates a new category.
-     */
-    #[Route('/bms/save_category', name: 'save_category', methods: ['POST'])]
-    public function createCategory(Request $request, EntityManagerInterface $em): Response
-    {
-        $data = json_decode((string) $request->getContent(), true);
-        if (!is_array($data) || empty($data['name'])) {
-            return new JsonResponse(['error' => 'Invalid JSON or missing name'], 400);
-        }
-
-        $category = (new Category())->setName((string) $data['name']);
-
-        $em->persist($category);
-        $em->flush();
-
-        return new JsonResponse([]);
-    }
-
-    /**
-     * Creates a new color.
-     */
-    #[Route('/bms/save_color', name: 'save_color', methods: ['POST'])]
-    public function createColor(Request $request, EntityManagerInterface $em): Response
-    {
-        $data = json_decode((string) $request->getContent(), true);
-        if (!is_array($data) || empty($data['name']) || empty($data['hex'])) {
-            return new JsonResponse(['error' => 'Invalid JSON or missing fields'], 400);
-        }
-
-        $color = (new Color())
-            ->setName((string) $data['name'])
-            ->setHex((string) $data['hex']);
-
-        $em->persist($color);
-        $em->flush();
-
-        return new JsonResponse([]);
-    }
-
-    /**
-     * Modifies an existing color.
-     */
-    #[Route('/bms/modify_color', name: 'modify_color', methods: ['POST'])]
-    public function modifyColor(Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $data = json_decode((string) $request->getContent(), true);
-        if (!is_array($data)) {
-            return new JsonResponse(['status' => 'error', 'message' => 'Invalid JSON'], 400);
-        }
-
-        $colorId = $data['id'] ?? null;
-        $newName = $data['new_name'] ?? null;
-        $newHex = $data['new_hex'] ?? null;
-
-        if ($colorId === null || $newName === null || $newHex === null) {
-            return new JsonResponse(['status' => 'error', 'message' => 'Invalid data'], 400);
-        }
-
-        $color = $em->getRepository(Color::class)->find((int) $colorId);
-        if ($color === null) {
-            return new JsonResponse(['status' => 'error', 'message' => 'Color not found'], 404);
-        }
-
-        $color->setName((string) $newName);
-        $color->setHex((string) $newHex);
-        $em->flush();
-
-        return new JsonResponse(['status' => 'success']);
-    }
-
-    /**
-     * Creates a new size.
-     */
-    #[Route('/bms/create_size', name: 'size_create', methods: ['POST'])]
-    public function createSize(Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $data = json_decode((string) $request->getContent(), true);
-        if (!is_array($data)) {
-            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON.'], 400);
-        }
-
-        $sizeName = trim((string) ($data['name'] ?? ''));
-        if ($sizeName === '') {
-            return new JsonResponse(['success' => false, 'message' => 'Size name cannot be empty.'], 400);
-        }
-
-        $size = (new Size())->setName($sizeName);
-
-        $em->persist($size);
-        $em->flush();
-
-        return new JsonResponse(['success' => true]);
-    }
-
-    /**
-     * Modifies an existing size name.
-     */
-    #[Route('/bms/modify_size/{id}', name: 'size_modify', methods: ['POST'], requirements: ['id' => '\d+'])]
-    public function modifySize(int $id, Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $data = json_decode((string) $request->getContent(), true);
-        if (!is_array($data)) {
-            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON.'], 400);
-        }
-
-        $newSizeName = trim((string) ($data['name'] ?? ''));
-        if ($newSizeName === '') {
-            return new JsonResponse(['success' => false, 'message' => 'New size name cannot be empty.'], 400);
-        }
-
-        $size = $em->getRepository(Size::class)->find($id);
-        if ($size === null) {
-            return new JsonResponse(['success' => false, 'message' => 'Size not found.'], 404);
-        }
-
-        $size->setName($newSizeName);
-        $em->flush();
-
-        return new JsonResponse(['success' => true]);
-    }
 }

@@ -15,12 +15,10 @@ RUN set -eux; \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        python3.11 python3.11-venv python3-pip \
-        libpq-dev gcc \
         git unzip libzip-dev \
+        libpq-dev \
+        gcc make pkg-config \
     ; \
-    ln -sf /usr/bin/python3.11 /usr/local/bin/python; \
-    ln -sf /usr/bin/python3.11 /usr/bin/python3; \
     docker-php-ext-install pdo pdo_pgsql zip; \
     a2enmod rewrite; \
     rm -rf /var/lib/apt/lists/*; \
@@ -32,10 +30,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 COPY . .
 
-COPY docker/common_python_venv.sh /common_python_venv.sh
 COPY docker/frontweb_entrypoint.sh /usr/local/bin/start-frontweb.sh
-
-RUN chmod +x /common_python_venv.sh /usr/local/bin/start-frontweb.sh
+RUN chmod +x /usr/local/bin/start-frontweb.sh
 
 ENTRYPOINT ["/usr/local/bin/start-frontweb.sh"]
 CMD ["apache2-foreground"]

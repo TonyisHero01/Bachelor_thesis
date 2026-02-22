@@ -14,8 +14,22 @@ fi
 mkdir -p /var/www/html/var
 chown -R www-data:www-data /var/www/html/var || true
 
-source /common_python_venv.sh
-create_venv_and_install "/var/www/html/python_scripts"
+echo "⏳ Waiting for database to be ready..."
+until php bin/console doctrine:query:sql "SELECT 1" > /dev/null 2>&1; do
+  sleep 2
+done
+echo "✅ Database is ready."
+
+LOCK_FILE=/tmp/doctrine_migrate.lock
+if [ -f "$LOCK_FILE" ]; then
+  echo "⏭️  Migrations already attempted (lock exists), skipping."
+else
+  touch "$LOCK_FILE"
+  echo "🗄️  Running migrations..."
+  SYMFONY_DEPRECATIONS_HELPER=disabled php bin/console doctrine:migrations:migrate \
+    --no-interaction --allow-no-migration --all-or-nothing -vvv
+  echo "✅ Migrations are done."
+fi
 
 echo "✅ Frontweb is ready."
 

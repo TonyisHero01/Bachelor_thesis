@@ -1,15 +1,11 @@
 doctrine:
   dbal:
     url: '%env(resolve:DATABASE_URL)%'
-    # PostgreSQL 14
     server_version: '14'
 
     profiling_collect_backtrace: '%kernel.debug%'
     use_savepoints: true
 
-    # 关键：让 ORM 校验/同步时忽略迁移元数据表
-    # 如需同时忽略 Messenger 队列表，可改为：
-    # schema_filter: '~^(?!doctrine_migration_versions$)(?!messenger_messages$).*~'
     schema_filter: '~^(?!doctrine_migration_versions$).*~'
 
   orm:
@@ -30,7 +26,6 @@ doctrine:
 when@test:
   doctrine:
     dbal:
-      # "TEST_TOKEN" is typically set by ParaTest
       dbname_suffix: '_test%env(default::TEST_TOKEN)%'
 
 when@prod:
