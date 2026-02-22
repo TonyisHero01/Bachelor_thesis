@@ -1,0 +1,18 @@
+framework:
+  secret: '%env(APP_SECRET)%'
+  default_locale: 'en'
+
+  session:
+    name: BMSSESSID
+    handler_id: null
+    save_path: '%kernel.project_dir%/var/sessions_bms/%kernel.environment%'
+    cookie_lifetime: 86400
+    gc_maxlifetime: 86400
+    cookie_secure: auto
+    cookie_samesite: lax
+
+when@test:
+  framework:
+    test: true
+    session:
+      storage_factory_id: session.storage.factory.mock_file

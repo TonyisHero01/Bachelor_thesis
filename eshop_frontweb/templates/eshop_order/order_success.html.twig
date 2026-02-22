@@ -1,0 +1,21 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Order Success - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-success.css') }}">
+
+<div id="order-successful-info-block">
+  <h2>Order Placed Successfully!</h2>
+  <p>Your order has been placed successfully.</p>
+  <p><strong>Order ID:</strong> {{ order.getId() }}</p>
+
+  {% if not shopInfo.hidePrices %}
+    <p><strong>Total Price:</strong> {{ money(order.getTotalPrice()) }}</p>
+  {% endif %}
+
+  <a href="{{ path('customer_orders', {'_locale': locale}) }}">View Your Orders</a>
+</div>
+
+<script src="{{ asset('assets/eshopOrderSuccess.js') }}"></script>
+{% endblock %}

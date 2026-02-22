@@ -1,0 +1,40 @@
+# config/routes.yaml
+
+# 1) Import all attribute routes from controllers (keep as-is)
+controllers:
+  resource:
+    path: ../src/Controller/
+    namespace: App\Controller
+  type: attribute
+
+# 2) Root (/) redirects to your existing home route defined by attribute
+#    If your EshopHomeController::index has #[Route('/home', name: 'app_eshop_home')]
+#    this will redirect "/" -> that page.
+index_redirect:
+  path: /
+  controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::redirectAction
+  defaults:
+    route: app_eshop_home
+    permanent: true
+
+# 3) (Optional) Explicit /home route.
+#    ONLY keep this if your controller does NOT already define it via attribute.
+#    If you already have #[Route('/home', name: 'app_eshop_home')] in the controller, DELETE this block.
+app_eshop_home:
+  path: /homepage
+  controller: App\Controller\EshopHomeController::index
+  methods: [GET]
+
+# 4) AJAX currency switch endpoint used by base.html.twig <select id="currency-select">
+set_currency:
+  path: /set-currency
+  controller: App\Controller\CurrencyController::setCurrency
+  methods: [POST]
+
+# 5) Delete image (kept from your original definition)
+delete_cimage:
+  path: /delete_cimage/{imageName}
+  controller: App\Controller\HomeController::deleteCImage
+  requirements:
+    imageName: '.+'
+  methods: [POST]

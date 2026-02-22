@@ -1,0 +1,305 @@
+{# templates/eshop_base.html.twig #}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ shopInfo.getEshopName() }}{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
+
+    {% block stylesheets %}
+      <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css">
+      <link rel="stylesheet" href="{{ asset('assets/eshop_styles/base.css') }}">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+    {% endblock %}
+
+    {% block javascripts %}
+      {% block importmap %}{{ importmap('app') }}{% endblock %}
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
+      <script src="{{ asset('assets/eshopBase.js') }}"></script>
+    {% endblock %}
+  </head>
+
+  <body class="eshop-root">
+    {% set languages = (languages is defined) ? languages : (availableLanguages is defined ? availableLanguages : []) %}
+    {% set currentLocale = (locale is defined and locale) ? locale : (app.request.get('_locale') ?? 'en') %}
+
+    {% set __currs = (currencies is defined and currencies is not empty) ? currencies : [] %}
+    {% set __active = app.session.get('active_currency') %}
+    {% if __active is null %}
+      {% set __activeTmp = null %}
+      {% for c in __currs %}
+        {% if c.isIsDefault is defined and c.isIsDefault() %}{% set __activeTmp = c.name %}{% endif %}
+      {% endfor %}
+      {% if __activeTmp is null and __currs is not empty %}
+        {% set __activeTmp = (__currs|first).name %}
+      {% endif %}
+      {% set __active = __activeTmp is not null ? __activeTmp : 'EUR' %}
+    {% endif %}
+
+    <div class="page-container">
+      <header class="header_container">
+        <button class="menu-toggle" aria-label="Toggle Menu">
+          <span></span><span></span><span></span>
+        </button>
+
+        <div class="header_left">
+          <div>☎ {{ shopInfo.telephone }}</div>
+          <div>✉ {{ shopInfo.email }}</div>
+        </div>
+
+        <div class="header_center">
+          <a href="{{ path('app_eshop_home', {'_locale': currentLocale}) }}"><h1>{{ shopInfo.getEshopName() }}</h1></a>
+        </div>
+
+        <div class="header_right">
+          <div class="field">
+            <input type="text" id="searchInput" class="search__input" placeholder="Search...">
+            <button class="search__button" type="button">
+              <svg class="icon-search" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <a href="{{ path('customer_wishlist', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Wishlist">
+            <svg viewBox="0 0 512 512" class="icon icon-wishlist">
+              <path d="M474.644,74.27C449.391,45.616,414.358,29.836,376,29.836c-53.948,0-88.103,32.22-107.255,59.25c-4.969,7.014-9.196,14.047-12.745,20.665c-3.549-6.618-7.775-13.651-12.745-20.665c-19.152-27.03-53.307-59.25-107.255-59.25c-38.358,0-73.391,15.781-98.645,44.435C13.267,101.605,0,138.213,0,177.351c0,42.603,16.633,82.228,52.345,124.7c31.917,37.96,77.834,77.088,131.005,122.397c19.813,16.884,40.302,34.344,62.115,53.429l0.655,0.574c2.828,2.476,6.354,3.713,9.88,3.713s7.052-1.238,9.88-3.713l0.655-0.574c21.813-19.085,42.302-36.544,62.118-53.431c53.168-45.306,99.085-84.434,131.002-122.395C495.367,259.578,512,219.954,512,177.351C512,138.213,498.733,101.605,474.644,74.27z"></path>
+            </svg>
+          </a>
+
+          <a href="{{ path('customer_cart', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Cart">
+            <svg viewBox="0 0 1024 1024" class="icon icon-cart" xmlns="http://www.w3.org/2000/svg">
+              <path class="path1" d="M409.6 1024c-56.464 0-102.4-45.936-102.4-102.4s45.936-102.4 102.4-102.4S512 865.136 512 921.6 466.064 1024 409.6 1024zm0-153.6c-28.232 0-51.2 22.968-51.2 51.2s22.968 51.2 51.2 51.2 51.2-22.968 51.2-51.2-22.968-51.2-51.2-51.2z"></path>
+              <path class="path2" d="M768 1024c-56.464 0-102.4-45.936-102.4-102.4S711.536 819.2 768 819.2s102.4 45.936 102.4 102.4S824.464 1024 768 1024zm0-153.6c-28.232 0-51.2 22.968-51.2 51.2s22.968 51.2 51.2 51.2 51.2-22.968 51.2-51.2-22.968-51.2-51.2-51.2z"></path>
+              <path class="path3" d="M898.021 228.688C885.162 213.507 865.763 204.8 844.8 204.8H217.954l-5.085-30.506C206.149 133.979 168.871 102.4 128 102.4H76.8c-14.138 0-25.6 11.462-25.6 25.6s11.462 25.6 25.6 25.6H128c15.722 0 31.781 13.603 34.366 29.112l85.566 513.395C254.65 736.421 291.929 768 332.799 768h512c14.139 0 25.6-11.461 25.6-25.6s-11.461-25.6-25.6-25.6h-512c-15.722 0-31.781-13.603-34.366-29.11l-12.63-75.784 510.206-44.366c39.69-3.451 75.907-36.938 82.458-76.234l34.366-206.194c3.448-20.677-1.952-41.243-14.813-56.424zm-35.69 48.006l-34.366 206.194c-2.699 16.186-20.043 32.221-36.39 33.645l-514.214 44.714-50.874-305.246h618.314c5.968 0 10.995 2.054 14.155 5.782 3.157 3.73 4.357 9.024 3.376 14.912z"></path>
+            </svg>
+            {% if app.user %}
+              <div class="cart-count-bubble">{{ cart_count() }}</div>
+            {% endif %}
+          </a>
+
+          <a href="{{ app.user ? path('customer_home', {'_locale': currentLocale}) : path('customer_login', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Account">
+            {% if app.user and app.user.email is not empty %}
+              <div class="user-initial-circle">{{ app.user.email|first|upper }}</div>
+            {% else %}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" class="icon icon-account">
+                <title>You are not logged in!</title>
+                <path d="M486.4 563.2c-155.275 0-281.6-126.325-281.6-281.6s126.325-281.6 281.6-281.6 281.6 126.325 281.6 281.6-126.325 281.6-281.6 281.6zM486.4 51.2c-127.043 0-230.4 103.357-230.4 230.4s103.357 230.4 230.4 230.4c127.042 0 230.4-103.357 230.4-230.4s-103.358-230.4-230.4-230.4z"></path>
+                <path d="M896 1024h-819.2c-42.347 0-76.8-34.451-76.8-76.8 0-3.485 0.712-86.285 62.72-168.96 36.094-48.126 85.514-86.36 146.883-113.634 74.957-33.314 168.085-50.206 276.797-50.206 108.71 0 201.838 16.893 276.797 50.206 61.37 27.275 110.789 65.507 146.883 113.634 62.008 82.675 62.72 165.475 62.72 168.96 0 42.349-34.451 76.8-76.8 76.8zM486.4 665.6c-178.52 0-310.267 48.789-381 141.093-53.011 69.174-54.195 139.904-54.2 140.61 0 14.013 11.485 25.498 25.6 25.498h819.2c14.115 0 25.6-11.485 25.6-25.6-0.006-0.603-1.189-71.333-54.198-140.507-70.734-92.304-202.483-141.093-381.002-141.093z"></path>
+              </svg>
+            {% endif %}
+          </a>
+
+          <form id="locale-switcher" method="get">
+            <select name="_locale" class="picker-select lang-select" onchange="this.form.submit()">
+              <option value="en" {% if currentLocale == 'en' %}selected{% endif %}>EN</option>
+              {% for lang in languages %}
+                {% if lang != 'en' %}
+                  <option value="{{ lang }}" {% if lang == currentLocale %}selected{% endif %}>{{ lang|upper }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </form>
+
+          <select id="currency-select" class="picker-select" data-set-url="{{ path('set_currency') }}">
+            {% if __currs is not empty %}
+              {% for c in __currs %}
+                <option value="{{ c.name }}" {% if c.name == __active %}selected{% endif %}>{{ c.name }}</option>
+              {% endfor %}
+            {% else %}
+              <option value="{{ __active }}" selected>{{ __active }}</option>
+            {% endif %}
+          </select>
+        </div>
+      </header>
+
+      <div class="overlay"></div>
+
+      <div class="mobile-categories">
+        <div class="mobile-categories-header">
+          <div class="mobile-header-icons">
+            <a href="{{ app.user ? path('customer_home', {'_locale': currentLocale}) : path('customer_login', {'_locale': currentLocale}) }}" class="header_icon account-icon" aria-label="Account">
+              {% if app.user and app.user.email is not empty %}
+                <div class="user-initial-circle">{{ app.user.email|first|upper }}</div>
+              {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" class="icon icon-account"><path d="M486.4 563.2c-155.275 0-281.6-126.325-281.6-281.6s126.325-281.6 281.6-281.6 281.6 126.325 281.6 281.6-126.325 281.6-281.6 281.6zM486.4 51.2c-127.043 0-230.4 103.357-230.4 230.4s103.357 230.4 230.4 230.4c127.042 0 230.4-103.357 230.4-230.4s-103.358-230.4-230.4-230.4z"></path><path d="M896 1024h-819.2c-42.347 0-76.8-34.451-76.8-76.8 0-3.485 0.712-86.285 62.72-168.96 36.094-48.126 85.514-86.36 146.883-113.634 74.957-33.314 168.085-50.206 276.797-50.206 108.71 0 201.838 16.893 276.797 50.206 61.37 27.275 110.789 65.507 146.883 113.634 62.008 82.675 62.72 165.475 62.72 168.96 0 42.349-34.451 76.8-76.8 76.8zM486.4 665.6c-178.52 0-310.267 48.789-381 141.093-53.011 69.174-54.195 139.904-54.2 140.61 0 14.013 11.485 25.498 25.6 25.498h819.2c14.115 0 25.6-11.485 25.6-25.6-0.006-0.603-1.189-71.333-54.198-140.507-70.734-92.304-202.483-141.093-381.002-141.093z"></path></svg>
+              {% endif %}
+            </a>
+            <a href="{{ path('customer_wishlist', {'_locale': currentLocale}) }}" class="header__icon header__icon--wishlist link link--text focus-inset">
+              <svg viewBox="0 0 512 512" class="icon icon-wishlist"><path d="M474.644,74.27..."></path></svg>
+            </a>
+            <a href="{{ path('customer_cart', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Cart">
+              <svg viewBox="0 0 1024 1024" class="icon icon-cart" xmlns="http://www.w3.org/2000/svg"><path class="path1" d="M409.6 1024..."></path></svg>
+              {% if app.user %}<div class="cart-count-bubble">{{ cart_count() }}</div>{% endif %}
+            </a>
+          </div>
+          <button class="close-categories">
+            <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          </button>
+        </div>
+        <div class="mobile-categories-content">
+          <ul class="categories-list">
+            {% for category in (categories is defined ? categories : []) %}
+              <li><a href="{{ path('app_eshop_category', {'id': category.id, '_locale': currentLocale}) }}">{{ category.name }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="main-body {{ (show_sidebar is defined and show_sidebar) ? 'has-sidebar' : 'no-sidebar' }}">
+        {% if show_sidebar is defined and show_sidebar %}
+          <aside class="eshop-sidebar">
+            <h3>Filters</h3>
+
+            {% if shopInfo is defined and (not shopInfo.getHidePrices()) %}
+              <div class="filter-section">
+                <h4>Price</h4>
+                <div id="price-slider"></div>
+                <div class="price-values">
+                  <span id="price-selected-min">0</span> - <span id="price-selected-max">1000</span>
+                </div>
+              </div>
+            {% endif %}
+
+            <div class="filter-section">
+              <h4>Color</h4>
+              <div class="color-options">
+                {% for color in (colors is defined ? colors : []) %}
+                  <label class="custom-checkbox circle">
+                    <input type="checkbox" name="color" value="{{ color.id }}">
+                    <span class="checkmark" id="checkmark-{{ color.id }}" style="background-color: {{ color.hex }};"></span>
+                    {{ color.getTranslatedName(currentLocale) }}
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="filter-section">
+              <h4>Size</h4>
+              <div class="size-options">
+                {% for size in (sizes is defined ? sizes : []) %}
+                  <label class="custom-checkbox large">
+                    <input type="checkbox" name="size" value="{{ size.id }}">
+                    <span class="checkmark"></span> {{ size.name }}
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <button id="reset-filters" class="filter-button reset">Reset Filters</button>
+            <button id="apply-filters" class="filter-button apply">Apply Filters</button>
+          </aside>
+        {% endif %}
+
+        <main class="product-content">
+          {% block body %}{% endblock %}
+        </main>
+      </div>
+
+      <footer class="footer">
+        <div class="footer-content">
+          <div class="footer-left">
+            <h3>{{ shopInfo.getEshopName() }}</h3>
+            <p>{{ shopInfo.address }}</p>
+            <p>📞 {{ shopInfo.telephone }}</p>
+            <p>✉️ {{ shopInfo.email }}</p>
+          </div>
+          <div class="footer-right">
+            <h3>Information</h3>
+            <div class="footer-links-grid">
+              <a href="{{ path('page_about_us', {'_locale': currentLocale}) }}" class="static-link">About Us</a>
+              <a href="{{ path('page_how_to_order', {'_locale': currentLocale}) }}" class="static-link">How To Order</a>
+              <a href="{{ path('page_business_conditions', {'_locale': currentLocale}) }}" class="static-link">Business Conditions</a>
+              <a href="{{ path('page_privacy_policy', {'_locale': currentLocale}) }}" class="static-link">Privacy Policy</a>
+              <a href="{{ path('page_shipping_info', {'_locale': currentLocale}) }}" class="static-link">Shipping Info</a>
+              <a href="{{ path('page_payment', {'_locale': currentLocale}) }}" class="static-link">Payment</a>
+              <a href="{{ path('page_refund', {'_locale': currentLocale}) }}" class="static-link">Refund</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>© {{ "now"|date("Y") }} {{ shopInfo.getEshopName() }}. All rights reserved.</p>
+        </div>
+      </footer>
+
+      <div class="mobile-search-overlay" id="mobile-search-overlay">
+        <div class="mobile-search-container">
+          <div class="mobile-search-header">
+            <button class="close-search">
+              <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+          </div>
+          <div class="mobile-search-content">
+            <div class="mobile-search-form">
+              <input type="text" class="mobile-search__input" placeholder="搜索产品...">
+              <button type="button" class="mobile-search__button">
+                <svg class="icon-search" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                  <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <div class="mobile-search-results" id="mobile-search-results"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loadingSpinner" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:9999;">
+      <i class="fas fa-spinner fa-spin fa-3x"></i>
+    </div>
+
+    <script src="{{ asset('assets/eshopSearch.js') }}"></script>
+
+    <script>
+      (function(){
+        const sel = document.getElementById('currency-select');
+        if(!sel) return;
+
+        const rates = {
+          {% for c in (__currs|default([])) %}
+            "{{ c.name|e('js') }}": {{ (c.value ?? 1)|default(1) }}{{ not loop.last ? ',' : '' }}
+          {% endfor %}
+        };
+        const postUrl = sel.dataset.setUrl;
+
+        function readBase(el){
+          const v = el.getAttribute('data-raw') ?? el.getAttribute('data-base') ?? el.dataset.amount ?? '0';
+          const n = parseFloat(v);
+          return isFinite(n) ? n : 0;
+        }
+
+        function redrawAll(code){
+          const r = Number(rates[code] ?? 1);
+          document.querySelectorAll('.money').forEach(el=>{
+            const base = readBase(el);
+            el.textContent = (base * r).toFixed(2) + ' ' + code;
+          });
+        }
+
+        function syncToServer(code){
+          return fetch(postUrl, {
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:'currency=' + encodeURIComponent(code)
+          }).catch(()=>{});
+        }
+
+        const LS_KEY = 'active_currency';
+        const stored = localStorage.getItem(LS_KEY);
+        if (stored && stored !== sel.value) sel.value = stored;
+
+        redrawAll(sel.value);
+        syncToServer(sel.value);
+
+        sel.addEventListener('change', ()=>{
+          const code = sel.value;
+          localStorage.setItem(LS_KEY, code);
+          redrawAll(code);
+          syncToServer(code);
+        });
+      })();
+    </script>
+  </body>
+</html>

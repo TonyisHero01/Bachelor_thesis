@@ -1,0 +1,10 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block body %}
+    <div class="container page-content">
+        <h1>{{ title }}</h1>
+        <div class="static-html-content">
+            {{ content|raw }}
+        </div>
+    </div>
+{% endblock %}

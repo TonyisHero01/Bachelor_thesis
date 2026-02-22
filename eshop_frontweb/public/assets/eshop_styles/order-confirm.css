@@ -1,0 +1,140 @@
+.order-confirmation {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.order-confirmation h2 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #333;
+    font-size: 2rem;
+}
+
+.order-confirmation table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.order-confirmation table tr {
+    border-bottom: 1px solid #eee;
+}
+
+.order-confirmation table tr:last-child {
+    border-bottom: none;
+}
+
+.order-confirmation table td {
+    padding: 1rem;
+    color: #666;
+}
+
+.order-confirmation table td:first-child {
+    font-weight: 500;
+    color: #333;
+}
+
+.order-confirmation table td:last-child {
+    text-align: right;
+}
+
+.order-confirmation .item_product_name td:first-child {
+    font-weight: 600;
+    color: #333;
+}
+
+.order-confirmation p {
+    text-align: right;
+    font-size: 1.2rem;
+    margin: 1.5rem 0;
+}
+
+.order-confirmation .order-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.order-confirmation button,
+.order-confirmation a.btn-action {
+    padding: 0.8rem 2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#cancelOrderBtn {
+    background: #dc3545;
+    color: white;
+}
+#cancelOrderBtn:hover {
+    background: #c82333;
+}
+
+#confirmOrderBtn,
+.order-confirmation a.btn-action {
+    background: #28a745;
+    color: white !important;
+    text-decoration: none;
+    display: inline-block;
+}
+#confirmOrderBtn:hover,
+.order-confirmation a.btn-action:hover {
+    background: #218838;
+}
+
+.order-confirmation .return-btn {
+    display: block;
+    width: 100%;
+    max-width: 200px;
+    margin: 2rem auto;
+    padding: 0.8rem;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.order-confirmation .return-btn:hover {
+    background: #c82333;
+}
+
+@media screen and (max-width: 768px) {
+    .order-confirmation {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+
+    .order-confirmation h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .order-confirmation table td {
+        padding: 0.8rem;
+        font-size: 0.95rem;
+    }
+
+    .order-confirmation p {
+        font-size: 1.1rem;
+    }
+
+    .order-confirmation .order-actions {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .order-confirmation button,
+    .order-confirmation a.btn-action {
+        width: 100%;
+    }
+}

@@ -1,0 +1,84 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
+<form method="post" action="{{ path('frontweb_translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('frontweb_translation_submit') }}">
+    <input type="hidden" name="original_path" value="eshop_cart/cart.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+<div class="field-group">
+    <label>% OFF</label>
+    <input type="hidden" name="original__auto__off_1" value="% OFF">
+    <input type="text" name="field__auto__off_1" placeholder="% OFF">
+</div>
+<div class="field-group">
+    <label>Your Shopping Cart</label>
+    <input type="hidden" name="original__auto_your_shopping_cart_4" value="Your Shopping Cart">
+    <input type="text" name="field__auto_your_shopping_cart_4" placeholder="Your Shopping Cart">
+</div>
+<div class="field-group">
+    <label>Your cart is empty.</label>
+    <input type="hidden" name="original__auto_your_cart_is_empty__6" value="Your cart is empty.">
+    <input type="text" name="field__auto_your_cart_is_empty__6" placeholder="Your cart is empty.">
+</div>
+<div class="field-group">
+    <label>Product</label>
+    <input type="hidden" name="original__auto_product_7" value="Product">
+    <input type="text" name="field__auto_product_7" placeholder="Product">
+</div>
+<div class="field-group">
+    <label>Price</label>
+    <input type="hidden" name="original__auto_price_9" value="Price">
+    <input type="text" name="field__auto_price_9" placeholder="Price">
+</div>
+<div class="field-group">
+    <label>Quantity</label>
+    <input type="hidden" name="original__auto_quantity_10" value="Quantity">
+    <input type="text" name="field__auto_quantity_10" placeholder="Quantity">
+</div>
+<div class="field-group">
+    <label>Total</label>
+    <input type="hidden" name="original__auto_total_11" value="Total">
+    <input type="text" name="field__auto_total_11" placeholder="Total">
+</div>
+<div class="field-group">
+    <label>Action</label>
+    <input type="hidden" name="original__auto_action_12" value="Action">
+    <input type="text" name="field__auto_action_12" placeholder="Action">
+</div>
+<div class="field-group">
+    <label>-</label>
+    <input type="hidden" name="original__auto___21" value="-">
+    <input type="text" name="field__auto___21" placeholder="-">
+</div>
+<div class="field-group">
+    <label>+</label>
+    <input type="hidden" name="original__auto___23" value="+">
+    <input type="text" name="field__auto___23" placeholder="+">
+</div>
+<div class="field-group">
+    <label>Remove</label>
+    <input type="hidden" name="original__auto_remove_25" value="Remove">
+    <input type="text" name="field__auto_remove_25" placeholder="Remove">
+</div>
+<div class="field-group">
+    <label>Total:</label>
+    <input type="hidden" name="original__auto_total__28" value="Total:">
+    <input type="text" name="field__auto_total__28" placeholder="Total:">
+</div>
+<div class="field-group">
+    <label>Proceed to Checkout</label>
+    <input type="hidden" name="original__auto_proceed_to_checkout_30" value="Proceed to Checkout">
+    <input type="text" name="field__auto_proceed_to_checkout_30" placeholder="Proceed to Checkout">
+</div>
+<input type="hidden" name="original__template_extends" value="eyUgZXh0ZW5kcyAnZXNob3BfYmFzZS5odG1sLnR3aWcnICV9">
+<input type="hidden" name="field__template_extends" value="eyUgZXh0ZW5kcyAnbG9jYWxlL2N6L2VzaG9wX2Jhc2UuaHRtbC50d2lnJyAlfQ==">
+
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

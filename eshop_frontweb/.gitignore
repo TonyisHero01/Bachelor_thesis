@@ -1,0 +1,24 @@
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> symfony/asset-mapper ###
+/assets/vendor/
+###< symfony/asset-mapper ###
+# macOS .DS_Store files
+.DS_Store
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
+
+/python_scripts/__pycache__/
+/python_scripts/venv/
+.env.local
+.env.*.local

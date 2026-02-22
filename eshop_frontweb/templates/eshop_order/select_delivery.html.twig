@@ -1,0 +1,45 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Select Delivery Option - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-delivery.css') }}">
+
+<div class="delivery-options">
+    <h2>Choose Delivery Method</h2>
+
+    <form id="deliveryForm"
+      data-create-api="{{ path('order_create', {'_locale': locale}) }}"
+      data-pay-url="{{ path('checkout_mock_gateway', {'_locale': locale}) }}">
+        <label>
+            <input type="radio" name="deliveryMethod" value="pickup" checked>
+            Pick Up at Store
+        </label>
+
+        <label>
+            <input type="radio" name="deliveryMethod" value="delivery">
+            Home Delivery
+        </label>
+
+        <div id="addressFields" style="display: none;">
+            <h3>Delivery Address</h3>
+            <label>Country: <input type="text" id="country" name="country"></label>
+            <label>City: <input type="text" id="city" name="city"></label>
+            <label>Street: <input type="text" id="street" name="street"></label>
+            <label>House Number: <input type="text" id="houseNumber" name="houseNumber"></label>
+            <label>Postal Code: <input type="text" id="postalCode" name="postalCode"></label>
+        </div>
+
+        <h3>Customer Contact Information</h3>
+        <label>Full Name: <input type="text" id="fullName" name="fullName" required></label>
+        <label>Phone Number: <input type="tel" id="phoneNumber" name="phoneNumber" required></label>
+
+        <h3>Leave a Note</h3>
+        <textarea id="orderNote" name="orderNote" placeholder="Enter any special requests or instructions"></textarea>
+
+        <button type="submit">Confirm</button>
+    </form>
+</div>
+
+<script src="{{ asset('assets/eshopSelectDelivery.js') }}"></script>
+{% endblock %}

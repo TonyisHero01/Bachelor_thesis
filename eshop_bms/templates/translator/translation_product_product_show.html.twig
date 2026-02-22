@@ -1,0 +1,127 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
+    <input type="hidden" name="original_path" value="product/product_show.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+<div class="field-group">
+    <label>Product Detail</label>
+    <input type="hidden" name="original__auto_product_detail_1" value="Product Detail">
+    <input type="text" name="field__auto_product_detail_1" placeholder="Product Detail">
+</div>
+<div class="field-group">
+    <label>Name</label>
+    <input type="hidden" name="original__auto_name_2" value="Name">
+    <input type="text" name="field__auto_name_2" placeholder="Name">
+</div>
+<div class="field-group">
+    <label>SKU</label>
+    <input type="hidden" name="original__auto_sku_3" value="SKU">
+    <input type="text" name="field__auto_sku_3" placeholder="SKU">
+</div>
+<div class="field-group">
+    <label>Category</label>
+    <input type="hidden" name="original__auto_category_4" value="Category">
+    <input type="text" name="field__auto_category_4" placeholder="Category">
+</div>
+<div class="field-group">
+    <label>Description</label>
+    <input type="hidden" name="original__auto_description_5" value="Description">
+    <input type="text" name="field__auto_description_5" placeholder="Description">
+</div>
+<div class="field-group">
+    <label>Size</label>
+    <input type="hidden" name="original__auto_size_7" value="Size">
+    <input type="text" name="field__auto_size_7" placeholder="Size">
+</div>
+<div class="field-group">
+    <label>Dimensions (W x H x L)</label>
+    <input type="hidden" name="original__auto_dimensions_w_x_h_x_l__8" value="Dimensions (W x H x L)">
+    <input type="text" name="field__auto_dimensions_w_x_h_x_l__8" placeholder="Dimensions (W x H x L)">
+</div>
+<div class="field-group">
+    <label>Weight</label>
+    <input type="hidden" name="original__auto_weight_9" value="Weight">
+    <input type="text" name="field__auto_weight_9" placeholder="Weight">
+</div>
+<div class="field-group">
+    <label>Material</label>
+    <input type="hidden" name="original__auto_material_10" value="Material">
+    <input type="text" name="field__auto_material_10" placeholder="Material">
+</div>
+<div class="field-group">
+    <label>Color</label>
+    <input type="hidden" name="original__auto_color_11" value="Color">
+    <input type="text" name="field__auto_color_11" placeholder="Color">
+</div>
+<div class="field-group">
+    <label>Stock</label>
+    <input type="hidden" name="original__auto_stock_12" value="Stock">
+    <input type="text" name="field__auto_stock_12" placeholder="Stock">
+</div>
+<div class="field-group">
+    <label>0 ? product.numberInStock ~ &#039; Available&#039; : &#039;Out of Stock&#039; }}&quot; readonly&gt;</label>
+    <input type="hidden" name="original__auto_0_product_numberinstock__13" value="0 ? product.numberInStock ~ &#039; Available&#039; : &#039;Out of Stock&#039; }}&quot; readonly&gt;">
+    <input type="text" name="field__auto_0_product_numberinstock__13" placeholder="0 ? product.numberInStock ~ &#039; Available&#039; : &#039;Out of Stock&#039; }}&quot; readonly&gt;">
+</div>
+<div class="field-group">
+    <label>Price</label>
+    <input type="hidden" name="original__auto_price_14" value="Price">
+    <input type="text" name="field__auto_price_14" placeholder="Price">
+</div>
+<div class="field-group">
+    <label>Discount</label>
+    <input type="hidden" name="original__auto_discount_17" value="Discount">
+    <input type="text" name="field__auto_discount_17" placeholder="Discount">
+</div>
+<div class="field-group">
+    <label>Final Price</label>
+    <input type="hidden" name="original__auto_final_price_18" value="Final Price">
+    <input type="text" name="field__auto_final_price_18" placeholder="Final Price">
+</div>
+<div class="field-group">
+    <label>Tax Rate</label>
+    <input type="hidden" name="original__auto_tax_rate_22" value="Tax Rate">
+    <input type="text" name="field__auto_tax_rate_22" placeholder="Tax Rate">
+</div>
+<div class="field-group">
+    <label>Added Time</label>
+    <input type="hidden" name="original__auto_added_time_23" value="Added Time">
+    <input type="text" name="field__auto_added_time_23" placeholder="Added Time">
+</div>
+<div class="field-group">
+    <label>Images</label>
+    <input type="hidden" name="original__auto_images_24" value="Images">
+    <input type="text" name="field__auto_images_24" placeholder="Images">
+</div>
+<div class="field-group">
+    <label>No images uploaded.</label>
+    <input type="hidden" name="original__auto_no_images_uploaded__27" value="No images uploaded.">
+    <input type="text" name="field__auto_no_images_uploaded__27" placeholder="No images uploaded.">
+</div>
+<div class="field-group">
+    <label>Attributes</label>
+    <input type="hidden" name="original__auto_attributes_28" value="Attributes">
+    <input type="text" name="field__auto_attributes_28" placeholder="Attributes">
+</div>
+<div class="field-group">
+    <label>No extra attributes.</label>
+    <input type="hidden" name="original__auto_no_extra_attributes__31" value="No extra attributes.">
+    <input type="text" name="field__auto_no_extra_attributes__31" placeholder="No extra attributes.">
+</div>
+<div class="field-group">
+    <label>Back</label>
+    <input type="hidden" name="original__auto_back_32" value="Back">
+    <input type="text" name="field__auto_back_32" placeholder="Back">
+</div>
+
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

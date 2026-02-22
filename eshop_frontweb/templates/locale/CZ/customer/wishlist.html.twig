@@ -1,0 +1,54 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/product-page.css') }}">
+    <link rel="stylesheet" href="{{ asset('../assets/eshop_styles/wishlist.css') }}">
+{% endblock %}
+
+{% block body %}
+<table class="wishlist-table">
+    {% for product in products %}
+        <tr>
+            <td>
+                <div class="wishlist-container">
+                    <div class="wishlist-grid">
+                        <!-- Image -->
+                        <div class="img-container">
+                            <a href="{{ path('show_eshop_product', {'id': product.id}) }}">
+                                <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
+                            </a>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="description-container">
+                            <div class="product-name">
+                                <a href="{{ path('show_eshop_product', {'id': product.id}) }}">{{ product.name }}</a>
+                            </div>
+                            <div class="product-description">{{ product.description | raw }}</div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="wishlist-actions">
+                            <button class="remove-from-wishlist" data-product-id="{{ product.id }}">🗑 Odebrat ze seznamu přání</button>
+
+                            <div class="actions-row">
+                                <div class="quantity-selector">
+                                    <button class="quantity-btn" onclick="updateQuantity('{{ product.id }}', -1)">-</button>
+                                    <span class="quantity-value" id="wishlist-quantity-{{ product.id }}">1</span>
+                                    <button class="quantity-btn" onclick="updateQuantity('{{ product.id }}', 1)">+</button>
+                                </div>
+
+                                <button class="add-to-cart" data-product-id="{{ product.id }}">🛒 Přidat do košíku</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+</table>
+
+<script src="{{ asset('../assets/eshopWishlist.js') }}"></script>
+
+{% endblock %}

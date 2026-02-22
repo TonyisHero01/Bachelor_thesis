@@ -1,0 +1,142 @@
+{# templates/checkout/mock_gateway.html.twig #}
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}
+  {% set shopName = (shopInfo is defined and shopInfo) ? shopInfo.getEshopName() : '' %}
+  {{ shopName ? 'Mock Payment - ' ~ shopName : 'Mock Payment' }}
+{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-confirm.css') }}">
+
+<div class="order-confirmation" 
+     data-locale="{{ locale|default(app.request.locale) }}"
+     data-callback="{{ path('checkout_mock_callback', {'_locale': locale}) }}"
+     data-status-api="{{ path('checkout_status', {'id': order.id, '_locale': locale}) }}"
+     data-success-redirect="{{ path('order_success', {'id': order.id, '_locale': locale}) }}">
+  <h2>Mock Payment</h2>
+
+  <table>
+    <tr>
+      <td>Order</td>
+      <td><strong>Order ID:</strong> {{ order.id }}</td>
+    </tr>
+  </table>
+
+  <p style="text-align:center; margin: 1rem 0;">
+    Current status in DB:
+    {% set ps = order.getPaymentStatus()|upper %}
+    <span id="paymentStatusPill" class="badge {{ ps == 'COMPLETED' ? 'badge-success' : (ps == 'FAILED' ? 'badge-danger' : 'badge-secondary') }}">
+      {{ ps }}
+    </span>
+  </p>
+
+  <form id="mockPayForm" style="text-align:center; margin-top: 1.5rem;">
+    <input type="hidden" name="order_id" value="{{ order.id }}"/>
+
+    <div class="order-actions" style="justify-content:center;">
+      <button type="button" data-result="SUCCESS" class="btn-success">Pay Success</button>
+      <button type="button" data-result="PENDING" class="btn-pending">Mark Pending</button>
+      <button type="button" data-result="FAILED"  class="btn-fail">Pay Failed</button>
+    </div>
+  </form>
+
+  <a href="{{ path('customer_orders', {'_locale': locale}) }}">Back to My Orders</a>
+</div>
+
+<script>
+(function(){
+  const root = document.querySelector('.order-confirmation');
+  if (!root) return;
+
+  const callbackUrl = root.getAttribute('data-callback');
+  const statusApi   = root.getAttribute('data-status-api');
+  const successUrl  = root.getAttribute('data-success-redirect');
+  const orderId     = document.querySelector('input[name="order_id"]').value;
+  const pill        = document.getElementById('paymentStatusPill');
+
+  function setPill(status){
+    const s = String(status || '').toUpperCase();
+    pill.textContent = s;
+    pill.className = 'badge ' + (s === 'COMPLETED' ? 'badge-success' : (s === 'FAILED' ? 'badge-danger' : 'badge-secondary'));
+  }
+
+  async function postResult(result){
+    const fd = new FormData();
+    fd.append('order_id', orderId);
+    fd.append('result', result); // SUCCESS|FAILED|PENDING
+
+    const btns = root.querySelectorAll('button[data-result]');
+    btns.forEach(b => b.disabled = true);
+
+    try {
+      const res  = await fetch(callbackUrl, { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (!data.success) {
+        alert(data.message || 'Callback failed');
+        btns.forEach(b => b.disabled = false);
+        return;
+      }
+
+      // 以数据库为准，刷新 pill
+      setPill(data.orderPaymentStatus);
+
+      // 支付成功才跳转
+      if (String(data.orderPaymentStatus).toUpperCase() === 'COMPLETED') {
+        window.location.href = successUrl;
+      } else {
+        btns.forEach(b => b.disabled = false);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Network error');
+      btns.forEach(b => b.disabled = false);
+    }
+  }
+
+  // 三个按钮
+  root.querySelectorAll('button[data-result]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const result = btn.getAttribute('data-result'); // SUCCESS|FAILED|PENDING
+      postResult(result);
+    });
+  });
+
+  // （可选）轮询：如果是 PENDING，隔几秒拉一次最新 DB 状态
+  let poller = null;
+  function startPolling(){
+    if (poller) return;
+    poller = setInterval(async () => {
+      try {
+        const r = await fetch(statusApi, { method: 'GET' });
+        const d = await r.json();
+        if (d && d.success) {
+          setPill(d.orderPaymentStatus);
+          if (String(d.orderPaymentStatus).toUpperCase() === 'COMPLETED') {
+            clearInterval(poller);
+            poller = null;
+            window.location.href = successUrl;
+          }
+        }
+      } catch (_) {}
+    }, 4000);
+  }
+  // 进入页面如果是 PENDING 就开始轮询
+  if (pill && pill.textContent.trim().toUpperCase() === 'PENDING') {
+    startPolling();
+  }
+})();
+</script>
+
+<style>
+/* 简单徽章样式，可放公共 CSS */
+.badge { padding: .25rem .5rem; border-radius: .375rem; font-weight: 600; }
+.badge-success { background:#198754; color:#fff; }
+.badge-danger  { background:#dc3545; color:#fff; }
+.badge-secondary { background:#6c757d; color:#fff; }
+.btn-success { background:#28a745; color:#fff; padding:.6rem 1.2rem; border:none; border-radius:4px; margin:0 .5rem; cursor:pointer; }
+.btn-pending { background:#6c757d; color:#fff; padding:.6rem 1.2rem; border:none; border-radius:4px; margin:0 .5rem; cursor:pointer; }
+.btn-fail    { background:#dc3545; color:#fff; padding:.6rem 1.2rem; border:none; border-radius:4px; margin:0 .5rem; cursor:pointer; }
+</style>
+{% endblock %}

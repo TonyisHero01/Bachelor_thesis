@@ -1,0 +1,36 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Customer Page{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/customer_home.css') }}">
+
+<div class="customer-container">
+    <nav class="customer-nav">
+        <a href="{{ app.user ? path('app_logout') : path('customer_login') }}">
+            {{ app.user ? 'Logout' : 'Login' }}
+        </a>
+
+        {% if app.user %}
+            <a href="{{ path('customer_wishlist') }}">Wishlist</a>
+            <a href="{{ path('customer_cart') }}">Košík</a>
+            <a href="{{ path('customer_orders') }}" class="orders-btn">Moje objednávky</a>
+            <a href="{{ path('customer_return_requests') }}" class="returns-btn">Moje žádosti o vrácení</a>
+        {% endif %}
+
+        <a href="{{ path('app_eshop_home') }}">Domovská stránka</a>
+    </nav>
+
+    {% if app.user %}
+    <div class="customer-info">
+        <h2>Vítejte, {{ app.user.email }}!</h2>
+    </div>
+    {% else %}
+    <div class="guest-message">
+        <h2>Vítejte v našem obchodě!</h2>
+        <p>Prosím <a href="{{ path('customer_login') }}">přihlásit se</a> pro přístup k vašemu účtu.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

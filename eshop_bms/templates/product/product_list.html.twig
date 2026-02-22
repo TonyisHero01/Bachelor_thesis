@@ -1,0 +1,177 @@
+{# templates/product_list.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Product List{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/product_list.css') }}">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}
+
+{% block body %}
+  <div id="MAX_ARTICLES_COUNT_PER_PAGE"
+       data-value="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"></div>
+  <div id="NAME_MAX_LENGTH" data-value="{{ NAME_MAX_LENGTH }}"></div>
+  <div id="CONTENT_MAX_LENGTH" data-value="{{ CONTENT_MAX_LENGTH }}"></div>
+
+  <h1>Product List</h1>
+
+  <form id="search" style="margin: .5rem 0 1rem;">
+    <label for="searchInput" class="sr-only">Search</label>
+    <input type="hidden" id="current-locale" value="{{ app.request.get('_locale') }}">
+    <input type="text" id="searchInput" name="searchInput" class="searchInput"
+           placeholder="Search Product">
+    <button type="button" id="searchButton" onclick="search_()">Search</button>
+  </form>
+
+  <div id="loadingSpinner"
+       style="display:none; position:fixed; top:50%; left:50%;
+              transform:translate(-50%, -50%); z-index:9999;">
+    <i class="fas fa-spinner fa-spin fa-3x"></i>
+  </div>
+
+  {% include 'partials/_product_table.html.twig' with {
+    products: products,
+    categories: categories,
+    colors: colors,
+    sizes: sizes
+  } %}
+
+  <div class="buttons" style="margin-top: 1rem;">
+    <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
+    <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
+    <span id="pageCount">Page Count </span>
+
+    <button class="popup" onclick="openCreateForm()">Create Product</button>
+
+    <div class="category-buttons" style="display:inline-block; margin-left:.5rem;">
+      <button class="categoryPopup" onclick="openCategoryAddForm()">Add Category</button>
+      <button class="modifyCategoryPopup" onclick="openModifyCategoryForm()">Modify Category</button>
+    </div>
+
+    <div class="color-buttons" style="display:inline-block; margin-left:.5rem;">
+      <button class="colorPopup" onclick="openColorAddForm()">Add Color</button>
+      <button class="modifyColorPopup" onclick="openModifyColorForm()">Modify Color</button>
+    </div>
+
+    <div class="size-buttons" style="display:inline-block; margin-left:.5rem;">
+      <button class="sizePopup" onclick="openSizeAddForm()">Add Size</button>
+      <button class="modifySizePopup" onclick="openModifySizeForm()">Modify Size</button>
+    </div>
+  </div>
+
+  <div class="popuptext" id="myPopup" style="display: none;">
+    <div id="routeData"
+         data-create-route="{{ localized_path('create_product') }}"></div>
+
+    <form action="#" oninput="enableCreateButton()">
+      <label for="name">Name</label>
+      <input type="text" id="name" name="name" required maxlength="{{ NAME_MAX_LENGTH }}"><br>
+
+      <label for="sku">SKU</label>
+      <input type="text" id="sku" name="sku" required maxlength="{{ NAME_MAX_LENGTH }}"><br>
+
+      <label for="number_in_stock">Number in stock</label>
+      <input type="text" id="number_in_stock" name="number_in_stock">
+
+      <label for="price">Price in CZK</label>
+      <input type="text" id="price" name="price">
+
+      <button type="button" id="createButton" onclick="create()" disabled>Create</button>
+      <button id="cancelButton" type="button" onclick="cancelCreateProductForm()" style="display: none;">Cancel</button>
+    </form>
+  </div>
+
+  <div class="popuptext" id="myCategoryPopup" style="display: none;">
+    <form action="#" oninput="enableCategoryAddButton()">
+      <label for="categoryName">Category Name</label>
+      <input type="text" id="categoryName" name="categoryName" required maxlength="{{ NAME_MAX_LENGTH }}"><br>
+      <button type="button" id="addCategoryButton" onclick="createCategory()" disabled>Create</button>
+      <button id="cancelCategoryAddButton" type="button" onclick="cancelCreateCategoryForm()" style="display: none;">Cancel</button>
+    </form>
+  </div>
+
+  <div class="popuptext" id="myModifyCategoryPopup" style="display: none;">
+    <form oninput="enableModifyCategoryButton()">
+      <label for="modifyCategorySelect">Select Category</label>
+      <select id="modifyCategorySelect">
+        {% for category in categories %}
+          <option value="{{ category.id }}">{{ category.name }}</option>
+        {% endfor %}
+      </select><br>
+
+      <label for="newCategoryName">New Name</label>
+      <input type="text" id="newCategoryName" required><br>
+
+      <button type="button" id="modifyCategoryButton" onclick="modifyCategory()" disabled>Modify</button>
+      <button type="button" onclick="cancelModifyCategoryForm()">Cancel</button>
+    </form>
+  </div>
+
+  <div class="popuptext" id="myColorPopup" style="display: none;">
+    <form action="#" oninput="enableColorAddButton()">
+      <label for="colorName">Color Name</label>
+      <input type="text" id="colorName" name="colorName" required maxlength="50"><br>
+
+      <label for="colorHex">Color Hex</label>
+      <input type="color" id="colorHex" name="colorHex" value="#FFFFFF" required><br>
+
+      <button type="button" id="addColorButton" onclick="createColor()" disabled>Create</button>
+      <button id="cancelColorAddButton" type="button" onclick="cancelCreateColorForm()" style="display: none;">Cancel</button>
+    </form>
+  </div>
+
+  <div class="popuptext" id="myModifyColorPopup" style="display: none;">
+    <form action="#" oninput="enableModifyColorButton()">
+      <label for="modifyColorSelect">Select Color</label>
+      <select id="modifyColorSelect" name="modifyColorSelect">
+        {% for color in colors %}
+          <option value="{{ color.id }}" data-hex="{{ color.hex }}">{{ color.name }}</option>
+        {% endfor %}
+      </select><br>
+
+      <label for="newColorName">New Name</label>
+      <input type="text" id="newColorName" name="newColorName" required maxlength="50"><br>
+
+      <label for="newColorHex">New Color</label>
+      <input type="color" id="newColorHex" name="newColorHex" value="#FFFFFF"><br>
+
+      <button type="button" id="modifyColorButton" onclick="modifyColor()" disabled>Modify</button>
+      <button id="cancelModifyColorButton" type="button" onclick="cancelModifyColorForm()">Cancel</button>
+    </form>
+  </div>
+
+  <div class="popuptext" id="mySizePopup" style="display: none;">
+    <form action="#" oninput="enableSizeAddButton()">
+      <label for="sizeName">Size Name</label>
+      <input type="text" id="sizeName" name="sizeName" required maxlength="50"><br>
+
+      <button type="button" id="addSizeButton" onclick="createSize()" disabled>Create</button>
+      <button id="cancelSizeAddButton" type="button" onclick="cancelCreateSizeForm()">Cancel</button>
+    </form>
+  </div>
+
+  <div class="popuptext" id="myModifySizePopup" style="display: none;">
+    <form action="#" oninput="enableModifySizeButton()">
+      <label for="modifySizeSelect">Select Size</label>
+      <select id="modifySizeSelect" name="modifySizeSelect">
+        {% for size in sizes %}
+          <option value="{{ size.id }}">{{ size.name }}</option>
+        {% endfor %}
+      </select><br>
+
+      <label for="newSizeName">New Size Name</label>
+      <input type="text" id="newSizeName" name="newSizeName" required maxlength="50"><br>
+
+      <button type="button" id="modifySizeButton" onclick="modifySize()" disabled>Modify</button>
+      <button type="button" id="cancelModifySizeButton" onclick="cancelModifySizeForm()">Cancel</button>
+    </form>
+  </div>
+
+  <script src="{{ asset('assets/search.js') }}"></script>
+  <script src="{{ asset('assets/productList.js') }}"></script>
+  <script src="{{ asset('assets/showPage.js') }}"></script>
+  <script src="{{ asset('assets/delete.js') }}"></script>
+{% endblock %}

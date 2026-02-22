@@ -1,0 +1,104 @@
+{# templates/cart/index.html.twig （示例路径） #}
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Your Cart - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/product-page.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/cart.css') }}">
+
+<h2>Your Shopping Cart</h2>
+
+{% if cartItems is empty %}
+  <p>Your cart is empty.</p>
+{% else %}
+  <table class="cart-table">
+    <thead>
+      <tr>
+        <th>Product</th>
+        {% if not shopInfo.hidePrices %}
+          <th>Price</th>
+        {% endif %}
+        <th>Quantity</th>
+        {% if not shopInfo.hidePrices %}
+          <th>Total</th>
+        {% endif %}
+        <th>Action</th>
+      </tr>
+    </thead>
+
+    <tbody>
+    {% for cartItem in cartItems %}
+      {% set product = cartItem.getProduct() %}
+      {% set price   = product.getPrice() %}
+      {% set discount = product.getDiscount() %}
+      {% set unitFinal = discount < 100 ? (price * discount / 100) : price %}
+      {% set rowTotal  = unitFinal * cartItem.getQuantity() %}
+
+      <tr>
+        <td class="cart-item" data-label="Product">
+          {% if product.getImageUrls() is not empty %}
+            <img class="product-img"
+                 src="{{ BMS_URL }}/images/{{ product.getImageUrls()|first }}"
+                 alt="{{ product.getName() }}">
+          {% endif %}
+          {{ product.getName() }}
+        </td>
+
+        {% if not shopInfo.hidePrices %}
+          <td data-label="Price">
+            {% if discount < 100 %}
+              <span class="original-price strikethrough">{{ money(price) }}</span><br>
+              <span class="discounted-price">{{ money(unitFinal) }}</span>
+              <span class="discount-tag">{{ 100 - discount }}% OFF</span>
+            {% else %}
+              {{ money(price) }}
+            {% endif %}
+          </td>
+        {% endif %}
+
+        <td data-label="Quantity">
+          <div class="quantity-selector">
+            <button class="quantity-btn"
+                    onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() - 1 }})">-</button>
+            <span class="quantity-value" id="cart-quantity-{{ cartItem.getId() }}">{{ cartItem.getQuantity() }}</span>
+            <button class="quantity-btn"
+                    onclick="updateCart({{ cartItem.getId() }}, {{ cartItem.getQuantity() + 1 }})">+</button>
+          </div>
+        </td>
+
+        {% if not shopInfo.hidePrices %}
+          <td data-label="Total">
+            {{ money(rowTotal) }}
+          </td>
+        {% endif %}
+
+        <td data-label="Action">
+          <button class="remove-btn" onclick="removeFromCart({{ cartItem.getId() }})">Remove</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if not shopInfo.hidePrices %}
+    {% set total = 0 %}
+    {% for item in cartItems %}
+      {% set p = item.getProduct().getPrice() %}
+      {% set d = item.getProduct().getDiscount() %}
+      {% set unit = d < 100 ? (p * d / 100) : p %}
+      {% set total = total + unit * item.getQuantity() %}
+    {% endfor %}
+
+    <div class="total-row">
+      <p><strong>Total:</strong> {{ money(total) }}</p>
+    </div>
+  {% endif %}
+
+  <div class="checkout-container">
+    <button class="checkout-btn" onclick="goToDeliveryOption()">Proceed to Checkout</button>
+  </div>
+{% endif %}
+
+<script src="{{ asset('assets/eshopCart.js') }}"></script>
+{% endblock %}

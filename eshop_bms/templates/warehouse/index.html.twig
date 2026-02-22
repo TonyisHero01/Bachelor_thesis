@@ -1,0 +1,73 @@
+{# templates/warehouse/index.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block title %}Warehouse{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/warehouse_index.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="warehouse-page">
+  <div class="warehouse-layout">
+    <aside class="warehouse-sidebar">
+      <h3>Warehouse Menu</h3>
+      <ul>
+        <li><a href="{{ localized_path('app_order_management') }}">📦 Order Management</a></li>
+        <li><a href="{{ localized_path('app_return_requests') }}">🔄 Return Requests</a></li>
+        <li><a href="{{ localized_path('all_low_stock_products') }}">📉 Low Stock Products</a></li>
+      </ul>
+    </aside>
+
+    <main class="warehouse-content">
+      <h2 class="warehouse-heading">🧾 Pending Orders</h2>
+      <p class="warehouse-subtitle">
+        Orders that are not yet completed or shipped will appear here.
+      </p>
+
+      <div class="table-card">
+        <table class="dashboard-table">
+          <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Customer</th>
+            <th>Payment</th>
+            <th>Created At</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for order in pendingOrders %}
+            {% set ps = (order.paymentStatus ?? 'PENDING')|upper %}
+            {% set badgeClass =
+              ps == 'COMPLETED' ? 'badge--completed' :
+              (ps == 'FAILED' ? 'badge--failed' :
+              (ps == 'REFUNDED' ? 'badge--refunded' : 'badge--pending')) %}
+            <tr>
+              <td>
+                <a href="{{ localized_path('order_detail', {'id': order.id}) }}">
+                  #{{ order.id }}
+                </a>
+              </td>
+              <td>{{ order.customer.email }}</td>
+              <td>
+                <span class="badge {{ badgeClass }}" title="Delivery: {{ order.deliveryStatus|default('PENDING') }}">
+                  {{ ps }}
+                </span>
+              </td>
+              <td>{{ order.orderCreatedAt|date('Y-m-d') }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="4" class="empty-row">
+                No pending orders 🎉
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

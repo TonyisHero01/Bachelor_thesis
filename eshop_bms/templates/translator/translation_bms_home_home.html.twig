@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
+    <input type="hidden" name="original_path" value="bms_home/home.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+<div class="field-group">
+    <label>Hi</label>
+    <input type="hidden" name="original__auto_hi_0" value="Hi">
+    <input type="text" name="field__auto_hi_0" placeholder="Hi">
+</div>
+<div class="field-group">
+    <label>Home</label>
+    <input type="hidden" name="original__auto_home_2" value="Home">
+    <input type="text" name="field__auto_home_2" placeholder="Home">
+</div>
+<div class="field-group">
+    <label>LOGO</label>
+    <input type="hidden" name="original__auto_logo_30" value="LOGO">
+    <input type="text" name="field__auto_logo_30" placeholder="LOGO">
+</div>
+<div class="field-group">
+    <label>No images uploaded yet</label>
+    <input type="hidden" name="original__auto_no_images_uploaded_yet_34" value="No images uploaded yet">
+    <input type="text" name="field__auto_no_images_uploaded_yet_34" placeholder="No images uploaded yet">
+</div>
+<div class="field-group">
+    <label>Delete</label>
+    <input type="hidden" name="original__auto_delete_39" value="Delete">
+    <input type="text" name="field__auto_delete_39" placeholder="Delete">
+</div>
+<div class="field-group">
+    <label>📊 Dashboard</label>
+    <input type="hidden" name="original__auto__dashboard_45" value="📊 Dashboard">
+    <input type="text" name="field__auto__dashboard_45" placeholder="📊 Dashboard">
+</div>
+<div class="field-group">
+    <label>📈 Sales in the Last 30 Days</label>
+    <input type="hidden" name="original__auto__sales_in_the_last_30_days_46" value="📈 Sales in the Last 30 Days">
+    <input type="text" name="field__auto__sales_in_the_last_30_days_46" placeholder="📈 Sales in the Last 30 Days">
+</div>
+<div class="field-group">
+    <label>🔥 Top 5 Best-Selling Products</label>
+    <input type="hidden" name="original__auto__top_5_best_selling_produc_47" value="🔥 Top 5 Best-Selling Products">
+    <input type="text" name="field__auto__top_5_best_selling_produc_47" placeholder="🔥 Top 5 Best-Selling Products">
+</div>
+<div class="field-group">
+    <label>💰 Top 5 Customers by Spending</label>
+    <input type="hidden" name="original__auto__top_5_customers_by_spendi_48" value="💰 Top 5 Customers by Spending">
+    <input type="text" name="field__auto__top_5_customers_by_spendi_48" placeholder="💰 Top 5 Customers by Spending">
+</div>
+<div class="field-group">
+    <label>Your Roles</label>
+    <input type="hidden" name="original__auto_your_roles_49" value="Your Roles">
+    <input type="text" name="field__auto_your_roles_49" placeholder="Your Roles">
+</div>
+
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

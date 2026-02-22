@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/styles/reg_success.css') }}">
+<div class="register-success-container">
+    <div class="card">
+        <div class="icon">✅</div>
+        <h1>Registration Successful!</h1>
+        <p>You can now go to the homepage.</p>
+        <button onclick="window.location.href='{{ localized_path('home') }}';">Done</button>
+    </div>
+</div>
+{% endblock %}

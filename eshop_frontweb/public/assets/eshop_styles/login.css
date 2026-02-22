@@ -1,0 +1,119 @@
+html, body {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    margin-top: 220px;
+}
+
+.login-box {
+    width: 90%;
+    max-width: 350px;
+    padding: 25px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.login-box h2 {
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+.input-group {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.btn-auth {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.1s;
+    text-decoration: none;
+    text-align: center;
+}
+
+.btn-primary {
+    background: #007bff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-register {
+    background: #28a745;
+    margin-top: 10px;
+}
+
+.btn-register:hover {
+    background: #218838;
+}
+
+@media screen and (max-width: 768px) {
+    .login-box {
+        padding: 20px;
+        max-width: 90%;
+    }
+
+    .login-box h2 {
+        font-size: 22px;
+    }
+
+    .input-group input {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    .btn-auth {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    .login-container  {
+        margin-top: 0px;
+    }
+}

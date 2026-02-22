@@ -1,0 +1,36 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Customer Page{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/customer_home.css') }}">
+
+<div class="customer-container">
+    <nav class="customer-nav">
+        <a href="{{ app.user ? path('app_logout') : path('customer_login') }}">
+            {{ app.user ? 'Logout' : 'Login' }}
+        </a>
+
+        {% if app.user %}
+            <a href="{{ path('customer_wishlist') }}">Wishlist</a>
+            <a href="{{ path('customer_cart') }}">Cart</a>
+            <a href="{{ path('customer_orders') }}" class="orders-btn">My Orders</a>
+            <a href="{{ path('customer_return_requests') }}" class="returns-btn">My Return Requests</a>
+        {% endif %}
+
+        <a href="{{ path('app_eshop_home') }}">Home</a>
+    </nav>
+
+    {% if app.user %}
+    <div class="customer-info">
+        <h2>Welcome, {{ app.user.email }}!</h2>
+    </div>
+    {% else %}
+    <div class="guest-message">
+        <h2>Welcome to our shop!</h2>
+        <p>Please <a href="{{ path('customer_login') }}">sign in</a> to access your account.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

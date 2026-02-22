@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>No result Found</title>
+        <link rel="stylesheet" href="{{ asset('assets/style/app.css') }}">
+    </head>
+    <body>
+        <h1>No result Found</h1>
+        <button onclick="window.location.href='{{ localized_path('show_All_products') }}';">Done</button>
+    </body>
+</html>
+{% endblock %}

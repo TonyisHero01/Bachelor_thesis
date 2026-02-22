@@ -1,0 +1,19 @@
+framework:
+  secret: '%env(APP_SECRET)%'
+  default_locale: 'en'
+
+  session:
+    # 每个项目务必不同
+    name: FRONTWEBSESSID
+    handler_id: null                  # 文件型 session
+    save_path: '%kernel.project_dir%/var/sessions_front/%kernel.environment%'
+    cookie_lifetime: 86400            # 1天（按需）
+    gc_maxlifetime: 86400
+    cookie_secure: auto               # https 环境自动 secure
+    cookie_samesite: lax
+
+when@test:
+  framework:
+    test: true
+    session:
+      storage_factory_id: session.storage.factory.mock_file

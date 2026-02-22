@@ -1,0 +1,248 @@
+{# templates/eshop/category.html.twig #}
+{% extends 'eshop_base.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('assets/eshop_styles/product-grid.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="category-page">
+
+    <div class="category-header">
+        <div class="category-header-left">
+            <div class="breadcrumb">
+                <a href="{{ path('app_eshop_home', {'_locale': locale}) }}">Home</a>
+                <span>/</span>
+                <span>{{ category }}</span>
+            </div>
+            <h1 class="category-title">{{ category }}</h1>
+            <div class="category-meta">
+                {{ products|length }} products
+            </div>
+        </div>
+
+        <div class="category-header-right">
+            <button class="category-filter-toggle" id="category-filter-toggle">
+                <i class="fas fa-filter"></i>
+                <span>Filter</span>
+            </button>
+
+            <div class="category-sort">
+                <label for="sort-select">Sort by:</label>
+                <select id="sort-select" class="sort-select">
+                    <option value="default">Recommended</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="latest">Newest</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-overlay" id="category-filter-overlay"></div>
+
+    <div class="category-content">
+        <aside class="category-sidebar" id="category-sidebar">
+            <div class="filter-header">
+                <h2 class="filter-title">Filter</h2>
+                <button class="close-filter" id="category-filter-close">&times;</button>
+            </div>
+
+            <div class="filter-content">
+
+                {% if shopInfo is defined and (not shopInfo.getHidePrices()) %}
+                    <div class="filter-section">
+                        <h3>Price</h3>
+                        <div id="price-slider"></div>
+                        <div class="price-values">
+                            <span id="price-selected-min">0</span>
+                            <span>-</span>
+                            <span id="price-selected-max">1000</span>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <div class="filter-section">
+                    <h3>Color</h3>
+                    <div class="filter-options color-options">
+                        {% for color in colors %}
+                            <label class="filter-option">
+                                <input type="checkbox"
+                                       id="color-{{ color.id }}"
+                                       name="color"
+                                       value="{{ color.id }}">
+                                <span class="filter-check"></span>
+                                <span class="filter-label">
+                                    {{ color.getTranslatedName(locale) }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Size</h3>
+                    <div class="filter-options size-options">
+                        {% for size in sizes %}
+                            <label class="filter-option">
+                                <input type="checkbox"
+                                       id="size-{{ size.id }}"
+                                       name="size"
+                                       value="{{ size.id }}">
+                                <span class="filter-check"></span>
+                                <span class="filter-label">
+                                    {{ size.name }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="apply-filter">
+                <button id="reset-filters" class="filter-btn reset">Reset</button>
+                <button id="apply-filters" class="filter-btn apply">Apply</button>
+            </div>
+        </aside>
+
+        <div class="category-main">
+            {% if products is empty %}
+                <p class="no-products">No products found for this category.</p>
+            {% else %}
+                <div class="product-grid">
+                    {% for product in products %}
+                        <div class="product-item"
+                             data-id="{{ product.id }}"
+                             data-name="{{ product.name }}"
+                             data-category="{{ product.category }}"
+                             data-description="{{ product.description }}"
+                             data-number-in-stock="{{ product.numberInStock }}"
+                             data-image-urls='{{ product.imageUrls|json_encode }}'
+                             data-width="{{ product.width }}"
+                             data-height="{{ product.height }}"
+                             data-length="{{ product.length }}"
+                             data-weight="{{ product.weight }}"
+                             data-material="{{ product.material }}"
+                             data-color="{{ product.color ? product.color.id : '' }}"
+                             data-price="{{ product.price }}"
+                             data-hidden="{{ product.hidden ? 'true' : 'false' }}"
+                             data-discount="{{ product.discount }}"
+                             data-discounted-price="{{ (product.price * product.discount / 100)|number_format(2, '.', '') }}"
+                             data-sku="{{ product.sku }}"
+                             data-attributes='{{ product.attributes|json_encode }}'
+                             data-currency-id="{{ product.currency.id }}"
+                             data-created-at="{{ product.createdAt|date('Y-m-d\\TH:i:s') }}"
+                             data-updated-at="{{ product.updatedAt|date('Y-m-d\\TH:i:s') }}"
+                             data-tax-rate="{{ product.taxRate }}"
+                             data-size="{{ product.size is not null ? product.size.id : '' }}">
+
+                            {% if product.getImageUrls() is not empty %}
+                                <a href="{{ path('show_eshop_product', {'id': product.id, '_locale': locale}) }}"
+                                   class="product-card {{ product.numberInStock <= 0 ? 'sold-out' : '' }}">
+
+                                    <div class="product-card-media">
+                                        <div class="product-image-wrapper">
+                                            <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}"
+                                                 alt="{{ product.name }}">
+                                            {% if product.numberInStock <= 0 %}
+                                                <div class="sold-out-label">Sold Out</div>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if product.discount < 100 %}
+                                            <div class="product-card-badge">
+                                                -{{ 100 - product.discount }}%
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="product-card-body">
+                                        <div class="product-name">
+                                            {{ product.getTranslatedName(locale) }}
+                                        </div>
+
+                                        <div class="product-meta-row">
+                                            {% if product.sku %}
+                                                <span class="product-sku">SKU: {{ product.sku }}</span>
+                                            {% endif %}
+                                            {% if product.numberInStock is not null %}
+                                                <span class="product-stock {{ product.numberInStock > 0 ? 'in-stock' : 'out-of-stock' }}">
+                                                    {% if product.numberInStock > 0 %}
+                                                        In stock
+                                                    {% else %}
+                                                        Out of stock
+                                                    {% endif %}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="product-price">
+                                            {% if product.discount < 100 %}
+                                                <div class="price-row">
+                                                    <span class="original-price">
+                                                        <span class="strikethrough">{{ money(product.price) }}</span>
+                                                    </span>
+                                                </div>
+
+                                                {% set discountedRaw = (product.price * product.discount / 100) | number_format(2, '.', '') %}
+                                                <div class="price-row">
+                                                    <span class="discounted-price">
+                                                        {{ money(discountedRaw) }}
+                                                    </span>
+                                                </div>
+                                            {% else %}
+                                                <div class="price-row">
+                                                    <span class="regular-price">
+                                                        {{ money(product.price) }}
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
+    window.ACTIVE_CURRENCY = "{{ active_currency() }}"; // 例如 "CZK"
+    </script>
+    <script src="{{ asset('assets/eshopProducts.js') }}"></script>
+    <script>
+        (function () {
+            const sidebar = document.getElementById('category-sidebar');
+            const overlay = document.getElementById('category-filter-overlay');
+            const toggle = document.getElementById('category-filter-toggle');
+            const closeBtn = document.getElementById('category-filter-close');
+
+            if (!sidebar || !overlay || !toggle || !closeBtn) return;
+
+            function openSidebar() {
+                sidebar.classList.add('active');
+                overlay.classList.add('active');
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+
+            toggle.addEventListener('click', openSidebar);
+            closeBtn.addEventListener('click', closeSidebar);
+            overlay.addEventListener('click', closeSidebar);
+        })();
+    </script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Select Delivery Option - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-delivery.css') }}">
+
+<div class="delivery-options">
+    <h2>Vyberte způsob doručení</h2>
+
+    <form id="deliveryForm">
+        <label>
+            <input type="radio" name="deliveryMethod" value="pickup" checked>
+            Vyzvedněte na prodejně
+        </label>
+
+        <label>
+            <input type="radio" name="deliveryMethod" value="delivery">
+            Doručení domů
+        </label>
+
+        <div id="addressFields" style="display: none;">
+            <h3>Doručovací adresa</h3>
+            <label>Země: <input type="text" id="country" name="country"></label>
+            <label>Město: <input type="text" id="city" name="city"></label>
+            <label>Ulice: <input type="text" id="street" name="street"></label>
+            <label>Číslo domu: <input type="text" id="houseNumber" name="houseNumber"></label>
+            <label>PSČ: <input type="text" id="postalCode" name="postalCode"></label>
+        </div>
+
+        <h3>Kontaktní údaje zákazníka</h3>
+        <label>Celé jméno: <input type="text" id="fullName" name="fullName" required></label>
+        <label>Telefonní číslo: <input type="tel" id="phoneNumber" name="phoneNumber" required></label>
+
+        <h3>Zanechte poznámku</h3>
+        <textarea id="orderNote" name="orderNote" placeholder="Enter any special requests or instructions"></textarea>
+
+        <button type="submit">Potvrdit</button>
+    </form>
+</div>
+
+<script src="{{ asset('../assets/eshopSelectDelivery.js') }}"></script>
+{% endblock %}

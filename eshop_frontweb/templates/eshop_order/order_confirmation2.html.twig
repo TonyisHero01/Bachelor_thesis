@@ -1,0 +1,71 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}Order Confirmation - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/order-confirm.css') }}">
+
+<div class="order-confirmation">
+  <h2>Order Confirmation</h2>
+
+  <table>
+    <tr>
+      <td>My Order</td>
+      <td><strong>Order ID:</strong> {{ order.getId() }}</td>
+    </tr>
+
+    {% for item in orderItems %}
+      <tr class="item_product_name">
+        <td>
+          {{ item.getProductName() }} ×{{ item.getQuantity() }}
+          {# <div class="sku">SKU: {{ item.getSku() }}</div> #}
+        </td>
+        <td></td>
+      </tr>
+
+      {% if not shopInfo.hidePrices %}
+        <tr>
+          <td>Subtotal (excl. tax):</td>
+          <td>{{ money(item.getSubtotal()) }}</td>
+        </tr>
+        <tr>
+          <td>Tax:</td>
+          <td>{{ money(item.getTaxAmount()) }}</td>
+        </tr>
+      {% endif %}
+    {% endfor %}
+  </table>
+
+  {% if not shopInfo.hidePrices %}
+    <p class="total">
+      <strong>Total Price:</strong>
+      {{ money(order.getTotalPrice()) }}
+    </p>
+  {% endif %}
+
+  <div class="order-actions">
+    <button id="cancelOrderBtn"
+            data-cancel-api="{{ path('cancel_order', {'id': order.getId(), '_locale': locale}) }}">
+      Cancel Order
+    </button>
+
+    <a id="confirmOrderBtn"
+       class="btn-action"
+       href="{{ path('checkout_mock_gateway', {'order': order.getId(), '_locale': locale}) }}">
+      Proceed to Payment
+    </a>
+  </div>
+
+  <a class="back-link" href="{{ path('customer_orders', {'_locale': locale}) }}">Back to My Orders</a>
+
+  {% if order.getIsCompleted() %}
+    <button id="returnOrderBtn"
+            class="return-btn"
+            onclick="goToReturnForm({{ order.getId() }})">
+      Return Order
+    </button>
+  {% endif %}
+</div>
+
+<script src="{{ asset('assets/eshopOrderConfirmation2.js') }}"></script>
+{% endblock %}

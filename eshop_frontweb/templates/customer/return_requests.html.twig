@@ -1,0 +1,42 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block title %}My Return Requests{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/customer_home.css') }}">
+
+<div class="customer-container">
+    <h2>My Return Requests</h2>
+
+    {% if returnRequests is empty %}
+        <p>You have no return requests.</p>
+    {% else %}
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>Request ID</th>
+                    <th>Order ID</th>
+                    <th>Return Reason</th>
+                    <th>Products (SKUs)</th>
+                    <th>Status</th>
+                    <th>Request Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in returnRequests %}
+                    <tr class="status-{{ request.getStatus() }}">
+                        <td>{{ request.getId() }}</td>
+                        <td>{{ request.getOrder().getId() }}</td>
+                        <td>{{ request.getReturnReason() ?: 'N/A' }}</td>
+                        <td>{{ request.getProductSkus() }}</td>
+                        <td>{{ request.getStatus()|capitalize }}</td>
+                        <td>{{ request.getRequestDate().format('Y-m-d H:i') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+
+{% endblock %}

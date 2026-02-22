@@ -1,0 +1,102 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
+    <input type="hidden" name="original_path" value="accounting/invoice.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+<div class="field-group">
+    <label>INVOICE #</label>
+    <input type="hidden" name="original__auto_invoice__0" value="INVOICE #">
+    <input type="text" name="field__auto_invoice__0" placeholder="INVOICE #">
+</div>
+<div class="field-group">
+    <label>Subtotal (without tax):</label>
+    <input type="hidden" name="original__auto_subtotal_without_tax__1" value="Subtotal (without tax):">
+    <input type="text" name="field__auto_subtotal_without_tax__1" placeholder="Subtotal (without tax):">
+</div>
+<div class="field-group">
+    <label>Discount: -</label>
+    <input type="hidden" name="original__auto_discount__2" value="Discount: -">
+    <input type="text" name="field__auto_discount__2" placeholder="Discount: -">
+</div>
+<div class="field-group">
+    <label>Tax:</label>
+    <input type="hidden" name="original__auto_tax__3" value="Tax:">
+    <input type="text" name="field__auto_tax__3" placeholder="Tax:">
+</div>
+<div class="field-group">
+    <label>Total (incl. tax):</label>
+    <input type="hidden" name="original__auto_total_incl_tax__4" value="Total (incl. tax):">
+    <input type="text" name="field__auto_total_incl_tax__4" placeholder="Total (incl. tax):">
+</div>
+<div class="field-group">
+    <label>For support, contact</label>
+    <input type="hidden" name="original__auto_for_support_contact_5" value="For support, contact">
+    <input type="text" name="field__auto_for_support_contact_5" placeholder="For support, contact">
+</div>
+<div class="field-group">
+    <label>Date:</label>
+    <input type="hidden" name="original__auto_date__7" value="Date:">
+    <input type="text" name="field__auto_date__7" placeholder="Date:">
+</div>
+<div class="field-group">
+    <label>Status:</label>
+    <input type="hidden" name="original__auto_status__9" value="Status:">
+    <input type="text" name="field__auto_status__9" placeholder="Status:">
+</div>
+<div class="field-group">
+    <label>Customer:</label>
+    <input type="hidden" name="original__auto_customer__11" value="Customer:">
+    <input type="text" name="field__auto_customer__11" placeholder="Customer:">
+</div>
+<div class="field-group">
+    <label>Contact:</label>
+    <input type="hidden" name="original__auto_contact__13" value="Contact:">
+    <input type="text" name="field__auto_contact__13" placeholder="Contact:">
+</div>
+<div class="field-group">
+    <label>Delivery:</label>
+    <input type="hidden" name="original__auto_delivery__17" value="Delivery:">
+    <input type="text" name="field__auto_delivery__17" placeholder="Delivery:">
+</div>
+<div class="field-group">
+    <label>#</label>
+    <input type="hidden" name="original__auto___19" value="#">
+    <input type="text" name="field__auto___19" placeholder="#">
+</div>
+<div class="field-group">
+    <label>Item</label>
+    <input type="hidden" name="original__auto_item_20" value="Item">
+    <input type="text" name="field__auto_item_20" placeholder="Item">
+</div>
+<div class="field-group">
+    <label>Qty</label>
+    <input type="hidden" name="original__auto_qty_21" value="Qty">
+    <input type="text" name="field__auto_qty_21" placeholder="Qty">
+</div>
+<div class="field-group">
+    <label>Unit Price</label>
+    <input type="hidden" name="original__auto_unit_price_22" value="Unit Price">
+    <input type="text" name="field__auto_unit_price_22" placeholder="Unit Price">
+</div>
+<div class="field-group">
+    <label>Subtotal</label>
+    <input type="hidden" name="original__auto_subtotal_23" value="Subtotal">
+    <input type="text" name="field__auto_subtotal_23" placeholder="Subtotal">
+</div>
+<div class="field-group">
+    <label>Thank you for your order!</label>
+    <input type="hidden" name="original__auto_thank_you_for_your_order__37" value="Thank you for your order!">
+    <input type="text" name="field__auto_thank_you_for_your_order__37" placeholder="Thank you for your order!">
+</div>
+
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

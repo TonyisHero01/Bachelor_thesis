@@ -1,0 +1,212 @@
+{% extends 'eshop_base.html.twig' %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/eshop_styles/product-page.css') }}">
+
+<div id="product_id" product-id="{{ product.id }}"></div>
+
+<div class="product-page">
+
+    <!-- 上半部分：左图右信息 -->
+    <div class="product-layout">
+
+        <!-- 左侧图片列 -->
+        <div class="product-gallery-column">
+            <div class="product-gallery-card">
+                {% if product.discount is not empty and product.discount != 0 and product.discount < 100 %}
+                    <div class="product-badge product-badge--discount">
+                        -{{ 100 - product.discount }}%
+                    </div>
+                {% endif %}
+
+                <div class="product-swiper swiper-container">
+                    <div class="swiper-wrapper">
+                        {% for imageURL in product.getImageUrls() %}
+                            <div class="swiper-slide"
+                                 style="background-image: url('{{ BMS_URL }}/images/{{ imageURL }}');">
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="swiper-pagination"></div>
+                    <div class="swiper-button-next"></div>
+                    <div class="swiper-button-prev"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧信息列 -->
+        <div class="product-info-column">
+            <div class="product-info-card">
+
+                <div class="product-title-row">
+                    <h1 class="product-name">
+                        {{ product.getTranslatedName(locale) }}
+                    </h1>
+                    <div class="product-sku">
+                        #{{ product.sku ?? product.id }}
+                    </div>
+                </div>
+
+                {% if not shopInfo.hidePrices %}
+                    <div class="product-price-block">
+                        {% if product.discount < 100 %}
+                            {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
+                            {% set currency = product.getCurrency().getName %}
+
+                            <div class="price-row">
+                                <span class="price-label">Original</span>
+                                <span class="price-original strikethrough">
+                                    {{ money(product.price) }}
+                                </span>
+                            </div>
+                            <div class="price-row">
+                                <span class="price-label">Now</span>
+                                <span class="price-discounted">
+                                    {{ money(discountedPrice) }}
+                                </span>
+                            </div>
+
+                            <div class="price-tags">
+                                <span class="discount-tag">Save {{ 100 - product.discount }}%</span>
+                                {% if product.taxRate is not empty and product.taxRate != 0 %}
+                                    <span class="tax-tag">VAT {{ product.taxRate }}%</span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="price-row">
+                                <span class="price-label">Price</span>
+                                <span class="price-normal">
+                                    {{ money(product.price) }}
+                                </span>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="product-cta-block">
+                    <div class="quantity-row">
+                        <span class="quantity-label">Quantity</span>
+                        <div class="quantity-selector">
+                            <button class="quantity-btn" onclick="decreaseQuantity()">-</button>
+                            <span id="quantity-value">1</span>
+                            <button class="quantity-btn" onclick="increaseQuantity()">+</button>
+                        </div>
+                    </div>
+
+                    <div class="cta-row">
+                        <button class="add-to-cart-button" onclick="addToCart()">
+                            ADD TO CART
+                        </button>
+
+                        <button class="add-to-wishlist"
+                                onclick="{% if app.user %}toggleWishlist(this){% else %}toggleWishlistAlert(){% endif %}">
+                            <svg class="wishlist-icon" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="product-shipping-block">
+                    <div class="shipping-item">
+                        <div class="shipping-title">Vyzvednutí na prodejně</div>
+                        <div class="shipping-text">
+                            Vyzvednutí je k dispozici v lokalitě Osobní odběr na prodejně. Obvykle připraveno za 24 hodin.
+                        </div>
+                    </div>
+                    <div class="shipping-item">
+                        <div class="shipping-title">Doprava zdarma</div>
+                        <div class="shipping-text">
+                            Standardní doprava zdarma při objednávce nad 1000 Kč.
+                        </div>
+                    </div>
+                    <div class="shipping-item">
+                        <div class="shipping-title">Vrácení zdarma</div>
+                        <div class="shipping-text">
+                            Možnost vrácení zboží bez poplatku.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 下半部分：参数 + 描述 -->
+    <div class="product-extra">
+        <section class="product-section">
+            <h2 class="section-title">Parameters</h2>
+            <ul class="parameter-list">
+                {% if product.width is not empty and product.width != 0 %}
+                    <li><span>Width</span><span>{{ product.width }} cm</span></li>
+                {% endif %}
+                {% if product.height is not empty and product.height != 0 %}
+                    <li><span>Height</span><span>{{ product.height }} cm</span></li>
+                {% endif %}
+                {% if product.length is not empty and product.length != 0 %}
+                    <li><span>Length</span><span>{{ product.length }} cm</span></li>
+                {% endif %}
+                {% if product.weight is not empty and product.weight != 0 %}
+                    <li><span>Weight</span><span>{{ product.weight }} kg</span></li>
+                {% endif %}
+                {% if product.material is not empty %}
+                    <li><span>Material</span><span>{{ product.getTranslatedMaterial(locale) }}</span></li>
+                {% endif %}
+                {% if product.color is not empty %}
+                    <li><span>Color</span><span>{{ product.color }}</span></li>
+                {% endif %}
+                {% if product.size is not empty %}
+                    <li><span>Size</span><span>{{ product.size }}</span></li>
+                {% endif %}
+                {% if product.discount is not empty and product.discount != 0 and product.discount < 100 %}
+                    <li><span>Discount</span><span>{{ product.discount }}%</span></li>
+                {% endif %}
+                {% if product.attributes is not empty %}
+                    {% for key, value in product.attributes %}
+                        {% if value is not empty and value != 0 %}
+                            <li><span>{{ key|capitalize }}</span><span>{{ value }}</span></li>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </ul>
+        </section>
+
+        <section class="product-section">
+            <h2 class="section-title">Description</h2>
+            <div class="description-content">
+                {{ product.getTranslatedDescription(locale) | raw }}
+            </div>
+        </section>
+    </div>
+
+</div>
+<script>
+  window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
+</script>
+
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script src="{{ asset('assets/eshopHome.js') }}"></script>
+<script src="{{ asset('assets/eshopProduct.js') }}"></script>
+
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{ product.name }}",
+    "image": [
+        {% for imageURL in product.getImageUrls() %}
+        "{{ BMS_URL }}images/{{ imageURL }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    "description": "{{ product.description|e('js') }}",
+    "brand": "{{ shopInfo.getEshopName() }}",
+    "offers": {
+        "@type": "Offer",
+        "price": "{{ product.price }}",
+        "priceCurrency": "{{ product.getCurrency().getName }}",
+        "availability": "https://schema.org/InStock"
+    }
+}
+</script>
+{% endblock %}

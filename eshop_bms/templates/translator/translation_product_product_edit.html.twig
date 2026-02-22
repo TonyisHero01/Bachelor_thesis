@@ -1,0 +1,207 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
+    <input type="hidden" name="original_path" value="product/product_edit.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+<div class="field-group">
+    <label>SKU:</label>
+    <input type="hidden" name="original__auto_sku__0" value="SKU:">
+    <input type="text" name="field__auto_sku__0" placeholder="SKU:">
+</div>
+<div class="field-group">
+    <label>v</label>
+    <input type="hidden" name="original__auto_v_1" value="v">
+    <input type="text" name="field__auto_v_1" placeholder="v">
+</div>
+<div class="field-group">
+    <label>Edit Product</label>
+    <input type="hidden" name="original__auto_edit_product_4" value="Edit Product">
+    <input type="text" name="field__auto_edit_product_4" placeholder="Edit Product">
+</div>
+<div class="field-group">
+    <label>Created at</label>
+    <input type="hidden" name="original__auto_created_at_6" value="Created at">
+    <input type="text" name="field__auto_created_at_6" placeholder="Created at">
+</div>
+<div class="field-group">
+    <label>← Back to products</label>
+    <input type="hidden" name="original__auto__back_to_products_11" value="← Back to products">
+    <input type="text" name="field__auto__back_to_products_11" placeholder="← Back to products">
+</div>
+<div class="field-group">
+    <label>💾 Save</label>
+    <input type="hidden" name="original__auto__save_12" value="💾 Save">
+    <input type="text" name="field__auto__save_12" placeholder="💾 Save">
+</div>
+<div class="field-group">
+    <label>Basic Information</label>
+    <input type="hidden" name="original__auto_basic_information_13" value="Basic Information">
+    <input type="text" name="field__auto_basic_information_13" placeholder="Basic Information">
+</div>
+<div class="field-group">
+    <label>Version history</label>
+    <input type="hidden" name="original__auto_version_history_14" value="Version history">
+    <input type="text" name="field__auto_version_history_14" placeholder="Version history">
+</div>
+<div class="field-group">
+    <label>Switch between different versions of this product.</label>
+    <input type="hidden" name="original__auto_switch_between_different_versi_18" value="Switch between different versions of this product.">
+    <input type="text" name="field__auto_switch_between_different_versi_18" placeholder="Switch between different versions of this product.">
+</div>
+<div class="field-group">
+    <label>Name</label>
+    <input type="hidden" name="original__auto_name_19" value="Name">
+    <input type="text" name="field__auto_name_19" placeholder="Name">
+</div>
+<div class="field-group">
+    <label>Category</label>
+    <input type="hidden" name="original__auto_category_20" value="Category">
+    <input type="text" name="field__auto_category_20" placeholder="Category">
+</div>
+<div class="field-group">
+    <label>Description</label>
+    <input type="hidden" name="original__auto_description_23" value="Description">
+    <input type="text" name="field__auto_description_23" placeholder="Description">
+</div>
+<div class="field-group">
+    <label>Number in stock</label>
+    <input type="hidden" name="original__auto_number_in_stock_25" value="Number in stock">
+    <input type="text" name="field__auto_number_in_stock_25" placeholder="Number in stock">
+</div>
+<div class="field-group">
+    <label>Base price</label>
+    <input type="hidden" name="original__auto_base_price_26" value="Base price">
+    <input type="text" name="field__auto_base_price_26" placeholder="Base price">
+</div>
+<div class="field-group">
+    <label>Discount</label>
+    <input type="hidden" name="original__auto_discount_27" value="Discount">
+    <input type="text" name="field__auto_discount_27" placeholder="Discount">
+</div>
+<div class="field-group">
+    <label>Tax Rate (%)</label>
+    <input type="hidden" name="original__auto_tax_rate__28" value="Tax Rate (%)">
+    <input type="text" name="field__auto_tax_rate__28" placeholder="Tax Rate (%)">
+</div>
+<div class="field-group">
+    <label>Variant &amp; Dimensions</label>
+    <input type="hidden" name="original__auto_variant_dimensions_29" value="Variant &amp; Dimensions">
+    <input type="text" name="field__auto_variant_dimensions_29" placeholder="Variant &amp; Dimensions">
+</div>
+<div class="field-group">
+    <label>Size</label>
+    <input type="hidden" name="original__auto_size_30" value="Size">
+    <input type="text" name="field__auto_size_30" placeholder="Size">
+</div>
+<div class="field-group">
+    <label>None</label>
+    <input type="hidden" name="original__auto_none_31" value="None">
+    <input type="text" name="field__auto_none_31" placeholder="None">
+</div>
+<div class="field-group">
+    <label>Color</label>
+    <input type="hidden" name="original__auto_color_34" value="Color">
+    <input type="text" name="field__auto_color_34" placeholder="Color">
+</div>
+<div class="field-group">
+    <label>Material</label>
+    <input type="hidden" name="original__auto_material_37" value="Material">
+    <input type="text" name="field__auto_material_37" placeholder="Material">
+</div>
+<div class="field-group">
+    <label>Width</label>
+    <input type="hidden" name="original__auto_width_38" value="Width">
+    <input type="text" name="field__auto_width_38" placeholder="Width">
+</div>
+<div class="field-group">
+    <label>Height</label>
+    <input type="hidden" name="original__auto_height_39" value="Height">
+    <input type="text" name="field__auto_height_39" placeholder="Height">
+</div>
+<div class="field-group">
+    <label>Length</label>
+    <input type="hidden" name="original__auto_length_40" value="Length">
+    <input type="text" name="field__auto_length_40" placeholder="Length">
+</div>
+<div class="field-group">
+    <label>Weight</label>
+    <input type="hidden" name="original__auto_weight_41" value="Weight">
+    <input type="text" name="field__auto_weight_41" placeholder="Weight">
+</div>
+<div class="field-group">
+    <label>Extra attributes</label>
+    <input type="hidden" name="original__auto_extra_attributes_42" value="Extra attributes">
+    <input type="text" name="field__auto_extra_attributes_42" placeholder="Extra attributes">
+</div>
+<div class="field-group">
+    <label>Delete</label>
+    <input type="hidden" name="original__auto_delete_44" value="Delete">
+    <input type="text" name="field__auto_delete_44" placeholder="Delete">
+</div>
+<div class="field-group">
+    <label>+ Add attribute</label>
+    <input type="hidden" name="original__auto__add_attribute_46" value="+ Add attribute">
+    <input type="text" name="field__auto__add_attribute_46" placeholder="+ Add attribute">
+</div>
+<div class="field-group">
+    <label>Hide product from storefront</label>
+    <input type="hidden" name="original__auto_hide_product_from_storefront_47" value="Hide product from storefront">
+    <input type="text" name="field__auto_hide_product_from_storefront_47" placeholder="Hide product from storefront">
+</div>
+<div class="field-group">
+    <label>Don&#039;t create new version (update current one)</label>
+    <input type="hidden" name="original__auto_don_t_create_new_version_upda_48" value="Don&#039;t create new version (update current one)">
+    <input type="text" name="field__auto_don_t_create_new_version_upda_48" placeholder="Don&#039;t create new version (update current one)">
+</div>
+<div class="field-group">
+    <label>Images</label>
+    <input type="hidden" name="original__auto_images_49" value="Images">
+    <input type="text" name="field__auto_images_49" placeholder="Images">
+</div>
+<div class="field-group">
+    <label>Upload new images or delete existing ones.</label>
+    <input type="hidden" name="original__auto_upload_new_images_or_delete_ex_50" value="Upload new images or delete existing ones.">
+    <input type="text" name="field__auto_upload_new_images_or_delete_ex_50" placeholder="Upload new images or delete existing ones.">
+</div>
+<div class="field-group">
+    <label>Delete image</label>
+    <input type="hidden" name="original__auto_delete_image_52" value="Delete image">
+    <input type="text" name="field__auto_delete_image_52" placeholder="Delete image">
+</div>
+<div class="field-group">
+    <label>No images uploaded yet.</label>
+    <input type="hidden" name="original__auto_no_images_uploaded_yet__53" value="No images uploaded yet.">
+    <input type="text" name="field__auto_no_images_uploaded_yet__53" placeholder="No images uploaded yet.">
+</div>
+<div class="field-group">
+    <label>Add images</label>
+    <input type="hidden" name="original__auto_add_images_54" value="Add images">
+    <input type="text" name="field__auto_add_images_54" placeholder="Add images">
+</div>
+<div class="field-group">
+    <label>Price preview</label>
+    <input type="hidden" name="original__auto_price_preview_55" value="Price preview">
+    <input type="text" name="field__auto_price_preview_55" placeholder="Price preview">
+</div>
+<div class="field-group">
+    <label>Current currency:</label>
+    <input type="hidden" name="original__auto_current_currency__57" value="Current currency:">
+    <input type="text" name="field__auto_current_currency__57" placeholder="Current currency:">
+</div>
+<div class="field-group">
+    <label>Preview:</label>
+    <input type="hidden" name="original__auto_preview__59" value="Preview:">
+    <input type="text" name="field__auto_preview__59" placeholder="Preview:">
+</div>
+
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

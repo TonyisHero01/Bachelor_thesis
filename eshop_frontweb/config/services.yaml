@@ -1,0 +1,56 @@
+parameters:
+    locale: 'en'
+    MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
+    NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
+    CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
+    BMS_URL: '%env(BMS_URL)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            $projectDir: '%kernel.project_dir%'
+
+    # 自动扫描 Controller / Service / Form ...
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # ===================== 多语言 Localized Path Twig 扩展 =====================
+    App\Twig\LocalizedPathExtension:
+        tags: ['twig.extension']
+
+    # ===================== money() Twig 扩展（带货币换算） =====================
+    App\Twig\MoneyExtension:
+        arguments:
+            $cm: '@App\Service\CurrencyManager'
+        tags: ['twig.extension']
+
+    # ===================== 货币管理器 =====================
+    App\Service\CurrencyManager:
+        arguments:
+            $doctrine: '@doctrine'
+            $requestStack: '@request_stack'
+            $logger: '@logger'
+
+    # ===================== Locale / 语言切换订阅器 =====================
+    App\EventSubscriber\LocaleSubscriber:
+        arguments:
+            $defaultLocale: '%locale%'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # ===================== 全局变量订阅器（把 currencies / languages / shopName 注入 every template） =====================
+    App\EventSubscriber\GlobalVariableSubscriber:
+        tags: ['kernel.event_subscriber']
+
+    # ===================== BaseController 显式注入依赖（推荐，不然有些 IDE 推断不出来） =====================
+    App\Controller\BaseController:
+        arguments:
+            $twig: '@twig'
+            $logger: '@logger'
+            $doctrine: '@doctrine'

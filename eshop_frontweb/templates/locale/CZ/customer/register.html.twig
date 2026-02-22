@@ -1,0 +1,35 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Customer Registration{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/register.css') }}">
+    <div class="registration-container">
+        <h1>📝 Vytvořte si svůj účet</h1>
+
+        <p class="subtitle">Přidejte se k nám a užijte si lepší zážitek z nakupování.</p>
+
+        <div class="registration-form">
+            {{ form_start(registrationForm) }}
+
+                <div class="form-group">
+                    {{ form_label(registrationForm.email) }}
+                    {{ form_widget(registrationForm.email, { 'attr': {'placeholder': 'Enter your email'} }) }}
+                    {{ form_errors(registrationForm.email) }}
+                </div>
+
+                <div class="form-group">
+                    {{ form_label(registrationForm.password_hash, 'Password') }}
+                    {{ form_widget(registrationForm.password_hash, { 'attr': {'placeholder': 'Create a password'} }) }}
+                    {{ form_errors(registrationForm.password_hash) }}
+                </div>
+
+                <div class="form-buttons">
+                    <button type="submit" class="btn btn-primary">Registrovat</button>
+                    <button type="button" class="btn btn-secondary" onclick="history.back()">Zrušit</button>
+                </div>
+
+            {{ form_end(registrationForm) }}
+        </div>
+    </div>
+{% endblock %}

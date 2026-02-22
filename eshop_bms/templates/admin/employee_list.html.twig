@@ -1,0 +1,79 @@
+{# templates/admin/employee_list.html.twig #}
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Employee List</title>
+    <link rel="stylesheet" href="{{ asset('assets/styles/employee_list.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div id='MAX_ARTICLES_COUNT_PER_PAGE' max_articles_count_per_page_value={{ MAX_ARTICLES_COUNT_PER_PAGE }}><div>
+    <div id='NAME_MAX_LENGTH' name_max_length_value={{ NAME_MAX_LENGTH }}></div>
+    <div id='CONTENT_MAX_LENGTH' content_max_length_value={{ CONTENT_MAX_LENGTH }}></div>
+    {% if app.user %}
+        {{ app.user.name ?: '' }} {{ app.user.surname ?: '' }}
+    {% endif %}
+    <h1>Employee List</h1>
+    <button id="addEmployee" type="button" onclick="window.location.href='{{ localized_path('app_register') }}';">Add Employee</button>
+    <div class="filter-container">
+        <label for="roleFilter">Filter by Role:</label>
+        <select id="roleFilter" onchange="filterByRole()">
+            <option value="">All</option>
+            <option value="ROLE_WAREHOUSEMAN">Warehouseman</option>
+            <option value="ROLE_WAREHOUSE_MANAGER">Warehouse Manager</option>
+            <option value="ROLE_TRANSLATOR">Translator</option>
+            <option value="ROLE_EVENT_MANAGER">Event Manager</option>
+            <option value="ROLE_ACCOUNTING">Accounting</option>
+            <option value="ROLE_ADMIN">Administrator</option>
+        </select>
+        <button onclick="resetRoleFilter()">Reset</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>{{ translations.name ?? 'Name' }}</th>
+                <th>{{ translations.surname ?? 'Surname' }}</th>
+                <th>{{ translations.edit ?? 'Edit' }}</th>
+                <th>{{ translations.delete ?? 'Delete' }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set ids = '' %}
+            {% for employee in employees %}
+                {% set ids = ids ~ employee.id ~ ',' %}
+                <tr id="{{ employee.id }}" data-edit-route="{{ localized_path('employee_edit', {'id': employee.id}) }}" data-roles="{{ employee.roles|join(',') }}">
+                    <td class="employee-name">{{ employee.name }}</td> 
+                    <td class="employee-surname">{{ employee.surname }}</td>
+                    <td class="editButton">
+                        <span class="edit-button" type="button" onclick="edit({{ employee.id }})">
+                            <i class="fa-regular fa-pen-to-square" style="color: green;"></i>
+                        </span>
+                    </td>
+                    <td class="deleteButton">
+                        <span class="delete-button" type="button" onclick="delete_({{ employee.id }})">
+                            <i class="fas fa-trash" style="color: red;"></i>
+                        </span>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+<div id="ids" data-ids="{{ ids }}" style="display: none;"></div>
+    
+    <div class="buttons">
+        <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
+        <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
+        <span id="pageCount">Page Count </span>
+    </div>
+    <script src="{{ asset('assets/showPage.js') }}"></script>
+    <script src="{{ asset('assets/employeeDelete.js') }}"></script>
+    <script src="{{ asset('assets/employeeEdit.js') }}"></script>
+    <script src="{{ asset('assets/employeeFilter.js') }}"></script>
+</body>
+</html>
+{% endblock %}

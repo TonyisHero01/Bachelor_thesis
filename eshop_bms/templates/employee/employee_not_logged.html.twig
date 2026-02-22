@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>You are not logged</title>
+    </head>
+    <body>
+        You are not logged. Please <a href="{{ localized_path('app_login') }}">Login</a>
+    </body>
+</html>
+{% endblock %}

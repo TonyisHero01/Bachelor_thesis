@@ -1,0 +1,10 @@
+dotenv==0.9.9
+joblib==1.4.2
+numpy==2.2.4
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+scikit-learn==1.6.1
+scipy==1.15.2
+threadpoolctl==3.6.0
+fastapi==0.115.0
+uvicorn[standard]==0.30.6

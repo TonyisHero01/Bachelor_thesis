@@ -1,0 +1,101 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Employee Registration{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset('assets/styles/registration.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="reg-page">
+  <div class="reg-card">
+    <header class="reg-header">
+      <div class="reg-header-main">
+        <h1 class="reg-title">New Employee</h1>
+        <p class="reg-subtitle">
+          Create a new employee account and assign one or more positions.
+        </p>
+      </div>
+      <div class="reg-header-side">
+        <a href="{{ localized_path('show_All_admins') }}" class="reg-back-link">
+          ⬅ Back to Employee List
+        </a>
+      </div>
+    </header>
+
+    {{ form_start(registrationForm, {'attr': {'class': 'reg-form'}}) }}
+
+      <section class="reg-section">
+        <h2 class="reg-section-title">Basic Information</h2>
+        <div class="reg-grid">
+          <div class="reg-field">
+            {{ form_label(registrationForm.surname, 'Surname', {'label_attr': {'class': 'reg-label'}}) }}
+            {{ form_widget(registrationForm.surname, {'attr': {'class': 'reg-input'}}) }}
+            <div class="reg-error">
+              {{ form_errors(registrationForm.surname) }}
+            </div>
+          </div>
+
+          <div class="reg-field">
+            {{ form_label(registrationForm.name, 'Name', {'label_attr': {'class': 'reg-label'}}) }}
+            {{ form_widget(registrationForm.name, {'attr': {'class': 'reg-input'}}) }}
+            <div class="reg-error">
+              {{ form_errors(registrationForm.name) }}
+            </div>
+          </div>
+
+          <div class="reg-field">
+            {{ form_label(registrationForm.email, 'Email', {'label_attr': {'class': 'reg-label'}}) }}
+            {{ form_widget(registrationForm.email, {'attr': {'class': 'reg-input'}}) }}
+            <div class="reg-error">
+              {{ form_errors(registrationForm.email) }}
+            </div>
+          </div>
+
+          <div class="reg-field">
+            {{ form_label(registrationForm.phoneNumber, 'Phone Number', {'label_attr': {'class': 'reg-label'}}) }}
+            {{ form_widget(registrationForm.phoneNumber, {'attr': {'class': 'reg-input'}}) }}
+            <div class="reg-error">
+              {{ form_errors(registrationForm.phoneNumber) }}
+            </div>
+          </div>
+
+          <div class="reg-field reg-field-full">
+            {{ form_label(registrationForm.plainPassword, 'Password', {'label_attr': {'class': 'reg-label'}}) }}
+            {{ form_widget(registrationForm.plainPassword, {'attr': {'class': 'reg-input'}}) }}
+            <p class="reg-hint">Minimum 6 characters.</p>
+            <div class="reg-error">
+              {{ form_errors(registrationForm.plainPassword) }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="reg-section">
+        <h2 class="reg-section-title">Employee Positions</h2>
+        <p class="reg-roles-hint">
+          You can assign multiple roles. Super admin can additionally grant <strong>Administrator</strong> privileges.
+        </p>
+
+        <div class="reg-roles">
+          {{ form_widget(registrationForm.roles) }}
+          <div class="reg-error">
+            {{ form_errors(registrationForm.roles) }}
+          </div>
+        </div>
+      </section>
+
+      <div class="reg-actions">
+        <button type="submit" class="btn btn-primary">
+          Create Employee
+        </button>
+        <button type="button" class="btn btn-ghost" onclick="history.back()">
+          Cancel
+        </button>
+      </div>
+
+    {{ form_end(registrationForm) }}
+  </div>
+</div>
+{% endblock %}

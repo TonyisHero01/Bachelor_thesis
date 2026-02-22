@@ -1,0 +1,93 @@
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d app"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  python-api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://user:password@db:5432/app"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:8000"
+    networks:
+      - backend
+
+  bms:
+    env_file:
+        - .env
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      DATABASE_URL: ${DATABASE_URL}
+      LOCK_DSN: ${LOCK_DSN:-flock}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
+      MAILER_DSN: ${MAILER_DSN}
+      BMS_URL: ${BMS_URL}
+      PYTHON_API_BASE_URL: ${PYTHON_API_BASE_URL}
+      SYMFONY_DEPRECATIONS_HELPER: disabled
+    build:
+      context: .
+      dockerfile: docker/bms/Dockerfile
+    ports:
+      - "8083:80"
+    volumes:
+      - ./eshop_bms:/var/www/html
+      - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
+      - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
+    depends_on:
+      db:
+        condition: service_healthy
+      python-api:
+        condition: service_started
+    networks:
+      - backend
+
+  frontweb:
+    env_file:
+        - .env
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      DATABASE_URL: ${DATABASE_URL}
+      LOCK_DSN: ${LOCK_DSN:-flock}
+      CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
+      MAILER_DSN: ${MAILER_DSN}
+      BMS_URL: ${BMS_URL}
+      PYTHON_API_BASE_URL: ${PYTHON_API_BASE_URL}
+      SYMFONY_DEPRECATIONS_HELPER: disabled
+    build:
+      context: .
+      dockerfile: docker/frontweb/Dockerfile
+    ports:
+      - "8082:80"
+    volumes:
+      - ./eshop_frontweb:/var/www/html
+      - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
+    depends_on:
+      db:
+        condition: service_healthy
+      python-api:
+        condition: service_started
+    networks:
+      - backend
+
+networks:
+  backend:
+
+volumes:
+  pgdata:

@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block body_class %}page-accounting{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/accounting_index.css') }}">
+{% endblock %}
+
+{% block body %}
+  <h1>Completed Orders</h1>
+
+  {% set pageTotal = 0 %}
+  {% for o in orders %}
+    {% set pageTotal = pageTotal + (o.totalPrice ?? 0) %}
+  {% endfor %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Total</th>
+        <th>Date</th>
+        <th>Email</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+        <tr>
+          <td>{{ order.id }}</td>
+          <td>
+            <span class="money" data-base="{{ order.totalPrice }}">{{ money(order.totalPrice) }}</span>
+          </td>
+          <td>{{ order.orderCreatedAt|date('Y-m-d') }}</td>
+          <td>{{ order.customer.email }}</td>
+          <td>
+            <a href="{{ localized_path('accounting_order_detail', { id: order.id }) }}">View</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No completed orders found.</td></tr>
+      {% endfor %}
+    </tbody>
+
+    {% if orders is not empty %}
+      <tfoot>
+        <tr>
+          <td><strong>Subtotal (this page)</strong></td>
+          <td><strong><span class="money" data-base="{{ pageTotal }}">{{ money(pageTotal) }}</span></strong></td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    {% endif %}
+  </table>
+{% endblock %}

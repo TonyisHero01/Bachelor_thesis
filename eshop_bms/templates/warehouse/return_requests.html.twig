@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Return Requests{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('assets/styles/return_requests.css') }}">
+
+<div class="example-wrapper">
+    <h2>Return Requests</h2>
+
+    {% if returnRequests is empty %}
+        <p>No return requests found.</p>
+    {% else %}
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Order ID</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Return Reason</th>
+                    <th>Products (SKUs)</th>
+                    <th>Request Date</th>
+                    <th>Status</th>
+                    <th>Action</th> 
+                </tr>
+            </thead>
+            <tbody>
+                {% for request in returnRequests %}
+                    <tr class="status-{{ request.getStatus() }}">
+                        <td>{{ request.getId() }}</td>
+                        <td>{{ request.getOrder().getId() }}</td>
+                        <td>{{ request.getUserName() }}</td>
+                        <td>{{ request.getUserEmail() }}</td>
+                        <td>{{ request.getUserPhone() }}</td>
+                        <td>{{ request.getReturnReason() ?: 'N/A' }}</td>
+                        <td>{{ request.getProductSkus() }}</td>
+                        <td>{{ request.getRequestDate().format('Y-m-d H:i') }}</td>
+                        <td>{{ request.getStatus()|capitalize }}</td>
+                        <td>
+                            <a href="{{ localized_path('return_request_detail', { 'id': request.getId() }) }}" class="view-btn">View Details</a>
+                        </td> 
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+{% endblock %}

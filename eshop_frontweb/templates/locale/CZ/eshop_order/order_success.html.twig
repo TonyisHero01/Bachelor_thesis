@@ -1,0 +1,20 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Order Success - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-success.css') }}">
+    <div id="order-successful-info-block">
+        <h2>Objednávka byla úspěšně zadána!</h2>
+        <p>Vaše objednávka byla úspěšně zadána.</p>
+        <p><strong>ID objednávky:</strong> {{ order.getId() }}</p>
+        
+        {% if not shopInfo.hidePrices %}
+            <p><strong>Celková cena:</strong> {{ order.getTotalPrice()|number_format(2) }} {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}</p>
+        {% endif %}
+        
+        <a href="{{ path('customer_orders', {'_locale': locale}) }}">Prohlédněte si své objednávky</a>
+    </div>
+
+    <script src="{{ asset('../assets/eshopOrderSuccess.js') }}"></script>
+{% endblock %}

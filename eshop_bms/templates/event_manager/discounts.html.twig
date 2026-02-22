@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Event Manager{% endblock %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  <link rel="stylesheet" href="{{ asset('assets/styles/discount_manager.css') }}?v={{ 'now'|date('U') }}">
+{% endblock %}
+
+{% block body %}
+<div class="dp-page">
+  <h1 class="dp-title">Event Manager</h1>
+
+  <form method="get" class="dp-filters">
+    <input type="text" name="sku" placeholder="SKU" value="{{ app.request.get('sku') }}">
+    <input type="text" name="name" placeholder="Product name" value="{{ app.request.get('name') }}">
+    <button type="submit">Filter</button>
+  </form>
+
+  <form
+    id="dp-form"
+    onsubmit="return false;"
+    data-post-url="{{ path('event_manager_update_discounts') }}"
+    data-csrf="{{ csrf_token('event_manager_update_discounts') }}"
+  >
+    <table class="dp-table">
+      <thead>
+      <tr>
+        <th>
+          <label>
+            <input type="checkbox" id="dp-select-all">
+            Select All
+          </label>
+        </th>
+        <th>SKU</th>
+        <th>Name</th>
+        <th>Current Discount (%)</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      {% for product in products %}
+        <tr>
+          <td>
+            <input type="checkbox" name="productIds[]" value="{{ product.id }}">
+          </td>
+          <td>{{ product.sku }}</td>
+          <td>{{ product.name }}</td>
+          <td>{{ product.discount }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" class="dp-centered">No products found</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="dp-controls">
+      <label for="dp-new-discount">Bulk Discount (%):</label>
+      <input type="number" id="dp-new-discount" min="0" max="100" step="1" required>
+      <button type="button" id="dp-apply">Apply Discount</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  <script src="{{ asset('assets/eventManagerDiscount.js') }}?v={{ 'now'|date('U') }}"></script>
+{% endblock %}

@@ -1,0 +1,44 @@
+# config/services.yaml
+parameters:
+  MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
+  NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
+  CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
+  images_directory: '%kernel.project_dir%/public/images'
+  python_api_base_url: '%env(PYTHON_API_BASE_URL)%'
+
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+
+  App\:
+    resource: '../src/'
+    exclude:
+      - '../src/DependencyInjection/'
+      - '../src/Entity/'
+      - '../src/Kernel.php'
+
+  App\Controller\BaseController:
+    arguments:
+      $twig: '@twig'
+      $logger: '@logger'
+      $doctrine: '@doctrine'
+
+  App\Twig\LocalizedPathExtension:
+    tags: ['twig.extension']
+
+  App\Twig\MoneyExtension:
+    arguments:
+      $cm: '@App\Service\CurrencyManager'
+    tags: ['twig.extension']
+
+  App\Service\CurrencyManager:
+    arguments:
+      $doctrine: '@doctrine'
+      $requestStack: '@request_stack'
+
+  App\EventSubscriber\GlobalVariableSubscriber:
+    arguments:
+      $projectDir: '%kernel.project_dir%'
+    tags:
+      - { name: kernel.event_subscriber }

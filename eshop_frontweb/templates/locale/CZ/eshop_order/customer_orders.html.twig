@@ -1,0 +1,63 @@
+{% extends 'locale/CZ/eshop_base.html.twig' %}
+
+{% block title %}Moje objednávky - {{ shopInfo.getEshopName() }}{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/eshop_styles/order-list.css') }}">
+
+<div class="customer-orders">
+
+    <h2>Moje objednávky</h2>
+
+    {% if orders is empty %}
+        <p>Nemáte žádné objednávky.</p>
+    {% else %}
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>ID objednávky</th>
+                    <th>Datum objednávky</th>
+                    {% if not shopInfo.hidePrices %}
+                        <th>Celková cena</th>
+                    {% endif %}
+                    <th>Status</th>
+                    <th>Akce</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td data-label="ID objednávky">{{ order.getId() }}</td>
+                        <td data-label="Datum objednávky">{{ order.getOrderCreatedAt()|date('Y-m-d H:i') }}</td>
+                        {% if not shopInfo.hidePrices %}
+                            <td data-label="Celková cena">
+                                {{ order.getTotalPrice()|number_format(2) }}
+                                {% if order.getOrderItems() is not empty %}
+                                    {{ order.getOrderItems().first().getProduct().getCurrency().getName() }}
+                                {% else %}
+                                    No currency
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                        <td data-label="Status">
+                            {% if order.getIsCompleted() %}
+                                <span class="status completed">DOKONČENO</span>
+                            {% else %}
+                                <span class="status pending">ČEKÁ</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Akce">
+                            <a href="{{ path('order_confirmation2', {'id': order.getId(), '_locale': locale}) }}" class="btn">Zobrazit</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <a href="{{ path('homepage') }}" class="btn return-home">
+        <i class="fas fa-home"></i> Návrat domů
+    </a>
+</div>
+
+{% endblock %}

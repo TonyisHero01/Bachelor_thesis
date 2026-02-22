@@ -1,0 +1,35 @@
+{% extends 'base.html.twig' %}
+
+{% block stylesheets %}
+    <link rel="stylesheet" href="{{ asset('assets/styles/login.css') }}">
+{% endblock %}
+
+{% block title %}Login{% endblock %}
+
+{% block body %}
+<div class="login-page">
+    <div class="login-card">
+        <h2 class="login-title">Sign In</h2>
+
+        {% if error %}
+            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+        {% endif %}
+
+        <form method="post">
+            <div class="form-group">
+                <label for="inputEmail">Email</label>
+                <input type="email" name="email" id="inputEmail" value="{{ last_username }}" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="inputPassword">Password</label>
+                <input type="password" name="password" id="inputPassword" required>
+            </div>
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+            <button type="submit" class="login-button">Login</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

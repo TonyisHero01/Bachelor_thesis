@@ -1,0 +1,82 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Translate – Auto Generated{% endblock %}
+
+{% block body %}
+<link rel="stylesheet" href="{{ asset('../assets/styles/translation_form.css') }}">
+
+<form method="post" action="{{ path('translation_submit') }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('translation_submit') }}">
+    <input type="hidden" name="original_path" value="warehouse/return_requests.html.twig">
+    <input type="hidden" name="target_language" value="{{ lang }}">
+
+<div class="field-group">
+    <label>Return Requests</label>
+    <input type="hidden" name="original__auto_return_requests_0" value="Return Requests">
+    <input type="text" name="field__auto_return_requests_0" placeholder="Return Requests">
+</div>
+<div class="field-group">
+    <label>No return requests found.</label>
+    <input type="hidden" name="original__auto_no_return_requests_found__2" value="No return requests found.">
+    <input type="text" name="field__auto_no_return_requests_found__2" placeholder="No return requests found.">
+</div>
+<div class="field-group">
+    <label>ID</label>
+    <input type="hidden" name="original__auto_id_4" value="ID">
+    <input type="text" name="field__auto_id_4" placeholder="ID">
+</div>
+<div class="field-group">
+    <label>Order ID</label>
+    <input type="hidden" name="original__auto_order_id_5" value="Order ID">
+    <input type="text" name="field__auto_order_id_5" placeholder="Order ID">
+</div>
+<div class="field-group">
+    <label>Customer Name</label>
+    <input type="hidden" name="original__auto_customer_name_6" value="Customer Name">
+    <input type="text" name="field__auto_customer_name_6" placeholder="Customer Name">
+</div>
+<div class="field-group">
+    <label>Email</label>
+    <input type="hidden" name="original__auto_email_7" value="Email">
+    <input type="text" name="field__auto_email_7" placeholder="Email">
+</div>
+<div class="field-group">
+    <label>Phone</label>
+    <input type="hidden" name="original__auto_phone_8" value="Phone">
+    <input type="text" name="field__auto_phone_8" placeholder="Phone">
+</div>
+<div class="field-group">
+    <label>Return Reason</label>
+    <input type="hidden" name="original__auto_return_reason_9" value="Return Reason">
+    <input type="text" name="field__auto_return_reason_9" placeholder="Return Reason">
+</div>
+<div class="field-group">
+    <label>Products (SKUs)</label>
+    <input type="hidden" name="original__auto_products_skus__10" value="Products (SKUs)">
+    <input type="text" name="field__auto_products_skus__10" placeholder="Products (SKUs)">
+</div>
+<div class="field-group">
+    <label>Request Date</label>
+    <input type="hidden" name="original__auto_request_date_11" value="Request Date">
+    <input type="text" name="field__auto_request_date_11" placeholder="Request Date">
+</div>
+<div class="field-group">
+    <label>Status</label>
+    <input type="hidden" name="original__auto_status_12" value="Status">
+    <input type="text" name="field__auto_status_12" placeholder="Status">
+</div>
+<div class="field-group">
+    <label>Action</label>
+    <input type="hidden" name="original__auto_action_13" value="Action">
+    <input type="text" name="field__auto_action_13" placeholder="Action">
+</div>
+<div class="field-group">
+    <label>View Details</label>
+    <input type="hidden" name="original__auto_view_details_24" value="View Details">
+    <input type="text" name="field__auto_view_details_24" placeholder="View Details">
+</div>
+
+
+    <button type="submit">Generate Translated File</button>
+</form>
+{% endblock %}

@@ -1,0 +1,89 @@
+.example-wrapper {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.example-wrapper h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #fdfdfd;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
+}
+
+.styled-table th,
+.styled-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.styled-table th {
+    background-color: #f5f5f5;
+    width: 30%;
+    color: #555;
+    font-weight: 600;
+}
+
+.styled-table td {
+    color: #333;
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.accept-btn,
+.reject-btn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    color: white;
+    font-size: 1rem;
+}
+
+.accept-btn {
+    background-color: #28a745;
+}
+
+.reject-btn {
+    background-color: #dc3545;
+}
+
+.accept-btn:hover {
+    background-color: #218838;
+}
+
+.reject-btn:hover {
+    background-color: #c82333;
+}
+
+.back-btn {
+    display: block;
+    text-align: center;
+    margin-top: 2rem;
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.back-btn:hover {
+    text-decoration: underline;
+}
