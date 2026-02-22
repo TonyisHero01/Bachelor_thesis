@@ -83,14 +83,14 @@ exit
 
 ### 1. Configure environment variables
 
-Edit `.env` in both `eshop_bms` and `eshop_frontweb`:
+Edit `.env`:
 
 ```dotenv
 DATABASE_URL="postgresql://your_username:your_password@host.docker.internal:5432/eshop_cms?serverVersion=14&charset=utf8"
 ```
 
 ### 2. Configure python-api base url for Symfony
-Edit .env in both eshop_bms and eshop_frontweb:
+Edit .env:
 ```dotenv
 PYTHON_API_BASE_URL="http://python-api:8000"
 ```
