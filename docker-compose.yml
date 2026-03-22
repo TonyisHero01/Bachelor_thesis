@@ -1,6 +1,10 @@
 services:
   db:
     image: postgres:14
+    container_name: eshop_db
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: app
       POSTGRES_USER: user
@@ -19,8 +23,12 @@ services:
     build:
       context: .
       dockerfile: docker/api/Dockerfile
+    container_name: eshop_python_api
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: "postgresql://user:password@db:5432/app"
+      DATABASE_URL: ${DATABASE_URL}
     depends_on:
       db:
         condition: service_healthy
@@ -30,24 +38,31 @@ services:
       - backend
 
   bms:
+    build:
+      context: .
+      dockerfile: docker/bms/Dockerfile
+    container_name: eshop_bms
+    restart: unless-stopped
     env_file:
-        - .env
+      - .env
     environment:
       APP_ENV: ${APP_ENV:-dev}
+      APP_SECRET: ${APP_SECRET:-change_this_secret}
       DATABASE_URL: ${DATABASE_URL}
       LOCK_DSN: ${LOCK_DSN:-flock}
       CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
       MAILER_DSN: ${MAILER_DSN}
       BMS_URL: ${BMS_URL}
       PYTHON_API_BASE_URL: ${PYTHON_API_BASE_URL}
+      MAX_ARTICLES_COUNT_PER_PAGE: ${MAX_ARTICLES_COUNT_PER_PAGE}
+      NAME_MAX_LENGTH: ${NAME_MAX_LENGTH}
+      CONTENT_MAX_LENGTH: ${CONTENT_MAX_LENGTH}
       SYMFONY_DEPRECATIONS_HELPER: disabled
-    build:
-      context: .
-      dockerfile: docker/bms/Dockerfile
     ports:
       - "8083:80"
     volumes:
       - ./eshop_bms:/var/www/html
+      - ./.env:/app_root_env/.env:ro
       - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
       - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
@@ -59,24 +74,31 @@ services:
       - backend
 
   frontweb:
+    build:
+      context: .
+      dockerfile: docker/frontweb/Dockerfile
+    container_name: eshop_frontweb
+    restart: unless-stopped
     env_file:
-        - .env
+      - .env
     environment:
       APP_ENV: ${APP_ENV:-dev}
+      APP_SECRET: ${APP_SECRET:-change_this_secret}
       DATABASE_URL: ${DATABASE_URL}
       LOCK_DSN: ${LOCK_DSN:-flock}
       CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN}
       MAILER_DSN: ${MAILER_DSN}
       BMS_URL: ${BMS_URL}
       PYTHON_API_BASE_URL: ${PYTHON_API_BASE_URL}
+      MAX_ARTICLES_COUNT_PER_PAGE: ${MAX_ARTICLES_COUNT_PER_PAGE}
+      NAME_MAX_LENGTH: ${NAME_MAX_LENGTH}
+      CONTENT_MAX_LENGTH: ${CONTENT_MAX_LENGTH}
       SYMFONY_DEPRECATIONS_HELPER: disabled
-    build:
-      context: .
-      dockerfile: docker/frontweb/Dockerfile
     ports:
       - "8082:80"
     volumes:
       - ./eshop_frontweb:/var/www/html
+      - ./.env:/app_root_env/.env:ro
       - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
       db:
