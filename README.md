@@ -11,7 +11,7 @@ All future development assumes Docker-based environments.
 ## Requirements
 
 - **Docker** + **Docker Compose**
-- (Inside containers) **PHP 8.2+**, **Symfony 7.x**
+- (Inside containers) **PHP 8.4+**, **Symfony 7.4.x**
 - (Inside container) **Python 3.12+**
 - **PostgreSQL 14+**
 

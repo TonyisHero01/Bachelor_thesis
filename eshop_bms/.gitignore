@@ -33,3 +33,4 @@ public/images/*
 /python_scripts/venv/
 .env.local
 .env.*.local
+.env.test

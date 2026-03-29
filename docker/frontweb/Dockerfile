@@ -1,4 +1,4 @@
-FROM php:8.2-apache-bookworm
+FROM php:8.4-apache
 
 RUN set -eux; \
     apt-get update; \
