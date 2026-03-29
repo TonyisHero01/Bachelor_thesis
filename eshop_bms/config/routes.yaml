@@ -1,9 +1,10 @@
 controllers:
   resource: ../src/Controller/
   type: attribute
-  exclude:
-    - 'Api/'
-    - 'Api/**'
+
+api_controllers:
+  resource: ../src/Api/Controller/
+  type: attribute
 
 product_edit:
   path: '/bms/product_edit/{id}'
@@ -18,11 +19,11 @@ save_image:
   controller: App\Controller\ProductController::saveImage
 
 register_succesfull:
-  path: 'register_succesfull'
+  path: /register_succesfull
   controller: App\Controller\RegistrationController::registerSuccessfullNotificate
 
 home:
-  path: 'home'
+  path: /home
   controller: App\Controller\HomeController::home
 
 images:
