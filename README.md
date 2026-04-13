@@ -65,18 +65,6 @@ docker compose up --build
 
 This will start two containers on ports 8082 and 8083.
 
-### Inside container: install Symfony dependencies
-
-```sh
-# Backend:
-docker exec -it bms bash
-exit
-
-# Frontend:
-docker exec -it frontweb bash
-exit
-```
-
 ---
 
 ## ⚙️ Setup
