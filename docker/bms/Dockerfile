@@ -40,7 +40,8 @@ RUN mkdir -p /var/www/html/var \
     && chown -R www-data:www-data /var/www/html/var
 
 COPY docker/bms_entrypoint.sh /usr/local/bin/start-bms.sh
-RUN chmod +x /usr/local/bin/start-bms.sh
+RUN sed -i 's/\r$//' /usr/local/bin/start-bms.sh \
+    && chmod +x /usr/local/bin/start-bms.sh
 
 ENTRYPOINT ["/usr/local/bin/start-bms.sh"]
 CMD ["apache2-foreground"]
