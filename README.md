@@ -48,6 +48,11 @@ git clone -b Symfony_Version --single-branch https://github.com/TonyisHero01/Bac
 cd Bachelor_thesis
 ```
 
+#### Edit your .github/workflows/docker-build-and-push.yml!
+```yml
+IMAGE_NAMESPACE: ghcr.io/<your-github-username>
+```
+
 #### Start with Docker
 
 Ensure Docker & Docker Compose are installed:
