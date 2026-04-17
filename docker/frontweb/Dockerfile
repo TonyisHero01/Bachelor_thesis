@@ -2,7 +2,10 @@ FROM php:8.4-apache
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends ca-certificates gnupg debian-archive-keyring; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        gnupg \
+        debian-archive-keyring; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 RUN set -eux; \
@@ -15,10 +18,13 @@ RUN set -eux; \
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-        git unzip libzip-dev \
+        git \
+        unzip \
+        libzip-dev \
         libpq-dev \
-        gcc make pkg-config \
-    ; \
+        gcc \
+        make \
+        pkg-config; \
     docker-php-ext-install pdo pdo_pgsql zip; \
     a2enmod rewrite; \
     rm -rf /var/lib/apt/lists/*; \
@@ -28,7 +34,10 @@ RUN set -eux; \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
-COPY . .
+COPY ./eshop_frontweb/ /var/www/html/
+
+RUN mkdir -p /var/www/html/var \
+    && chown -R www-data:www-data /var/www/html/var
 
 COPY docker/frontweb_entrypoint.sh /usr/local/bin/start-frontweb.sh
 RUN chmod +x /usr/local/bin/start-frontweb.sh

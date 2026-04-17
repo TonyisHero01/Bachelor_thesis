@@ -61,6 +61,51 @@ final class ProductController extends BaseController
         );
     }
 
+    private function notifyReindex(
+        HttpClientInterface $httpClient,
+        LoggerInterface $logger,
+        string $event,
+        array $payload = []
+    ): void {
+        $baseUrl = rtrim((string) $this->getParameter('python_api_base_url'), '/');
+
+        if ($baseUrl === '') {
+            $logger->warning('PYTHON_API_BASE_URL is empty, skipping reindex notification.');
+            return;
+        }
+
+        try {
+            $response = $httpClient->request('POST', $baseUrl . '/reindex', [
+                'json' => [
+                    'event' => $event,
+                    'payload' => $payload,
+                ],
+                'timeout' => 5,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode >= 400) {
+                $logger->error('Reindex notification failed.', [
+                    'statusCode' => $statusCode,
+                    'event' => $event,
+                    'payload' => $payload,
+                    'response' => $response->getContent(false),
+                ]);
+            } else {
+                $logger->info('Reindex notification sent.', [
+                    'event' => $event,
+                    'payload' => $payload,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $logger->error('Failed to notify python-api for reindex: ' . $e->getMessage(), [
+                'event' => $event,
+                'payload' => $payload,
+            ]);
+        }
+    }
+
     #[Route('/bms/product_create', name: 'create_product', methods: ['POST'])]
     public function createProduct(
         Request $request,
