@@ -1,16 +1,59 @@
 {% extends 'eshop_base.html.twig' %}
 
+{% block title %}
+    {{ product.getTranslatedName(locale) }} | {{ shopInfo.getEshopName() }}
+{% endblock %}
+
+{% block head_extra %}
+    {% set productName = product.getTranslatedName(locale) %}
+    {% set productDescription = product.getTranslatedDescription(locale)|striptags|trim %}
+    {% set productDescriptionShort = productDescription|slice(0, 160) %}
+    {% set productUrl = app.request.uri %}
+    {% set imageUrls = product.getImageUrls() %}
+    {% set firstImage = imageUrls is not empty ? imageUrls|first : null %}
+    {% set ogImage = firstImage ? (BMS_URL ~ '/images/' ~ firstImage) : asset('assets/images/default-product.jpg') %}
+    {% set currencyCode = product.getCurrency().getName() %}
+
+    <meta name="description" content="{{ productDescriptionShort|e('html_attr') }}">
+
+    <link rel="canonical" href="{{ productUrl }}">
+
+    {# Open Graph #}
+    <meta property="og:type" content="product">
+    <meta property="og:title" content="{{ productName|e('html_attr') }}">
+    <meta property="og:description" content="{{ productDescriptionShort|e('html_attr') }}">
+    <meta property="og:url" content="{{ productUrl|e('html_attr') }}">
+    <meta property="og:image" content="{{ ogImage|e('html_attr') }}">
+    <meta property="og:site_name" content="{{ shopInfo.getEshopName()|e('html_attr') }}">
+    <meta property="og:locale" content="{{ locale|e('html_attr') }}">
+
+    {# Twitter Card #}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ productName|e('html_attr') }}">
+    <meta name="twitter:description" content="{{ productDescriptionShort|e('html_attr') }}">
+    <meta name="twitter:image" content="{{ ogImage|e('html_attr') }}">
+
+    {% if not shopInfo.hidePrices %}
+        <meta property="product:price:amount" content="{{ product.price }}">
+        <meta property="product:price:currency" content="{{ currencyCode|e('html_attr') }}">
+    {% endif %}
+{% endblock %}
+
 {% block body %}
 <link rel="stylesheet" href="{{ asset('assets/eshop_styles/product-page.css') }}">
+
+{% set productName = product.getTranslatedName(locale) %}
+{% set productDescription = product.getTranslatedDescription(locale)|striptags|trim %}
+{% set imageUrls = product.getImageUrls() %}
+{% set firstImage = imageUrls is not empty ? imageUrls|first : null %}
+{% set currencyCode = product.getCurrency().getName() %}
 
 <div id="product_id" product-id="{{ product.id }}"></div>
 
 <div class="product-page">
 
-    <!-- 上半部分：左图右信息 -->
     <div class="product-layout">
 
-        <!-- 左侧图片列 -->
         <div class="product-gallery-column">
             <div class="product-gallery-card">
                 {% if product.discount is not empty and product.discount != 0 and product.discount < 100 %}
@@ -21,7 +64,7 @@
 
                 <div class="product-swiper swiper-container">
                     <div class="swiper-wrapper">
-                        {% for imageURL in product.getImageUrls() %}
+                        {% for imageURL in imageUrls %}
                             <div class="swiper-slide"
                                  style="background-image: url('{{ BMS_URL }}/images/{{ imageURL }}');">
                             </div>
@@ -34,13 +77,12 @@
             </div>
         </div>
 
-        <!-- 右侧信息列 -->
         <div class="product-info-column">
             <div class="product-info-card">
 
                 <div class="product-title-row">
                     <h1 class="product-name">
-                        {{ product.getTranslatedName(locale) }}
+                        {{ productName }}
                     </h1>
                     <div class="product-sku">
                         #{{ product.sku ?? product.id }}
@@ -49,9 +91,8 @@
 
                 {% if not shopInfo.hidePrices %}
                     <div class="product-price-block">
-                        {% if product.discount < 100 %}
-                            {% set discountedPrice = (product.price * product.discount / 100) | number_format(2, '.', '') %}
-                            {% set currency = product.getCurrency().getName %}
+                        {% if product.discount is not empty and product.discount != 0 and product.discount < 100 %}
+                            {% set discountedPrice = (product.price * product.discount / 100)|number_format(2, '.', '') %}
 
                             <div class="price-row">
                                 <span class="price-label">Original</span>
@@ -133,7 +174,6 @@
 
     </div>
 
-    <!-- 下半部分：参数 + 描述 -->
     <div class="product-extra">
         <section class="product-section">
             <h2 class="section-title">Parameters</h2>
@@ -175,14 +215,15 @@
         <section class="product-section">
             <h2 class="section-title">Description</h2>
             <div class="description-content">
-                {{ product.getTranslatedDescription(locale) | raw }}
+                {{ product.getTranslatedDescription(locale)|raw }}
             </div>
         </section>
     </div>
 
 </div>
+
 <script>
-  window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
+    window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
 </script>
 
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
@@ -193,19 +234,27 @@
 {
     "@context": "https://schema.org",
     "@type": "Product",
-    "name": "{{ product.name }}",
+    "name": {{ productName|json_encode|raw }},
     "image": [
-        {% for imageURL in product.getImageUrls() %}
-        "{{ BMS_URL }}images/{{ imageURL }}"{% if not loop.last %},{% endif %}
+        {% for imageURL in imageUrls %}
+            {{ (BMS_URL ~ '/images/' ~ imageURL)|json_encode|raw }}{% if not loop.last %},{% endif %}
         {% endfor %}
     ],
-    "description": "{{ product.description|e('js') }}",
-    "brand": "{{ shopInfo.getEshopName() }}",
+    "description": {{ productDescription|json_encode|raw }},
+    "sku": {{ (product.sku ?? product.id)|json_encode|raw }},
+    "brand": {
+        "@type": "Brand",
+        "name": {{ shopInfo.getEshopName()|json_encode|raw }}
+    },
     "offers": {
         "@type": "Offer",
-        "price": "{{ product.price }}",
-        "priceCurrency": "{{ product.getCurrency().getName }}",
+        "url": {{ app.request.uri|json_encode|raw }},
+        "price": {{ product.price|json_encode|raw }},
+        "priceCurrency": {{ currencyCode|json_encode|raw }},
         "availability": "https://schema.org/InStock"
+        {% if product.taxRate is not empty and product.taxRate != 0 %},
+        "valueAddedTaxIncluded": true
+        {% endif %}
     }
 }
 </script>
