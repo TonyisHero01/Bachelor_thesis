@@ -21,7 +21,6 @@ public/images/*
 
 # Custom ignores
 /templates/locale/
-/templates/translation/*
 
 # But keep these specific files
 !/templates/translation/languages.html.twig
