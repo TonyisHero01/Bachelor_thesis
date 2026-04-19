@@ -1,7 +1,7 @@
 {# templates/product/edit.html.twig #}
 {% extends 'base.html.twig' %}
 
-{% block title %}Edit Product - {{ product.name }}{% endblock %}
+{% block title %}Edit Product - {{ product.getTranslatedName(locale) }}{% endblock %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -72,7 +72,7 @@
                    name="name"
                    required
                    maxlength="{{ NAME_MAX_LENGTH }}"
-                   value="{{ product.name }}"
+                   value="{{ product.getTranslatedName(locale) }}"
                    class="form-input">
           </div>
 
@@ -82,7 +82,7 @@
               {% for category in categories %}
                 <option value="{{ category.id }}"
                         {% if product.category and category.id == product.category.id %}selected{% endif %}>
-                  {{ category.name }}
+                  {{ category.getTranslatedName(locale) }}
                 </option>
               {% endfor %}
             </select>
@@ -95,7 +95,7 @@
             <textarea id="description"
                       name="description"
                       rows="8"
-                      class="form-textarea">{{ product.description }}</textarea>
+                      class="form-textarea">{{ product.getTranslatedDescription(locale) }}</textarea>
           </div>
         </div>
 
@@ -166,7 +166,7 @@
               {% for color in colors %}
                 <option value="{{ color.id }}"
                         {% if product.color and color.id == product.color.id %}selected{% endif %}>
-                  {{ color.name }}
+                  {{ color.getTranslatedName(locale) }}
                 </option>
               {% endfor %}
             </select>
@@ -177,7 +177,7 @@
             <input type="text"
                    id="material"
                    name="material"
-                   value="{{ product.material }}"
+                   value="{{ product.getTranslatedMaterial(locale) }}"
                    class="form-input">
           </div>
         </div>

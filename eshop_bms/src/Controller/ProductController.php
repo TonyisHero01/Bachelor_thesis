@@ -194,7 +194,7 @@ final class ProductController extends BaseController
         $sizes = $em->getRepository(Size::class)->findAll();
         $categories = $em->getRepository(Category::class)->findAll();
 
-        $locale = $request->getLocale();
+        $locale = strtolower((string) $request->query->get('_locale', $request->getLocale()));
         $productsForView = $this->buildProductsForView($products, $locale);
 
         return $this->renderLocalized('product/product_list.html.twig', [
@@ -213,7 +213,7 @@ final class ProductController extends BaseController
      * Displays the product edit page and product history by SKU.
      */
     #[Route('/bms/product_edit/{id}', name: 'edit_product', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function edit(EntityManagerInterface $em, int $id): Response
+    public function edit(EntityManagerInterface $em, Request $request, int $id): Response
     {
         $productRepository = $em->getRepository(Product::class);
         $product = $productRepository->find($id);
@@ -231,6 +231,9 @@ final class ProductController extends BaseController
         $colors = $em->getRepository(Color::class)->findAll();
         $sizes = $em->getRepository(Size::class)->findAll();
 
+        $locale = strtolower((string) $request->query->get('_locale', $request->getLocale()));
+
+
         return $this->renderLocalized('product/product_edit.html.twig', [
             'product' => $product,
             'productsWithSameSku' => $productsWithSameSku,
@@ -240,6 +243,7 @@ final class ProductController extends BaseController
             'categories' => $categories,
             'colors' => $colors,
             'sizes' => $sizes,
+            'locale' => $locale,
         ]);
     }
 
