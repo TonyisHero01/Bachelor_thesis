@@ -341,7 +341,6 @@ function createSize() {
         .then((response) => response.json())
         .then((data) => {
             if (data.success) {
-                alert('Size added successfully!');
                 location.reload();
             } else {
                 alert(`Error: ${data.message}`);
