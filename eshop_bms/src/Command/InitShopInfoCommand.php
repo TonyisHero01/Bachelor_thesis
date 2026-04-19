@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\Currency;
 use App\Entity\ShopInfo;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -14,7 +15,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:init-shopinfo',
-    description: 'Initialize default ShopInfo entry if not exists',
+    description: 'Initialize default ShopInfo and default Currency if not exists',
 )]
 class InitShopInfoCommand extends Command
 {
@@ -24,50 +25,81 @@ class InitShopInfoCommand extends Command
         parent::__construct();
     }
 
-    /**
-     * Configures the command metadata and help text.
-     */
     protected function configure(): void
     {
-        $this->setHelp('Creates a default ShopInfo record if none exists yet.');
+        $this->setHelp('Creates a default ShopInfo record and default Currency record if they do not exist yet.');
     }
 
-    /**
-     * Executes the command and creates a default ShopInfo record when missing.
-     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
-        $existing = $this->em->getRepository(ShopInfo::class)->findOneBy([]);
-        if ($existing !== null) {
-            $io->warning('ShopInfo already exists. Aborting.');
+        $shopInfoCreated = false;
+        $currencyCreated = false;
 
-            return Command::SUCCESS;
+        $existingShopInfo = $this->em->getRepository(ShopInfo::class)->findOneBy([]);
+
+        if ($existingShopInfo === null) {
+            $io->title('Create default ShopInfo entry');
+
+            $eshopName = (string) $io->ask('Shop name (e.g. Moda Vogue)', '');
+            $address = (string) $io->ask('Address', '');
+            $telephone = (string) $io->ask('Phone', '');
+            $email = (string) $io->ask('Email', '');
+            $companyName = (string) $io->ask('Company name', '');
+            $cin = (string) $io->ask('CIN / IČ', '');
+
+            $shopInfo = new ShopInfo();
+            $shopInfo
+                ->setEshopName($eshopName)
+                ->setAddress($address)
+                ->setTelephone($telephone)
+                ->setEmail($email)
+                ->setCompanyName($companyName)
+                ->setCin($cin);
+
+            $this->em->persist($shopInfo);
+            $shopInfoCreated = true;
+        } else {
+            $io->note('ShopInfo already exists. Skipping ShopInfo creation.');
         }
 
-        $io->title('Create default ShopInfo entry');
+        $currencyRepo = $this->em->getRepository(Currency::class);
+        $existingCurrency = $currencyRepo->findOneBy(['isDefault' => true]);
 
-        $eshopName = (string) $io->ask('Shop name (e.g. Moda Vogue)', '');
-        $address = (string) $io->ask('Address', '');
-        $telephone = (string) $io->ask('Phone', '');
-        $email = (string) $io->ask('Email', '');
-        $companyName = (string) $io->ask('Company name', '');
-        $cin = (string) $io->ask('CIN / IČ', '');
+        if ($existingCurrency === null) {
+            $io->section('Create default currency');
 
-        $shopInfo = new ShopInfo();
-        $shopInfo
-            ->setEshopName($eshopName)
-            ->setAddress($address)
-            ->setTelephone($telephone)
-            ->setEmail($email)
-            ->setCompanyName($companyName)
-            ->setCin($cin);
+            $currencyName = (string) $io->ask('Default currency (e.g. CZK, EUR)', 'CZK');
+            $currencyValue = (float) $io->ask('Currency value (base = 1.0)', '1');
 
-        $this->em->persist($shopInfo);
-        $this->em->flush();
+            $currency = new Currency();
+            $currency
+                ->setName($currencyName)
+                ->setValue($currencyValue)
+                ->setIsDefault(true);
 
-        $io->success('Default ShopInfo created successfully.');
+            $this->em->persist($currency);
+            $currencyCreated = true;
+        } else {
+            $io->note(sprintf('Default currency already exists: %s', $existingCurrency->getName()));
+        }
+
+        if ($shopInfoCreated || $currencyCreated) {
+            $this->em->flush();
+        }
+
+        if ($shopInfoCreated) {
+            $io->success('Default ShopInfo created successfully.');
+        }
+
+        if ($currencyCreated) {
+            $io->success('Default Currency created successfully.');
+        }
+
+        if (!$shopInfoCreated && !$currencyCreated) {
+            $io->warning('Nothing was created. ShopInfo and default Currency already exist.');
+        }
 
         return Command::SUCCESS;
     }
