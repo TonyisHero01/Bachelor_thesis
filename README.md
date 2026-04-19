@@ -97,7 +97,7 @@ php bin/console app:create-super-admin
 
 ### 4. Initialize Shop Info
 ```sh
-docker exec -it bms bash
+docker exec -it eshop_bms bash
 php bin/console app:init-shopinfo
 ```
 
