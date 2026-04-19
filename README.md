@@ -91,7 +91,7 @@ PYTHON_API_BASE_URL="http://python-api:8000"
 ### 3. Set up the super administrator
 
 ```sh
-docker exec -it bms bash
+docker exec -it eshop_bms bash
 php bin/console app:create-super-admin
 ```
 
