@@ -121,19 +121,32 @@ Access:
 
 ## ⚙️ Setup
 
-### 1. Configure environment variables
+### 1. Environment configuration
 
-Edit `.env`:
+The application uses environment variables defined in `docker-compose.yml`.
 
-```dotenv
-DATABASE_URL="postgresql://your_username:your_password@host.docker.internal:5432/eshop_cms?serverVersion=14&charset=utf8"
+Key variables:
+
+```yaml
+APP_ENV: dev
+MAILER_DSN: smtp://<your-email>:<your-app-password>@smtp.gmail.com:587?encryption=tls
+CORS_ALLOW_ORIGIN: "^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$"
+BMS_URL: "http://localhost:8083/"
 ```
 
-### 2. Configure python-api base url for Symfony
-Edit .env:
-```dotenv
-PYTHON_API_BASE_URL="http://python-api:8000"
+---
+
+### 2. Docker image configuration
+
+In `.github/workflows/docker-build-and-push.yml`, configure:
+
+```yaml
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ghcr.io/<your-github-username>
 ```
+
+---
 
 ### 3. Set up the super administrator
 
@@ -142,11 +155,22 @@ docker exec -it eshop_bms bash
 php bin/console app:create-super-admin
 ```
 
+---
+
 ### 4. Initialize Shop Info
+
 ```sh
 docker exec -it eshop_bms bash
 php bin/console app:init-shopinfo
 ```
+
+---
+
+### Notes
+
+- `APP_ENV=dev` is recommended for development.
+- Make sure your `MAILER_DSN` is correctly configured if email functionality is required.
+- `CORS_ALLOW_ORIGIN` should match your frontend domain if accessed externally.
 
 ---
 

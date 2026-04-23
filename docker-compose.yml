@@ -4,7 +4,7 @@ x-app-env: &app-env
   APP_SECRET: 75d2222c239930c8fc40c98ae6b88cb6d9dfacf51c5c8c0749583fc681de9d9a
   DATABASE_URL: "postgresql://user:password@db:5432/app"
   PYTHON_API_BASE_URL: "http://python-api:8000"
-  MAILER_DSN: "smtp://wang.tony.0330@gmail.com:lfjxrpczzshywbdx@smtp.gmail.com:587?encryption=tls"
+  MAILER_DSN: smtp://<user>:<password>@<host>:<port>?encryption=tls
   MAX_ARTICLES_COUNT_PER_PAGE: "10"
   NAME_MAX_LENGTH: "32"
   CONTENT_MAX_LENGTH: "1024"
