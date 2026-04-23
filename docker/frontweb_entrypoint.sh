@@ -6,11 +6,9 @@ echo "🚀 Frontweb container startup initiated."
 cd /var/www/html
 
 if [ ! -f "vendor/autoload.php" ]; then
-  echo "📦 vendor/autoload.php not found. Running composer install..."
-  rm -rf vendor
-  composer install --no-interaction --prefer-dist --no-progress
-else
-  echo "✅ vendor/autoload.php exists. Skipping composer install."
+  echo "❌ vendor/autoload.php not found."
+  echo "This image expects Composer dependencies to be installed during Docker build."
+  exit 1
 fi
 
 mkdir -p var

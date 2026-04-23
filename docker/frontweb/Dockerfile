@@ -34,7 +34,16 @@ RUN set -eux; \
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
+
+COPY ./eshop_frontweb/composer.json ./composer.json
+COPY ./eshop_frontweb/composer.lock ./composer.lock
+
+RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
 COPY ./eshop_frontweb/ /var/www/html/
+
+RUN composer dump-autoload --optimize \
+    && php bin/console cache:clear || true
 
 RUN mkdir -p /var/www/html/var \
     && chown -R www-data:www-data /var/www/html/var

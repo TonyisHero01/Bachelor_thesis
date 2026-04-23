@@ -1,5 +1,3 @@
-version: "3.9"
-
 x-app-env: &app-env
   APP_ENV: dev
   APP_DEBUG: "1"
@@ -33,7 +31,30 @@ services:
     networks:
       - backend
 
+  bms:
+    build:
+      context: .
+      dockerfile: docker/bms/Dockerfile
+    container_name: eshop_bms
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      SYMFONY_DEPRECATIONS_HELPER: disabled
+    ports:
+      - "8083:80"
+    volumes:
+      - ./eshop_bms:/var/www/html
+      - bms_vendor:/var/www/html/vendor
+      - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
+      - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+
   python-api:
+    profiles: ["python", "full"]
     build:
       context: .
       dockerfile: docker/api/Dockerfile
@@ -51,30 +72,8 @@ services:
     networks:
       - backend
 
-  bms:
-    build:
-      context: .
-      dockerfile: docker/bms/Dockerfile
-    container_name: eshop_bms
-    restart: unless-stopped
-    environment:
-      <<: *app-env
-      SYMFONY_DEPRECATIONS_HELPER: disabled
-    ports:
-      - "8083:80"
-    volumes:
-      - ./eshop_bms:/var/www/html
-      - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
-      - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
-    depends_on:
-      db:
-        condition: service_healthy
-      python-api:
-        condition: service_started
-    networks:
-      - backend
-
   frontweb:
+    profiles: ["frontweb", "full"]
     build:
       context: .
       dockerfile: docker/frontweb/Dockerfile
@@ -87,12 +86,11 @@ services:
       - "8082:80"
     volumes:
       - ./eshop_frontweb:/var/www/html
+      - frontweb_vendor:/var/www/html/vendor
       - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
       db:
         condition: service_healthy
-      python-api:
-        condition: service_started
     networks:
       - backend
 
@@ -101,3 +99,5 @@ networks:
 
 volumes:
   pgdata:
+  bms_vendor:
+  frontweb_vendor:

@@ -1,0 +1,59 @@
+#################################
+# Git
+#################################
+.git
+.gitignore
+.gitattributes
+.github
+
+#################################
+# macOS / OS
+#################################
+.DS_Store
+
+#################################
+# IDE / Editor
+#################################
+.vscode
+.idea
+*.swp
+*.swo
+
+#################################
+# Logs
+#################################
+*.log
+
+#################################
+# Symfony (BMS + Frontend)
+#################################
+
+# Do not include local vendor directories
+# Dependencies are installed during Docker build
+eshop_bms/vendor
+eshop_frontweb/vendor
+
+# Runtime/cache files (should not be part of the image)
+eshop_bms/var
+eshop_frontweb/var
+
+# PHPUnit cache files
+eshop_bms/.phpunit.result.cache
+eshop_frontweb/.phpunit.result.cache
+
+#################################
+# Python
+#################################
+# Bytecode cache
+python_scripts/__pycache__
+python_scripts/*.pyc
+
+#################################
+# Node / frontend
+#################################
+node_modules
+
+#################################
+# Docker / Development only
+#################################
+docker-compose.override.yml

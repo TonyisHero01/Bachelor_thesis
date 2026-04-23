@@ -62,13 +62,60 @@ docker --version
 docker compose version
 ```
 
-Build and start the containers:
+---
+
+#### Running the application
+
+This project supports multiple run modes depending on your machine resources.
+
+##### 🟢 Recommended for 8 GB RAM (lightweight mode)
+
+Starts only the core services (`db` + `bms`) to reduce memory usage.
 
 ```sh
-docker compose up --build
+docker compose up -d
 ```
 
-This will start two containers on ports 8082 and 8083.
+Access:
+- BMS: http://localhost:8083
+
+---
+
+##### 🟡 Optional services
+
+If you need additional features, you can enable services selectively:
+
+**Start Python API:**
+```sh
+docker compose --profile python up -d
+```
+
+**Start Frontend (frontweb):**
+```sh
+docker compose --profile frontweb up -d
+```
+
+---
+
+##### 🔵 Full mode (recommended for 16 GB RAM or higher)
+
+Starts all services (`db`, `bms`, `python-api`, `frontweb`):
+
+```sh
+docker compose --profile full up -d
+```
+
+Access:
+- Frontend: http://localhost:8082  
+- BMS: http://localhost:8083
+
+---
+
+#### Notes
+
+- On machines with limited memory (e.g. 8 GB RAM), running all services simultaneously may lead to reduced performance.
+- It is recommended to start only the services needed for your current task.
+- The use of Docker profiles allows flexible resource management and improves usability on lower-spec devices.
 
 ---
 
