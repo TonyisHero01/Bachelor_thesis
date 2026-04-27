@@ -35,13 +35,27 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-COPY ./eshop_frontweb/composer.json ./composer.json
-COPY ./eshop_frontweb/composer.lock ./composer.lock
-COPY docker/apache/frontweb.conf /etc/apache2/sites-enabled/000-default.conf
+COPY ./eshop_bms/composer.json ./composer.json
+COPY ./eshop_bms/composer.lock ./composer.lock
 
 RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
-COPY ./eshop_frontweb/ /var/www/html/
+COPY ./eshop_bms/ /var/www/html/
+
+RUN cat > /etc/apache2/sites-enabled/000-default.conf <<'EOF'
+<VirtualHost *:80>
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html/public
+
+    <Directory /var/www/html/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+EOF
 
 RUN composer dump-autoload --optimize \
     && php bin/console cache:clear || true
@@ -49,9 +63,10 @@ RUN composer dump-autoload --optimize \
 RUN mkdir -p /var/www/html/var \
     && chown -R www-data:www-data /var/www/html/var
 
-COPY docker/frontweb_entrypoint.sh /usr/local/bin/start-frontweb.sh
-RUN sed -i 's/\r$//' /usr/local/bin/start-frontweb.sh \
-    && chmod +x /usr/local/bin/start-frontweb.sh
+COPY docker/bms_entrypoint.sh /usr/local/bin/start-bms.sh
 
-ENTRYPOINT ["/usr/local/bin/start-frontweb.sh"]
+RUN sed -i 's/\r$//' /usr/local/bin/start-bms.sh \
+    && chmod +x /usr/local/bin/start-bms.sh
+
+ENTRYPOINT ["/usr/local/bin/start-bms.sh"]
 CMD ["apache2-foreground"]

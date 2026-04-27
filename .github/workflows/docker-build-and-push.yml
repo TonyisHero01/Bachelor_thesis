@@ -25,13 +25,13 @@ jobs:
       matrix:
         include:
           - service: bms
-            dockerfile: ./docker/bms/Dockerfile
+            dockerfile: ./eshop_bms/Dockerfile
             image: eshop-bms
           - service: frontweb
-            dockerfile: ./docker/frontweb/Dockerfile
+            dockerfile: ./eshop_frontweb/Dockerfile
             image: eshop-frontweb
           - service: python-api
-            dockerfile: ./docker/api/Dockerfile
+            dockerfile: ./python_scripts/Dockerfile
             image: eshop-python-api
 
     steps:
