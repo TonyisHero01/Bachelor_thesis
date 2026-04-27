@@ -61,7 +61,8 @@ RUN composer dump-autoload --optimize \
     && php bin/console cache:clear || true
 
 RUN mkdir -p /var/www/html/var \
-    && chown -R www-data:www-data /var/www/html/var
+    && chown -R www-data:www-data /var/www/html/var \
+    && chmod -R 775 /var/www/html/var
 
 COPY docker/frontweb_entrypoint.sh /usr/local/bin/start-frontweb.sh
 

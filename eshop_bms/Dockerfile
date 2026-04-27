@@ -57,11 +57,18 @@ RUN cat > /etc/apache2/sites-enabled/000-default.conf <<'EOF'
 </VirtualHost>
 EOF
 
+RUN { \
+    echo "upload_max_filesize=20M"; \
+    echo "post_max_size=25M"; \
+    echo "max_file_uploads=20"; \
+} > /usr/local/etc/php/conf.d/uploads.ini
+
 RUN composer dump-autoload --optimize \
     && php bin/console cache:clear || true
 
-RUN mkdir -p /var/www/html/var \
-    && chown -R www-data:www-data /var/www/html/var
+RUN mkdir -p /var/www/html/var /var/www/html/public/images \
+    && chown -R www-data:www-data /var/www/html/var /var/www/html/public/images \
+    && chmod -R 775 /var/www/html/var /var/www/html/public/images
 
 COPY docker/bms_entrypoint.sh /usr/local/bin/start-bms.sh
 
