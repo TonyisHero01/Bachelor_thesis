@@ -451,18 +451,100 @@ final class ProductController extends BaseController
         EntityManagerInterface $em,
         LoggerInterface $logger
     ): Response {
+        $logger->info('saveImage started.', [
+            'productId' => $id,
+            'method' => $request->getMethod(),
+            'contentType' => $request->headers->get('content-type'),
+            'requestFields' => array_keys($request->request->all()),
+            'fileFields' => array_keys($request->files->all()),
+        ]);
+
         $product = $em->getRepository(Product::class)->find($id);
         if ($product === null) {
+            $logger->warning('saveImage failed: product not found.', [
+                'productId' => $id,
+            ]);
+
             return new JsonResponse(['error' => 'Product not found'], 404);
         }
 
-        $files = $request->files->all('images');
-        if (empty($files)) {
-            return new JsonResponse(['error' => 'No files received'], 400);
+        $uploadedFiles = [];
+
+        foreach (['images', 'image', 'file'] as $fieldName) {
+            $value = $request->files->get($fieldName);
+
+            $logger->info('Checking upload field.', [
+                'fieldName' => $fieldName,
+                'exists' => $value !== null,
+                'type' => is_object($value) ? get_class($value) : gettype($value),
+                'isArray' => is_array($value),
+            ]);
+
+            if ($value instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+                $uploadedFiles[] = $value;
+            } elseif (is_array($value)) {
+                foreach ($value as $index => $item) {
+                    $logger->info('Checking upload array item.', [
+                        'fieldName' => $fieldName,
+                        'index' => $index,
+                        'type' => is_object($item) ? get_class($item) : gettype($item),
+                    ]);
+
+                    if ($item instanceof \Symfony\Component\HttpFoundation\File\UploadedFile) {
+                        $uploadedFiles[] = $item;
+                    }
+                }
+            }
+        }
+
+        $logger->info('Uploaded files collected.', [
+            'count' => count($uploadedFiles),
+            'allFileFields' => array_keys($request->files->all()),
+        ]);
+
+        if ($uploadedFiles === []) {
+            $logger->warning('saveImage failed: no uploaded files collected.', [
+                'allFiles' => $request->files->all(),
+            ]);
+
+            return new JsonResponse([
+                'error' => 'No files received',
+                'receivedFileFields' => array_keys($request->files->all()),
+            ], 400);
         }
 
         $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
         $imagesDir = (string) $this->getParameter('images_directory');
+
+        $logger->info('Image directory status.', [
+            'imagesDir' => $imagesDir,
+            'exists' => is_dir($imagesDir),
+            'isWritable' => is_writable($imagesDir),
+            'owner' => is_dir($imagesDir) ? fileowner($imagesDir) : null,
+            'permissions' => is_dir($imagesDir) ? substr(sprintf('%o', fileperms($imagesDir)), -4) : null,
+        ]);
+
+        if ($imagesDir === '') {
+            $logger->error('saveImage failed: images_directory is empty.');
+            return new JsonResponse(['error' => 'images_directory is not configured'], 500);
+        }
+
+        if (!is_dir($imagesDir) && !mkdir($imagesDir, 0775, true) && !is_dir($imagesDir)) {
+            $logger->error('saveImage failed: failed to create images directory.', [
+                'imagesDir' => $imagesDir,
+            ]);
+
+            return new JsonResponse(['error' => 'Failed to create images directory'], 500);
+        }
+
+        if (!is_writable($imagesDir)) {
+            $logger->error('saveImage failed: images directory is not writable.', [
+                'imagesDir' => $imagesDir,
+                'permissions' => substr(sprintf('%o', fileperms($imagesDir)), -4),
+            ]);
+
+            return new JsonResponse(['error' => 'Images directory is not writable'], 500);
+        }
 
         $slugger = new AsciiSlugger();
         $safeBase = strtolower((string) $slugger->slug((string) ($product->getSku() ?: ('product-' . $product->getId()))));
@@ -470,22 +552,105 @@ final class ProductController extends BaseController
         $existing = $product->getImageUrls() ?? [];
         $new = [];
 
-        foreach ($files as $file) {
-            if ($file === null) {
+        foreach ($uploadedFiles as $index => $file) {
+            $logger->info('Processing uploaded file.', [
+                'index' => $index,
+                'originalName' => $file->getClientOriginalName(),
+                'clientMimeType' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+                'error' => $file->getError(),
+                'errorMessage' => $file->getErrorMessage(),
+                'isValid' => $file->isValid(),
+                'tmpPath' => $file->getPathname(),
+                'tmpReadable' => $file->getPathname() ? is_readable($file->getPathname()) : false,
+            ]);
+
+            if (!$file->isValid()) {
+                $logger->warning('Skipping invalid uploaded image.', [
+                    'index' => $index,
+                    'originalName' => $file->getClientOriginalName(),
+                    'error' => $file->getError(),
+                    'errorMessage' => $file->getErrorMessage(),
+                ]);
+
                 continue;
             }
 
-            $ext = strtolower((string) $file->guessExtension());
+            $tmpPath = $file->getPathname();
+
+            if (!$tmpPath || !is_readable($tmpPath)) {
+                $logger->error('Uploaded file temporary path is empty or unreadable.', [
+                    'index' => $index,
+                    'originalName' => $file->getClientOriginalName(),
+                    'clientMimeType' => $file->getClientMimeType(),
+                    'error' => $file->getError(),
+                    'errorMessage' => $file->getErrorMessage(),
+                    'path' => $tmpPath,
+                ]);
+
+                return new JsonResponse(['error' => 'Uploaded file is not readable'], 400);
+            }
+
+            $originalName = $file->getClientOriginalName();
+            $ext = strtolower((string) pathinfo($originalName, PATHINFO_EXTENSION));
+
+            if ($ext === '') {
+                $mimeType = (string) $file->getClientMimeType();
+
+                $ext = match ($mimeType) {
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                    default => '',
+                };
+            }
+
+            $logger->info('Detected uploaded file extension.', [
+                'index' => $index,
+                'originalName' => $originalName,
+                'extension' => $ext,
+            ]);
+
             if (!in_array($ext, $allowedExt, true)) {
-                return new JsonResponse(['error' => 'Unsupported file type'], 400);
+                $logger->warning('Unsupported uploaded file type.', [
+                    'index' => $index,
+                    'filename' => $originalName,
+                    'extension' => $ext,
+                    'allowed' => $allowedExt,
+                ]);
+
+                return new JsonResponse([
+                    'error' => 'Unsupported file type',
+                    'filename' => $originalName,
+                    'extension' => $ext,
+                ], 400);
             }
 
             $filename = sprintf('%s_%s.%s', $safeBase, bin2hex(random_bytes(8)), $ext);
 
             try {
+                $logger->info('Moving uploaded file.', [
+                    'index' => $index,
+                    'targetDir' => $imagesDir,
+                    'filename' => $filename,
+                ]);
+
                 $file->move($imagesDir, $filename);
+
+                $logger->info('Uploaded file moved successfully.', [
+                    'index' => $index,
+                    'savedAs' => $filename,
+                    'fullPath' => $imagesDir . DIRECTORY_SEPARATOR . $filename,
+                    'existsAfterMove' => file_exists($imagesDir . DIRECTORY_SEPARATOR . $filename),
+                ]);
             } catch (\Throwable $e) {
-                $logger->error('saveImage failed: ' . $e->getMessage());
+                $logger->error('saveImage failed while moving file.', [
+                    'message' => $e->getMessage(),
+                    'targetDir' => $imagesDir,
+                    'filename' => $filename,
+                    'originalName' => $originalName,
+                ]);
+
                 return new JsonResponse(['error' => 'Upload failed'], 500);
             }
 
@@ -493,13 +658,27 @@ final class ProductController extends BaseController
         }
 
         if ($new === []) {
+            $logger->warning('saveImage failed: no valid files uploaded after processing.', [
+                'productId' => $id,
+            ]);
+
             return new JsonResponse(['error' => 'No valid files uploaded'], 400);
         }
 
-        $product->setImageUrls(array_values(array_merge($existing, $new)));
+        $merged = array_values(array_merge($existing, $new));
+        $product->setImageUrls($merged);
         $em->flush();
 
-        return new JsonResponse(['filePaths' => $new]);
+        $logger->info('saveImage completed successfully.', [
+            'productId' => $id,
+            'newFiles' => $new,
+            'totalImageCount' => count($merged),
+        ]);
+
+        return new JsonResponse([
+            'status' => 'success',
+            'filePaths' => $new,
+        ]);
     }
 
     /**
