@@ -31,9 +31,9 @@ class SearchController extends BaseController
     ) {
         parent::__construct($twig, $logger);
 
-        $this->pythonApiBaseUrl = rtrim((string) getenv('PYTHON_API_BASE_URL'), '/');
+        $this->pythonApiBaseUrl = rtrim((string) getenv('SEARCH_SERVICE_BASE_URL'), '/');
         if ($this->pythonApiBaseUrl === '') {
-            $this->logger->error('[SEARCH] PYTHON_API_BASE_URL missing');
+            $this->logger->error('[SEARCH] SEARCH_SERVICE_BASE_URL missing');
         }
 
         $this->shopInfo = $this->entityManager
@@ -42,7 +42,7 @@ class SearchController extends BaseController
     }
 
     /**
-     * Executes a product search using python-api and stores results in the session.
+     * Executes a product search using search-service and stores results in the session.
      */
     #[Route('/search', name: 'search', methods: ['POST'])]
     public function search(Request $request, SessionInterface $session): JsonResponse
@@ -221,7 +221,7 @@ class SearchController extends BaseController
     }
 
     /**
-     * Runs python-api search and maps returned SKUs to the latest product IDs.
+     * Runs search-service search and maps returned SKUs to the latest product IDs.
      *
      * @return array<int, array{id:int, similarity:float}>
      */
@@ -289,14 +289,14 @@ class SearchController extends BaseController
     }
 
     /**
-     * Call python-api POST /search
+     * Call search-service POST /search
      *
      * @return array<string, mixed>|null
      */
     private function callPythonApiSearch(string $query, int $limit): ?array
     {
         if ($this->pythonApiBaseUrl === '') {
-            $this->logger->error('[SEARCH] pythonApiBaseUrl empty');
+            $this->logger->error('[SEARCH] SEARCH_SERVICE_BASE_URL empty');
             return null;
         }
 
@@ -316,7 +316,7 @@ class SearchController extends BaseController
             $body = $resp->getContent(false);
 
             if ($status < 200 || $status >= 300) {
-                $this->logger->error('[SEARCH] python-api non-2xx', [
+                $this->logger->error('[SEARCH] search-service non-2xx', [
                     'url' => $url,
                     'status' => $status,
                     'body_head' => substr((string) $body, 0, 800),
@@ -326,7 +326,7 @@ class SearchController extends BaseController
 
             $data = json_decode((string) $body, true);
             if (!is_array($data)) {
-                $this->logger->error('[SEARCH] python-api invalid JSON', [
+                $this->logger->error('[SEARCH] search-service invalid JSON', [
                     'url' => $url,
                     'status' => $status,
                     'body_head' => substr((string) $body, 0, 800),
@@ -336,13 +336,13 @@ class SearchController extends BaseController
 
             return $data;
         } catch (TransportExceptionInterface $e) {
-            $this->logger->error('[SEARCH] python-api transport error', [
+            $this->logger->error('[SEARCH] search-service transport error', [
                 'url' => $url,
                 'msg' => $e->getMessage(),
             ]);
             return null;
         } catch (\Throwable $e) {
-            $this->logger->error('[SEARCH] python-api exception', [
+            $this->logger->error('[SEARCH] search-service exception', [
                 'url' => $url,
                 'msg' => $e->getMessage(),
                 'class' => get_class($e),

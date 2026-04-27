@@ -67,10 +67,10 @@ final class ProductController extends BaseController
         string $event,
         array $payload = []
     ): void {
-        $baseUrl = rtrim((string) $this->getParameter('python_api_base_url'), '/');
+        $baseUrl = rtrim((string) $this->getParameter('search_service'), '/');
 
         if ($baseUrl === '') {
-            $logger->warning('PYTHON_API_BASE_URL is empty, skipping reindex notification.');
+            $logger->warning('SEARCH_SERVICE_BASE_URL is empty, skipping reindex notification.');
             return;
         }
 
@@ -99,7 +99,7 @@ final class ProductController extends BaseController
                 ]);
             }
         } catch (\Throwable $e) {
-            $logger->error('Failed to notify python-api for reindex: ' . $e->getMessage(), [
+            $logger->error('Failed to notify search-service for reindex: ' . $e->getMessage(), [
                 'event' => $event,
                 'payload' => $payload,
             ]);

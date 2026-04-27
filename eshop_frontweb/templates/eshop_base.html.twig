@@ -1,10 +1,15 @@
 {# templates/eshop_base.html.twig #}
+{% set shopName = shopInfo is defined and shopInfo and shopInfo.getEshopName() ? shopInfo.getEshopName() : 'EShop' %}
+{% set shopPhone = shopInfo is defined and shopInfo and shopInfo.telephone ? shopInfo.telephone : '+420 000 000 000' %}
+{% set shopEmail = shopInfo is defined and shopInfo and shopInfo.email ? shopInfo.email : 'info@example.com' %}
+{% set shopAddress = shopInfo is defined and shopInfo and shopInfo.address ? shopInfo.address : 'Address not available' %}
+{% set hidePrices = shopInfo is defined and shopInfo and shopInfo.getHidePrices() ? shopInfo.getHidePrices() : false %}
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ shopInfo.getEshopName() }}{% endblock %}</title>
+    <title>{% block title %}{{ shopName }}{% endblock %}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
 
     {% block stylesheets %}
@@ -45,12 +50,12 @@
         </button>
 
         <div class="header_left">
-          <div>☎ {{ shopInfo.telephone }}</div>
-          <div>✉ {{ shopInfo.email }}</div>
+          <div>☎ {{ shopPhone }}</div>
+          <div>✉ {{ shopEmail }}</div>
         </div>
 
         <div class="header_center">
-          <a href="{{ path('app_eshop_home', {'_locale': currentLocale}) }}"><h1>{{ shopInfo.getEshopName() }}</h1></a>
+          <a href="{{ path('app_eshop_home', {'_locale': currentLocale}) }}"><h1>{{ shopName }}</h1></a>
         </div>
 
         <div class="header_right">
@@ -128,7 +133,7 @@
               {% endif %}
             </a>
             <a href="{{ path('customer_wishlist', {'_locale': currentLocale}) }}" class="header__icon header__icon--wishlist link link--text focus-inset">
-              <svg viewBox="0 0 512 512" class="icon icon-wishlist"><path d="M474.644,74.27..."></path></svg>
+              <svg viewBox="0 0 512 512" class="icon icon-wishlist"><path d="M474.644,74.270..."></path></svg>
             </a>
             <a href="{{ path('customer_cart', {'_locale': currentLocale}) }}" class="header_icon" aria-label="Cart">
               <svg viewBox="0 0 1024 1024" class="icon icon-cart" xmlns="http://www.w3.org/2000/svg"><path class="path1" d="M409.6 1024..."></path></svg>
@@ -153,7 +158,7 @@
           <aside class="eshop-sidebar">
             <h3>Filters</h3>
 
-            {% if shopInfo is defined and (not shopInfo.getHidePrices()) %}
+            {% if not hidePrices %}
               <div class="filter-section">
                 <h4>Price</h4>
                 <div id="price-slider"></div>
@@ -201,10 +206,10 @@
       <footer class="footer">
         <div class="footer-content">
           <div class="footer-left">
-            <h3>{{ shopInfo.getEshopName() }}</h3>
-            <p>{{ shopInfo.address }}</p>
-            <p>📞 {{ shopInfo.telephone }}</p>
-            <p>✉️ {{ shopInfo.email }}</p>
+            <h3>{{ shopName }}</h3>
+            <p>{{ shopAddress }}</p>
+            <p>📞 {{ shopPhone }}</p>
+            <p>✉️ {{ shopEmail }}</p>
           </div>
           <div class="footer-right">
             <h3>Information</h3>
@@ -220,7 +225,7 @@
           </div>
         </div>
         <div class="footer-bottom">
-          <p>© {{ "now"|date("Y") }} {{ shopInfo.getEshopName() }}. All rights reserved.</p>
+          <p>© {{ "now"|date("Y") }} {{ shopName }}. All rights reserved.</p>
         </div>
       </footer>
 
@@ -233,7 +238,7 @@
           </div>
           <div class="mobile-search-content">
             <div class="mobile-search-form">
-              <input type="text" class="mobile-search__input" placeholder="搜索产品...">
+              <input type="text" class="mobile-search__input" placeholder="Search products...">
               <button type="button" class="mobile-search__button">
                 <svg class="icon-search" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                   <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/>

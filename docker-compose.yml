@@ -3,7 +3,7 @@ x-app-env: &app-env
   APP_DEBUG: ${APP_DEBUG}
   APP_SECRET: ${APP_SECRET}
   DATABASE_URL: ${DATABASE_URL}
-  PYTHON_API_BASE_URL: ${PYTHON_API_BASE_URL}
+  SEARCH_SERVICE_BASE_URL: ${SEARCH_SERVICE_BASE_URL}
   MAILER_DSN: ${MAILER_DSN}
   MAX_ARTICLES_COUNT_PER_PAGE: ${MAX_ARTICLES_COUNT_PER_PAGE}
   NAME_MAX_LENGTH: ${NAME_MAX_LENGTH}
@@ -45,14 +45,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      python-api:
+      search-service:
         condition: service_started
     networks:
       - backend
 
-  python-api:
-    image: ${GHCR_NAMESPACE}/eshop-python-api:${IMAGE_TAG}
-    container_name: eshop_python_api
+  search-service:
+    image: ${GHCR_NAMESPACE}/eshop-search-service:${IMAGE_TAG}
+    container_name: eshop_search_service
     restart: unless-stopped
     environment:
       DATABASE_URL: ${DATABASE_URL}
@@ -78,7 +78,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      python-api:
+      search-service:
         condition: service_started
     networks:
       - backend

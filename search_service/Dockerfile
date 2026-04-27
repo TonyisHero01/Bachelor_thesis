@@ -7,10 +7,10 @@ ENV PYTHONUNBUFFERED=1
 
 RUN pip install --no-cache-dir --upgrade pip
 
-COPY python_scripts/api/requirements.txt /app/requirements.txt
+COPY search_service/api/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-COPY python_scripts/api/ /app/
+COPY search_service/api/ /app/
 
 EXPOSE 8000
 
