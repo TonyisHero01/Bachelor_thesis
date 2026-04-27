@@ -11,9 +11,6 @@ class ShipmentService
 {
     public function __construct(private EntityManagerInterface $em){}
 
-    /**
-     * 客户刚下单成功时调用
-     */
     public function createOnOrderPlaced(Order $order): Shipment
     {
         if ($order->getShipment()) {
@@ -23,7 +20,7 @@ class ShipmentService
         $shipment = new Shipment();
         $shipment->setOrder($order);
         $shipment->setTrackingNumber($this->generateTrackingNumber());
-        $shipment->setStatus('CREATED');  // 初始状态
+        $shipment->setStatus('CREATED');
         $order->setShipment($shipment);
         $order->setDeliveryStatus('PENDING');
 
@@ -37,8 +34,7 @@ class ShipmentService
         $event->setDescription("Order placed by customer: {$customerEmail}");
         $event->setLocation('Online');
         $this->em->persist($event);
-
-        // 注意：不要立即 flush，让控制器最后统一 flush
+        
         return $shipment;
     }
 

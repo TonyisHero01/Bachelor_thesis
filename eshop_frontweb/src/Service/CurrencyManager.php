@@ -27,17 +27,14 @@ class CurrencyManager
     /** @return Currency[] */
     public function getAll(): array
     {
-        // 两种写法都可：$this->doctrine->getRepository(Currency::class) 或 getManager()->getRepository()
         return $this->doctrine->getRepository(Currency::class)->findAll() ?: [];
     }
 
-    /** 兼容别名：MoneyExtension 里用到 */
     public function getActiveCurrency(): string
     {
         return $this->getActiveCode();
     }
 
-    /** 兼容别名：控制器/JS 同步时可用 */
     public function setActiveCurrency(string $code): void
     {
         $this->setActiveCode($code);
@@ -49,7 +46,6 @@ class CurrencyManager
         $code = strtoupper((string)($session?->get('active_currency') ?? ''));
         if ($code !== '') return $code;
 
-        // 0) 仓库默认
         $repo = $this->doctrine->getRepository(Currency::class);
         if (method_exists($repo, 'findDefaultCurrency')) {
             $def = $repo->findDefaultCurrency();
@@ -63,7 +59,6 @@ class CurrencyManager
             }
         }
 
-        // 1) 列表优先 CZK -> 实体默认 -> 第一项 -> EUR
         $all = $this->getAll();
         foreach ($all as $c) {
             if ($this->codeFromEntity($c) === 'CZK') {

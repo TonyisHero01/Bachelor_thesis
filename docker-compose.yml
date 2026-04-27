@@ -4,7 +4,7 @@ x-app-env: &app-env
   APP_SECRET: 75d2222c239930c8fc40c98ae6b88cb6d9dfacf51c5c8c0749583fc681de9d9a
   DATABASE_URL: "postgresql://user:password@db:5432/app"
   PYTHON_API_BASE_URL: "http://python-api:8000"
-  MAILER_DSN: smtp://<user>:<password>@<host>:<port>?encryption=tls
+  MAILER_DSN: "smtp://<user>:<password>@<host>:<port>?encryption=tls"
   MAX_ARTICLES_COUNT_PER_PAGE: "10"
   NAME_MAX_LENGTH: "32"
   CONTENT_MAX_LENGTH: "1024"
@@ -32,9 +32,7 @@ services:
       - backend
 
   bms:
-    build:
-      context: .
-      dockerfile: docker/bms/Dockerfile
+    image: ghcr.io/<your-github-username>/eshop-bms:latest
     container_name: eshop_bms
     restart: unless-stopped
     environment:
@@ -43,8 +41,6 @@ services:
     ports:
       - "8083:80"
     volumes:
-      - ./eshop_bms:/var/www/html
-      - bms_vendor:/var/www/html/vendor
       - ./eshop_frontweb/templates:/var/www/eshop_frontweb_templates
       - ./docker/apache/bms.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
@@ -55,9 +51,7 @@ services:
 
   python-api:
     profiles: ["python", "full"]
-    build:
-      context: .
-      dockerfile: docker/api/Dockerfile
+    image: ghcr.io/<your-github-username>/eshop-python-api:latest
     container_name: eshop_python_api
     restart: unless-stopped
     environment:
@@ -74,9 +68,7 @@ services:
 
   frontweb:
     profiles: ["frontweb", "full"]
-    build:
-      context: .
-      dockerfile: docker/frontweb/Dockerfile
+    image: ghcr.io/<your-github-username>/eshop-frontweb:latest
     container_name: eshop_frontweb
     restart: unless-stopped
     environment:
@@ -85,8 +77,6 @@ services:
     ports:
       - "8082:80"
     volumes:
-      - ./eshop_frontweb:/var/www/html
-      - frontweb_vendor:/var/www/html/vendor
       - ./docker/apache/frontweb.conf:/etc/apache2/sites-enabled/000-default.conf
     depends_on:
       db:
@@ -99,5 +89,3 @@ networks:
 
 volumes:
   pgdata:
-  bms_vendor:
-  frontweb_vendor:

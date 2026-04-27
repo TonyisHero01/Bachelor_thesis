@@ -15,7 +15,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAMESPACE: ghcr.io/<your-github-username>
+  IMAGE_NAMESPACE: ghcr.io/${{ github.repository_owner }}
 
 jobs:
   build-and-push:
@@ -57,13 +57,13 @@ jobs:
             echo "latest_tag=latest" >> $GITHUB_OUTPUT
           elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
             echo "version_tag=main" >> $GITHUB_OUTPUT
-            echo "latest_tag=test-latest" >> $GITHUB_OUTPUT
+            echo "latest_tag=latest" >> $GITHUB_OUTPUT
           elif [[ "${GITHUB_REF_NAME}" == "develop" ]]; then
             echo "version_tag=develop" >> $GITHUB_OUTPUT
-            echo "latest_tag=test-latest" >> $GITHUB_OUTPUT
+            echo "latest_tag=dev-latest" >> $GITHUB_OUTPUT
           else
             echo "version_tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-            echo "latest_tag=test-latest" >> $GITHUB_OUTPUT
+            echo "latest_tag=dev-latest" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push ${{ matrix.service }}

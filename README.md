@@ -129,7 +129,7 @@ Key variables:
 
 ```yaml
 APP_ENV: dev
-MAILER_DSN: smtp://<your-email>:<your-app-password>@smtp.gmail.com:587?encryption=tls
+MAILER_DSN: smtp://<user>:<password>@<host>:<port>?encryption=tls
 CORS_ALLOW_ORIGIN: "^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$"
 BMS_URL: "http://localhost:8083/"
 ```
