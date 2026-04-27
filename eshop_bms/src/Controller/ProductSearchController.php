@@ -79,10 +79,10 @@ final class ProductSearchController extends BaseController
             return new JsonResponse(['error' => 'Query too long'], 400);
         }
 
-        $baseUrl = (string) $this->getParameter('python_api_base_url');
+        $baseUrl = (string) $this->getParameter('search_service');
         $baseUrl = rtrim($baseUrl, '/');
         if ($baseUrl === '') {
-            $logger->error('PYTHON_API_BASE_URL is empty');
+            $logger->error('SEARCH_SERVICE_BASE_URL is empty');
             return new JsonResponse(['error' => 'Search backend not available'], 500);
         }
 

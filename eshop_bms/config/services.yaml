@@ -4,7 +4,7 @@ parameters:
   NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
   CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
   images_directory: '%kernel.project_dir%/public/images'
-  python_api_base_url: '%env(PYTHON_API_BASE_URL)%'
+  search_service: '%env(SEARCH_SERVICE_BASE_URL)%'
 
 services:
   _defaults:

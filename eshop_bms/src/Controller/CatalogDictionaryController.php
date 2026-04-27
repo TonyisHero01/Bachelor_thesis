@@ -213,11 +213,11 @@ final class CatalogDictionaryController extends BaseController
         string $reason,
         array $context = []
     ): void {
-        $baseUrl = (string) $this->getParameter('python_api_base_url');
+        $baseUrl = (string) $this->getParameter('search_service');
         $baseUrl = rtrim($baseUrl, '/');
 
         if ($baseUrl === '') {
-            $logger->warning('[TFIDF] python_api_base_url is empty, skip reindex', [
+            $logger->warning('[TFIDF] search_service is empty, skip reindex', [
                 'reason' => $reason,
                 'context' => $context,
             ]);
