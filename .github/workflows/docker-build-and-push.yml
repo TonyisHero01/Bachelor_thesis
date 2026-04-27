@@ -48,6 +48,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Normalize image namespace
+        id: namespace
+        shell: bash
+        run: |
+          echo "value=$(echo '${{ env.IMAGE_NAMESPACE }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Generate image tags
         id: meta
         shell: bash
@@ -73,7 +79,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ steps.meta.outputs.version_tag }}
-            ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ steps.meta.outputs.latest_tag }}
+            ${{ steps.namespace.outputs.value }}/${{ matrix.image }}:${{ steps.meta.outputs.version_tag }}
+            ${{ steps.namespace.outputs.value }}/${{ matrix.image }}:${{ steps.meta.outputs.latest_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
