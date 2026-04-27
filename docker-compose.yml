@@ -46,11 +46,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      python-api:
+        condition: service_started
     networks:
       - backend
 
   python-api:
-    profiles: ["python", "full"]
     image: ${GHCR_NAMESPACE}/eshop-python-api:${IMAGE_TAG}
     container_name: eshop_python_api
     restart: unless-stopped
@@ -67,7 +68,6 @@ services:
       - backend
 
   frontweb:
-    profiles: ["frontweb", "full"]
     image: ${GHCR_NAMESPACE}/eshop-frontweb:${IMAGE_TAG}
     container_name: eshop_frontweb
     restart: unless-stopped
@@ -81,6 +81,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      python-api:
+        condition: service_started
     networks:
       - backend
 
