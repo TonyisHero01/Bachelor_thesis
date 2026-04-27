@@ -78,6 +78,7 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ steps.namespace.outputs.value }}/${{ matrix.image }}:${{ steps.meta.outputs.version_tag }}
             ${{ steps.namespace.outputs.value }}/${{ matrix.image }}:${{ steps.meta.outputs.latest_tag }}

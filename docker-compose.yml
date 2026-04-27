@@ -32,7 +32,7 @@ services:
       - backend
 
   bms:
-    image: ghcr.io/<your-github-username>/eshop-bms:latest
+    image: ${GHCR_NAMESPACE}/eshop-bms:${IMAGE_TAG}
     container_name: eshop_bms
     restart: unless-stopped
     environment:
@@ -51,7 +51,7 @@ services:
 
   python-api:
     profiles: ["python", "full"]
-    image: ghcr.io/<your-github-username>/eshop-python-api:latest
+    image: ${GHCR_NAMESPACE}/eshop-python-api:${IMAGE_TAG}
     container_name: eshop_python_api
     restart: unless-stopped
     environment:
@@ -68,7 +68,7 @@ services:
 
   frontweb:
     profiles: ["frontweb", "full"]
-    image: ghcr.io/<your-github-username>/eshop-frontweb:latest
+    image: ${GHCR_NAMESPACE}/eshop-frontweb:${IMAGE_TAG}
     container_name: eshop_frontweb
     restart: unless-stopped
     environment:
