@@ -37,6 +37,7 @@ WORKDIR /var/www/html
 
 COPY ./eshop_bms/composer.json ./composer.json
 COPY ./eshop_bms/composer.lock ./composer.lock
+COPY docker/apache/bms.conf /etc/apache2/sites-enabled/000-default.conf
 
 RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts
 

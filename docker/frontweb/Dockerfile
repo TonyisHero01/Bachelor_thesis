@@ -37,6 +37,7 @@ WORKDIR /var/www/html
 
 COPY ./eshop_frontweb/composer.json ./composer.json
 COPY ./eshop_frontweb/composer.lock ./composer.lock
+COPY docker/apache/frontweb.conf /etc/apache2/sites-enabled/000-default.conf
 
 RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
