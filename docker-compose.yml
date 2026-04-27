@@ -75,7 +75,6 @@ services:
       SYMFONY_DEPRECATIONS_HELPER: disabled
     ports:
       - "8082:80"
-    volumes:
     depends_on:
       db:
         condition: service_healthy
