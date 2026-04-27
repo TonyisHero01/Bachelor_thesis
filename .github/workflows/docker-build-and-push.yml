@@ -30,9 +30,9 @@ jobs:
           - service: frontweb
             dockerfile: ./eshop_frontweb/Dockerfile
             image: eshop-frontweb
-          - service: python-api
-            dockerfile: ./python_scripts/Dockerfile
-            image: eshop-python-api
+          - service: search-service
+            dockerfile: ./search_service/Dockerfile
+            image: eshop-search-service
 
     steps:
       - name: Checkout
