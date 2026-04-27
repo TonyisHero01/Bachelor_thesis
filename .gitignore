@@ -1,8 +1,11 @@
 # Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,windows
+
 ### ENV files ###
 .env
 .env.local
+!.env.example
+
 ### VisualStudioCode ###
 .vscode/*
 !.vscode/settings.json
