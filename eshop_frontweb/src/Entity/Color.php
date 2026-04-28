@@ -25,37 +25,73 @@ class Color
     #[ORM\OneToMany(mappedBy: 'color', targetEntity: ColorTranslation::class, cascade: ['persist', 'remove'])]
     private Collection $translations;
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->translations = new ArrayCollection();
     }
 
+    /**
+     * Convert to string.
+     *
+     * @return string
+     */
     public function __toString(): string
     {
         return $this->name ?? '';
     }
 
+    /**
+     * Get the color ID.
+     *
+     * @return int|null
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * Get the color name.
+     *
+     * @return string|null
+     */
     public function getName(): ?string
     {
         return $this->name;
     }
 
+    /**
+     * Set the color name.
+     *
+     * @param string $name
+     * @return static
+     */
     public function setName(string $name): static
     {
         $this->name = $name;
         return $this;
     }
 
+    /**
+     * Get the hex color code.
+     *
+     * @return string|null
+     */
     public function getHex(): ?string
     {
         return $this->hex;
     }
 
+    /**
+     * Set the hex color code.
+     *
+     * @param string $hex
+     * @return static
+     * @throws \InvalidArgumentException
+     */
     public function setHex(string $hex): static
     {
         if (!preg_match('/^#[A-Fa-f0-9]{6}$/', $hex)) {
@@ -66,11 +102,22 @@ class Color
         return $this;
     }
 
+    /**
+     * Get the translations.
+     *
+     * @return Collection
+     */
     public function getTranslations(): Collection
     {
         return $this->translations;
     }
 
+    /**
+     * Add a translation.
+     *
+     * @param ColorTranslation $translation
+     * @return static
+     */
     public function addTranslation(ColorTranslation $translation): static
     {
         if (!$this->translations->contains($translation)) {
@@ -81,6 +128,12 @@ class Color
         return $this;
     }
 
+    /**
+     * Remove a translation.
+     *
+     * @param ColorTranslation $translation
+     * @return static
+     */
     public function removeTranslation(ColorTranslation $translation): static
     {
         if ($this->translations->removeElement($translation)) {
@@ -92,6 +145,12 @@ class Color
         return $this;
     }
 
+    /**
+     * Get the translated name for a given locale.
+     *
+     * @param string $locale
+     * @return string
+     */
     public function getTranslatedName(string $locale): string
     {
         foreach ($this->translations as $translation) {

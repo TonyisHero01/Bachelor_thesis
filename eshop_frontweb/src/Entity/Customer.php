@@ -36,88 +36,176 @@ class Customer implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: "json", nullable: true)]
     private ?array $wishlist = [];
 
+    /**
+     * Get the reset token expiration.
+     *
+     * @return \DateTimeInterface|null
+     */
     public function getResetTokenExpiration(): ?\DateTimeInterface
     {
         return $this->resetTokenExpiration;
     }
 
+    /**
+     * Set the reset token expiration.
+     *
+     * @param \DateTimeInterface|null $resetTokenExpiration
+     * @return self
+     */
     public function setResetTokenExpiration(?\DateTimeInterface $resetTokenExpiration): self
     {
         $this->resetTokenExpiration = $resetTokenExpiration;
         return $this;
     }
 
+    /**
+     * Get the customer ID.
+     *
+     * @return int|null
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * Get the email.
+     *
+     * @return string|null
+     */
     public function getEmail(): ?string
     {
         return $this->email;
     }
 
+    /**
+     * Set the email.
+     *
+     * @param string|null $email
+     * @return static
+     */
     public function setEmail(?string $email): static
     {
         $this->email = $email;
         return $this;
     }
 
+    /**
+     * Get the password hash.
+     *
+     * @return string|null
+     */
     public function getPasswordHash(): ?string
     {
         return $this->password_hash;
     }
 
+    /**
+     * Set the password hash.
+     *
+     * @param string|null $password_hash
+     * @return static
+     */
     public function setPasswordHash(?string $password_hash): static
     {
         $this->password_hash = $password_hash;
         return $this;
     }
 
+    /**
+     * Get the created at date.
+     *
+     * @return \DateTimeImmutable|null
+     */
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->created_at;
     }
 
+    /**
+     * Set the created at date.
+     *
+     * @param \DateTimeImmutable|null $created_at
+     * @return static
+     */
     public function setCreatedAt(?\DateTimeImmutable $created_at): static
     {
         $this->created_at = $created_at;
         return $this;
     }
 
+    /**
+     * Check if the customer is verified.
+     *
+     * @return bool|null
+     */
     public function isIsVerified(): ?bool
     {
         return $this->is_verified;
     }
 
+    /**
+     * Set if the customer is verified.
+     *
+     * @param bool $is_verified
+     * @return static
+     */
     public function setIsVerified(bool $is_verified): static
     {
         $this->is_verified = $is_verified;
         return $this;
     }
 
+    /**
+     * Get the reset token.
+     *
+     * @return string|null
+     */
     public function getResetToken(): ?string
     {
         return $this->reset_token;
     }
 
+    /**
+     * Set the reset token.
+     *
+     * @param string|null $reset_token
+     * @return static
+     */
     public function setResetToken(?string $reset_token): static
     {
         $this->reset_token = $reset_token;
         return $this;
     }
 
+    /**
+     * Get the wishlist.
+     *
+     * @return array
+     */
     public function getWishlist(): array
     {
         return $this->wishlist ?? [];
     }
 
+    /**
+     * Set the wishlist.
+     *
+     * @param array $wishlist
+     * @return self
+     */
     public function setWishlist(array $wishlist): self
     {
         $this->wishlist = $wishlist;
         return $this;
     }
 
+    /**
+     * Add a product to the wishlist.
+     *
+     * @param int $productId
+     * @return self
+     */
     public function addToWishlist(int $productId): self
     {
         if ($this->wishlist === null) {
@@ -130,22 +218,43 @@ class Customer implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    /**
+     * Remove a product from the wishlist.
+     *
+     * @param int $productId
+     * @return self
+     */
     public function removeFromWishlist(int $productId): self
     {
         $this->wishlist = array_filter($this->wishlist, fn($id) => $id !== $productId);
         return $this;
     }
 
+    /**
+     * Get the password.
+     *
+     * @return string|null
+     */
     public function getPassword(): ?string
     {
         return $this->password_hash;
     }
 
+    /**
+     * Get the roles.
+     *
+     * @return array
+     */
     public function getRoles(): array
     {
         return ['ROLE_CUSTOMER'];
     }
 
+    /**
+     * Get the user identifier.
+     *
+     * @return string
+     */
     public function getUserIdentifier(): string
     {
         return $this->email ?? '';

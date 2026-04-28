@@ -65,6 +65,9 @@ class Order
     #[ORM\OneToOne(mappedBy: "order", targetEntity: Shipment::class, cascade: ["persist", "remove"])]
     private ?Shipment $shipment = null;
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->orderCreatedAt = new \DateTime();
@@ -72,75 +75,146 @@ class Order
         $this->payments = new ArrayCollection();
     }
 
+    /**
+     * Get the order ID.
+     *
+     * @return int
+     */
     public function getId(): int
     {
         return $this->id;
     }
 
+    /**
+     * Get the customer.
+     *
+     * @return Customer
+     */
     public function getCustomer(): Customer
     {
         return $this->customer;
     }
 
+    /**
+     * Set the customer.
+     *
+     * @param Customer $customer
+     * @return self
+     */
     public function setCustomer(Customer $customer): self
     {
         $this->customer = $customer;
         return $this;
     }
 
+    /**
+     * Get the total price.
+     *
+     * @return string
+     */
     public function getTotalPrice(): string
     {
         return $this->totalPrice;
     }
 
+    /**
+     * Set the total price.
+     *
+     * @param string $totalPrice
+     * @return self
+     */
     public function setTotalPrice(string $totalPrice): self
     {
         $this->totalPrice = $totalPrice;
         return $this;
     }
 
+    /**
+     * Get the address.
+     *
+     * @return string
+     */
     public function getAddress(): string
     {
         return $this->address ?? 'No address provided';
     }
 
+    /**
+     * Set the address.
+     *
+     * @param string $address
+     * @return self
+     */
     public function setAddress(string $address): self
     {
         $this->address = $address;
         return $this;
     }
 
+    /**
+     * Get order creation date.
+     *
+     * @return \DateTime
+     */
     public function getOrderCreatedAt(): \DateTime
     {
         return $this->orderCreatedAt;
     }
 
+    /**
+     * Set order creation date.
+     *
+     * @param \DateTime|null $orderCreatedAt
+     * @return self
+     */
     public function setOrderCreatedAt(?\DateTime $orderCreatedAt): self
     {
         $this->orderCreatedAt = $orderCreatedAt;
         return $this;
     }
 
+    /**
+     * Get pickup or delivery date.
+     *
+     * @return \DateTime|null
+     */
     public function getPickupOrDeliveryAt(): ?\DateTime
     {
         return $this->pickupOrDeliveryAt;
     }
 
+    /**
+     * Set pickup or delivery date.
+     *
+     * @param \DateTime|null $pickupOrDeliveryAt
+     * @return self
+     */
     public function setPickupOrDeliveryAt(?\DateTime $pickupOrDeliveryAt): self
     {
         $this->pickupOrDeliveryAt = $pickupOrDeliveryAt;
         return $this;
     }
 
+    /**
+     * Check if the order is completed.
+     *
+     * @return bool
+     */
     public function getIsCompleted(): bool
     {
         return $this->isCompleted;
     }
 
+    /**
+     * Set order completion status.
+     *
+     * @param bool $isCompleted
+     * @return self
+     */
     public function setIsCompleted(bool $isCompleted): self
     {
         $this->isCompleted = $isCompleted;
-        
+
         if ($isCompleted) {
             $this->paymentStatus = "COMPLETED";
             $this->deliveryStatus = "COMPLETED";
@@ -149,68 +223,130 @@ class Order
         return $this;
     }
 
+    /**
+     * Get payment status.
+     *
+     * @return string
+     */
     public function getPaymentStatus(): string
     {
         return $this->paymentStatus;
     }
 
+    /**
+     * Set payment status.
+     *
+     * @param string $paymentStatus
+     * @return self
+     */
     public function setPaymentStatus(string $paymentStatus): self
     {
         $this->paymentStatus = $paymentStatus;
         return $this;
     }
 
+    /**
+     * Get payment method.
+     *
+     * @return string|null
+     */
     public function getPaymentMethod(): ?string
     {
         return $this->paymentMethod;
     }
 
+    /**
+     * Set payment method.
+     *
+     * @param string|null $paymentMethod
+     * @return self
+     */
     public function setPaymentMethod(?string $paymentMethod): self
     {
         $this->paymentMethod = $paymentMethod;
         return $this;
     }
 
+    /**
+     * Get delivery status.
+     *
+     * @return string
+     */
     public function getDeliveryStatus(): string
     {
         return $this->deliveryStatus;
     }
 
+    /**
+     * Set delivery status.
+     *
+     * @param string $deliveryStatus
+     * @return self
+     */
     public function setDeliveryStatus(string $deliveryStatus): self
     {
         $this->deliveryStatus = $deliveryStatus;
         return $this;
     }
 
+    /**
+     * Get notes.
+     *
+     * @return string|null
+     */
     public function getNotes(): ?string
     {
         return $this->notes;
     }
 
+    /**
+     * Set notes.
+     *
+     * @param string|null $notes
+     * @return self
+     */
     public function setNotes(?string $notes): self
     {
         $this->notes = $notes;
         return $this;
     }
 
+    /**
+     * Get discount value.
+     *
+     * @return string
+     */
     public function getDiscount(): string
     {
         return $this->discount;
     }
 
+    /**
+     * Set discount value.
+     *
+     * @param string $discount
+     * @return self
+     */
     public function setDiscount(string $discount): self
     {
         $this->discount = $discount;
         return $this;
     }
 
+    /**
+     * Get order items.
+     *
+     * @return Collection
+     */
     public function getOrderItems(): Collection
     {
         return $this->orderItems;
     }
 
     /**
-     * Get Delivery Method (pickup/delivery)
+     * Get delivery method.
+     *
+     * @return string
      */
     public function getDeliveryMethod(): string
     {
@@ -218,33 +354,76 @@ class Order
     }
 
     /**
-     * Set Delivery Method
+     * Set delivery method.
+     *
+     * @param string $deliveryMethod
+     * @return self
      */
     public function setDeliveryMethod(string $deliveryMethod): self
     {
         if (!in_array($deliveryMethod, ["pickup", "delivery"])) {
             throw new \InvalidArgumentException("Invalid delivery method.");
         }
+
         $this->deliveryMethod = $deliveryMethod;
         return $this;
     }
 
-    public function getPayments(): Collection { return $this->payments; }
+    /**
+     * Get payments.
+     *
+     * @return Collection
+     */
+    public function getPayments(): Collection
+    {
+        return $this->payments;
+    }
 
+    /**
+     * Add a payment.
+     *
+     * @param Payment $payment
+     * @return self
+     */
     public function addPayment(Payment $payment): self
     {
         if (!$this->payments->contains($payment)) {
             $this->payments->add($payment);
             $payment->setOrder($this);
         }
+
         return $this;
     }
 
+    /**
+     * Get latest payment.
+     *
+     * @return Payment|null
+     */
     public function getLatestPayment(): ?Payment
     {
         return $this->payments->first() ?: null;
     }
 
-    public function getShipment(): ?Shipment { return $this->shipment; }
-    public function setShipment(Shipment $shipment): self { $this->shipment = $shipment; return $this; }
+    /**
+     * Get shipment.
+     *
+     * @return Shipment|null
+     */
+    public function getShipment(): ?Shipment
+    {
+        return $this->shipment;
+    }
+
+    /**
+     * Set shipment.
+     *
+     * @param Shipment $shipment
+     * @return self
+     */
+    public function setShipment(Shipment $shipment): self
+    {
+        $this->shipment = $shipment;
+        return $this;
+    }
 }

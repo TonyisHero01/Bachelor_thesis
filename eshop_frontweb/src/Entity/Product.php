@@ -89,89 +89,281 @@ class Product
     #[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductTranslation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $translations;
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->translations = new ArrayCollection();
     }
 
+    /**
+     * Convert product to string.
+     *
+     * @return string
+     */
     public function __toString(): string
     {
         return $this->name ?? '';
     }
 
+    /**
+     * Get the product ID.
+     *
+     * @return int|null
+     */
     public function getId(): ?int { return $this->id; }
 
+    /**
+     * Get the product name.
+     *
+     * @return string|null
+     */
     public function getName(): ?string { return $this->name; }
+
+    /**
+     * Set the product name.
+     *
+     * @param string $name
+     * @return self
+     */
     public function setName(string $name): static { $this->name = $name; return $this; }
 
+    /**
+     * Get the category.
+     *
+     * @return Category|null
+     */
     public function getCategory(): ?Category { return $this->category; }
+
+    /**
+     * Set the category.
+     *
+     * @param Category|null $category
+     * @return self
+     */
     public function setCategory(?Category $category): static { $this->category = $category; return $this; }
 
+    /**
+     * Get the description.
+     *
+     * @return string|null
+     */
     public function getDescription(): ?string { return $this->description; }
+
+    /**
+     * Set the description.
+     *
+     * @param string|null $description
+     * @return self
+     */
     public function setDescription(?string $description): static { $this->description = $description; return $this; }
 
+    /**
+     * Get the stock quantity.
+     *
+     * @return int|null
+     */
     public function getNumberInStock(): ?int { return $this->number_in_stock; }
+
+    /**
+     * Set the stock quantity.
+     *
+     * @param int $number_in_stock
+     * @return self
+     */
     public function setNumberInStock(int $number_in_stock): static { $this->number_in_stock = $number_in_stock; return $this; }
 
+    /**
+     * Get image URLs.
+     *
+     * @return array|null
+     */
     public function getImageUrls(): ?array { return $this->image_urls; }
+
+    /**
+     * Set image URLs.
+     *
+     * @param array|null $image_urls
+     * @return self
+     */
     public function setImageUrls(?array $image_urls): static { $this->image_urls = $image_urls; return $this; }
 
+    /**
+     * Get the size.
+     *
+     * @return Size|null
+     */
     public function getSize(): ?Size { return $this->size; }
+
+    /**
+     * Set the size.
+     *
+     * @param Size|null $size
+     * @return self
+     */
     public function setSize(?Size $size): static { $this->size = $size; return $this; }
 
+    /**
+     * Get the width.
+     *
+     * @return float|null
+     */
     public function getWidth(): ?float { return $this->width; }
+
     public function setWidth(?float $width): static { $this->width = $width; return $this; }
 
+    /**
+     * Get the height.
+     *
+     * @return float|null
+     */
     public function getHeight(): ?float { return $this->height; }
+
     public function setHeight(?float $height): static { $this->height = $height; return $this; }
 
+    /**
+     * Get the length.
+     *
+     * @return float|null
+     */
     public function getLength(): ?float { return $this->length; }
+
     public function setLength(?float $length): static { $this->length = $length; return $this; }
 
+    /**
+     * Get the weight.
+     *
+     * @return float|null
+     */
     public function getWeight(): ?float { return $this->weight; }
+
     public function setWeight(?float $weight): static { $this->weight = $weight; return $this; }
 
+    /**
+     * Get the material.
+     *
+     * @return string|null
+     */
     public function getMaterial(): ?string { return $this->material; }
+
     public function setMaterial(?string $material): static { $this->material = $material; return $this; }
 
+    /**
+     * Get the color.
+     *
+     * @return Color|null
+     */
     public function getColor(): ?Color { return $this->color; }
+
     public function setColor(?Color $color): static { $this->color = $color; return $this; }
 
+    /**
+     * Get the price.
+     *
+     * @return float|null
+     */
     public function getPrice(): ?float { return $this->price; }
+
     public function setPrice(float $price): static { $this->price = $price; return $this; }
 
+    /**
+     * Get visibility flag.
+     *
+     * @return bool
+     */
     public function getHidden(): bool { return $this->hidden; }
+
     public function setHidden(bool $hidden): static { $this->hidden = $hidden; return $this; }
 
+    /**
+     * Get the discount percentage.
+     *
+     * @return float
+     */
     public function getDiscount(): float { return $this->discount; }
+
     public function setDiscount(float $discount): static { $this->discount = $discount; return $this; }
 
+    /**
+     * Get the currency.
+     *
+     * @return Currency|null
+     */
     public function getCurrency(): ?Currency { return $this->currency; }
+
     public function setCurrency(Currency $currency): static { $this->currency = $currency; return $this; }
 
+    /**
+     * Get custom attributes.
+     *
+     * @return array|null
+     */
     public function getAttributes(): ?array { return $this->attributes; }
+
     public function setAttributes(?array $attributes): static { $this->attributes = $attributes; return $this; }
 
+    /**
+     * Get the version.
+     *
+     * @return int
+     */
     public function getVersion(): int { return $this->version; }
+
     public function setVersion(int $version): static { $this->version = $version; return $this; }
 
+    /**
+     * Get the SKU.
+     *
+     * @return string|null
+     */
     public function getSku(): ?string { return $this->sku; }
+
     public function setSku(string $sku): static { $this->sku = $sku; return $this; }
 
+    /**
+     * Get the tax rate.
+     *
+     * @return float
+     */
     public function getTaxRate(): float { return $this->taxRate; }
+
     public function setTaxRate(float $taxRate): static { $this->taxRate = $taxRate; return $this; }
 
+    /**
+     * Get creation timestamp.
+     *
+     * @return \DateTimeImmutable|null
+     */
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+
     public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
 
+    /**
+     * Get update timestamp.
+     *
+     * @return \DateTimeImmutable|null
+     */
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
+
     public function setUpdatedAt(\DateTimeImmutable $updatedAt): static { $this->updatedAt = $updatedAt; return $this; }
 
+    /**
+     * Get translations collection.
+     *
+     * @return Collection
+     */
     public function getTranslations(): Collection
     {
         return $this->translations;
     }
 
+    /**
+     * Add a translation.
+     *
+     * @param ProductTranslation $translation
+     * @return self
+     */
     public function addTranslation(ProductTranslation $translation): static
     {
         if (!$this->translations->contains($translation)) {
@@ -181,12 +373,24 @@ class Product
         return $this;
     }
 
+    /**
+     * Remove a translation.
+     *
+     * @param ProductTranslation $translation
+     * @return self
+     */
     public function removeTranslation(ProductTranslation $translation): static
     {
         $this->translations->removeElement($translation);
         return $this;
     }
 
+    /**
+     * Get translation by locale.
+     *
+     * @param string|null $locale
+     * @return ProductTranslation|null
+     */
     public function getTranslation(?string $locale): ?ProductTranslation
     {
         foreach ($this->translations as $t) {
@@ -197,20 +401,44 @@ class Product
         return null;
     }
 
+    /**
+     * Get translated name.
+     *
+     * @param string|null $locale
+     * @return string
+     */
     public function getTranslatedName(?string $locale): string
     {
         return $this->getTranslation($locale)?->getName() ?? $this->name ?? '';
     }
 
+    /**
+     * Get translated description.
+     *
+     * @param string|null $locale
+     * @return string
+     */
     public function getTranslatedDescription(?string $locale): string
     {
         return $this->getTranslation($locale)?->getDescription() ?? $this->description ?? '';
     }
 
+    /**
+     * Get translated material.
+     *
+     * @param string|null $locale
+     * @return string
+     */
     public function getTranslatedMaterial(?string $locale): string
     {
         return $this->getTranslation($locale)?->getMaterial() ?? $this->material ?? '';
     }
+
+    /**
+     * Check if product has images.
+     *
+     * @return bool
+     */
     public function hasImages(): bool
     {
         return is_array($this->image_urls) && count($this->image_urls) > 0;

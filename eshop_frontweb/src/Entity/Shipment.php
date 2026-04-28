@@ -44,6 +44,9 @@ class Shipment
     #[ORM\Column(type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
     private \DateTime $updatedAt;
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->events    = new ArrayCollection();
@@ -51,45 +54,191 @@ class Shipment
         $this->updatedAt = new \DateTime();
     }
 
-    // --- getters & setters ---
-
-    public function getId(): ?int { return $this->id; }
-
-    public function getOrder(): ?Order { return $this->order; }
-    public function setOrder(Order $order): self { $this->order = $order; return $this; }
-
-    public function getCarrier(): string { return $this->carrier; }
-    public function setCarrier(string $carrier): self { $this->carrier = $carrier; return $this; }
-
-    public function getTrackingNumber(): ?string { return $this->trackingNumber; }
-    public function setTrackingNumber(?string $tn): self { $this->trackingNumber = $tn; return $this; }
-
-    public function getStatus(): string { return $this->status; }
-    public function setStatus(string $status): self { $this->status = $status; return $this; }
-
-    /** @return Collection<int, ShipmentEvent> */
-    public function getEvents(): Collection { return $this->events; }
-
-    public function addEvent(ShipmentEvent $e): self
+    /**
+     * Get the shipment ID.
+     *
+     * @return int|null
+     */
+    public function getId(): ?int
     {
-        if (!$this->events->contains($e)) {
-            $this->events->add($e);
-            $e->setShipment($this);
+        return $this->id;
+    }
+
+    /**
+     * Get the related order.
+     *
+     * @return Order|null
+     */
+    public function getOrder(): ?Order
+    {
+        return $this->order;
+    }
+
+    /**
+     * Set the related order.
+     *
+     * @param Order $order
+     * @return self
+     */
+    public function setOrder(Order $order): self
+    {
+        $this->order = $order;
+        return $this;
+    }
+
+    /**
+     * Get the carrier name.
+     *
+     * @return string
+     */
+    public function getCarrier(): string
+    {
+        return $this->carrier;
+    }
+
+    /**
+     * Set the carrier name.
+     *
+     * @param string $carrier
+     * @return self
+     */
+    public function setCarrier(string $carrier): self
+    {
+        $this->carrier = $carrier;
+        return $this;
+    }
+
+    /**
+     * Get the tracking number.
+     *
+     * @return string|null
+     */
+    public function getTrackingNumber(): ?string
+    {
+        return $this->trackingNumber;
+    }
+
+    /**
+     * Set the tracking number.
+     *
+     * @param string|null $trackingNumber
+     * @return self
+     */
+    public function setTrackingNumber(?string $trackingNumber): self
+    {
+        $this->trackingNumber = $trackingNumber;
+        return $this;
+    }
+
+    /**
+     * Get the shipment status.
+     *
+     * @return string
+     */
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    /**
+     * Set the shipment status.
+     *
+     * @param string $status
+     * @return self
+     */
+    public function setStatus(string $status): self
+    {
+        $this->status = $status;
+        return $this;
+    }
+
+    /**
+     * Get shipment events.
+     *
+     * @return Collection
+     */
+    public function getEvents(): Collection
+    {
+        return $this->events;
+    }
+
+    /**
+     * Add a shipment event.
+     *
+     * @param ShipmentEvent $event
+     * @return self
+     */
+    public function addEvent(ShipmentEvent $event): self
+    {
+        if (!$this->events->contains($event)) {
+            $this->events->add($event);
+            $event->setShipment($this);
         }
+
         return $this;
     }
 
-    public function removeEvent(ShipmentEvent $e): self
+    /**
+     * Remove a shipment event.
+     *
+     * @param ShipmentEvent $event
+     * @return self
+     */
+    public function removeEvent(ShipmentEvent $event): self
     {
-        $this->events->removeElement($e);
+        $this->events->removeElement($event);
         return $this;
     }
 
-    public function getCreatedAt(): \DateTime { return $this->createdAt; }
-    public function setCreatedAt(\DateTime $dt): self { $this->createdAt = $dt; return $this; }
+    /**
+     * Get the creation timestamp.
+     *
+     * @return \DateTime
+     */
+    public function getCreatedAt(): \DateTime
+    {
+        return $this->createdAt;
+    }
 
-    public function getUpdatedAt(): \DateTime { return $this->updatedAt; }
-    public function setUpdatedAt(\DateTime $dt): self { $this->updatedAt = $dt; return $this; }
+    /**
+     * Set the creation timestamp.
+     *
+     * @param \DateTime $createdAt
+     * @return self
+     */
+    public function setCreatedAt(\DateTime $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
 
-    public function touch(): void { $this->updatedAt = new \DateTime(); }
+    /**
+     * Get the last update timestamp.
+     *
+     * @return \DateTime
+     */
+    public function getUpdatedAt(): \DateTime
+    {
+        return $this->updatedAt;
+    }
+
+    /**
+     * Set the last update timestamp.
+     *
+     * @param \DateTime $updatedAt
+     * @return self
+     */
+    public function setUpdatedAt(\DateTime $updatedAt): self
+    {
+        $this->updatedAt = $updatedAt;
+        return $this;
+    }
+
+    /**
+     * Update the modification timestamp.
+     */
+    public function touch(): void
+    {
+        $this->updatedAt = new \DateTime();
+    }
 }

@@ -22,7 +22,7 @@ class CurrencyManager
      * Returns the active currency code.
      *
      * If a currency is stored in session, it is used. Otherwise, the first currency
-     * from the database is used. If none exists, "EUR" is returned as a fallback.
+     * from the database is used. If none exists, "CZK" is returned as a fallback.
      */
     public function getActiveCurrency(): string
     {
@@ -37,7 +37,7 @@ class CurrencyManager
             ->getRepository(Currency::class)
             ->findOneBy([]);
 
-        return $first?->getName() ?? 'EUR';
+        return $first?->getName() ?? 'CZK';
     }
 
     /**

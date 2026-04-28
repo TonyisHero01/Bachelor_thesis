@@ -31,64 +31,178 @@ class ApiToken
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
-    // ✅ 改成 datetime_immutable（关键）
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $lastUsedAt = null;
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    // ===== Getters / Setters =====
+    /**
+     * Get the token ID.
+     *
+     * @return int|null
+     */
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
 
+    /**
+     * Get the public identifier.
+     *
+     * @return string
+     */
     public function getPublicId(): string
     {
         return $this->publicId;
     }
 
+    /**
+     * Set the public identifier.
+     *
+     * @param string $publicId
+     * @return self
+     */
     public function setPublicId(string $publicId): self
     {
         $this->publicId = $publicId;
         return $this;
     }
 
+    /**
+     * Get the hashed secret.
+     *
+     * @return string
+     */
     public function getSecretHash(): string
     {
         return $this->secretHash;
     }
 
+    /**
+     * Set the hashed secret.
+     *
+     * @param string $secretHash
+     * @return self
+     */
     public function setSecretHash(string $secretHash): self
     {
         $this->secretHash = $secretHash;
         return $this;
     }
 
+    /**
+     * Get the label.
+     *
+     * @return string|null
+     */
+    public function getLabel(): ?string
+    {
+        return $this->label;
+    }
+
+    /**
+     * Set the label.
+     *
+     * @param string|null $label
+     * @return self
+     */
+    public function setLabel(?string $label): self
+    {
+        $this->label = $label;
+        return $this;
+    }
+
+    /**
+     * Get token scopes.
+     *
+     * @return array|null
+     */
     public function getScopes(): ?array
     {
         return $this->scopes;
     }
 
+    /**
+     * Set token scopes.
+     *
+     * @param array|null $scopes
+     * @return self
+     */
     public function setScopes(?array $scopes): self
     {
         $this->scopes = $scopes;
         return $this;
     }
 
+    /**
+     * Check if the token is active.
+     *
+     * @return bool
+     */
     public function isActive(): bool
     {
         return $this->active;
     }
 
+    /**
+     * Set whether the token is active.
+     *
+     * @param bool $active
+     * @return self
+     */
     public function setActive(bool $active): self
     {
         $this->active = $active;
         return $this;
     }
 
-    public function setLastUsedAt(?\DateTimeImmutable $dt): self
+    /**
+     * Get the creation timestamp.
+     *
+     * @return \DateTimeImmutable
+     */
+    public function getCreatedAt(): \DateTimeImmutable
     {
-        $this->lastUsedAt = $dt;
+        return $this->createdAt;
+    }
+
+    /**
+     * Set the creation timestamp.
+     *
+     * @param \DateTimeImmutable $createdAt
+     * @return self
+     */
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt;
+        return $this;
+    }
+
+    /**
+     * Get the last used timestamp.
+     *
+     * @return \DateTimeImmutable|null
+     */
+    public function getLastUsedAt(): ?\DateTimeImmutable
+    {
+        return $this->lastUsedAt;
+    }
+
+    /**
+     * Set the last used timestamp.
+     *
+     * @param \DateTimeImmutable|null $lastUsedAt
+     * @return self
+     */
+    public function setLastUsedAt(?\DateTimeImmutable $lastUsedAt): self
+    {
+        $this->lastUsedAt = $lastUsedAt;
         return $this;
     }
 }

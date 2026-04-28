@@ -24,27 +24,15 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 180)]
     private ?string $name = null;
 
-    /**
-     * @var list<string> The user roles
-     */
     #[ORM\Column(type: Types::JSON, columnDefinition: 'jsonb')]
     private array $roles = [];
 
-    /**
-     * @var string The hashed password
-     */
     #[ORM\Column]
     private ?string $password = null;
 
-    /**
-     * @var string Contact e-mail
-     */
     #[ORM\Column(length: 255, unique: true)]
     private ?string $email = null;
 
-    /**
-     * @var string The mobile phone
-     */
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $phoneNumber = null;
 
@@ -54,57 +42,73 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime')]
     private ?\DateTimeInterface $updated_at = null;
 
+    /**
+     * Constructor.
+     */
     public function __construct()
     {
         $this->created_at = new \DateTime();
         $this->updated_at = new \DateTime();
     }
 
-    public function getCreatedAt(): ?\DateTimeInterface
-    {
-        return $this->created_at;
-    }
-
-    public function setCreatedAt(\DateTimeInterface $created_at): self
-    {
-        $this->created_at = $created_at;
-
-        return $this;
-    }
-
+    /**
+     * Get the employee ID.
+     *
+     * @return int|null
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * Get the surname.
+     *
+     * @return string|null
+     */
     public function getSurname(): ?string
     {
         return $this->surname;
     }
 
+    /**
+     * Set the surname.
+     *
+     * @param string $surname
+     * @return self
+     */
     public function setSurname(string $surname): static
     {
         $this->surname = $surname;
-
         return $this;
     }
 
+    /**
+     * Get the name.
+     *
+     * @return string|null
+     */
     public function getName(): ?string
     {
         return $this->name;
     }
 
+    /**
+     * Set the name.
+     *
+     * @param string $name
+     * @return self
+     */
     public function setName(string $name): static
     {
         $this->name = $name;
-
         return $this;
     }
 
     /**
-     * A visual identifier that represents this user.
+     * Get user identifier.
      *
-     * @see UserInterface
+     * @return string
      */
     public function getUserIdentifier(): string
     {
@@ -112,8 +116,9 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * @see UserInterface
-     * @return list<string>
+     * Get user roles.
+     *
+     * @return array
      */
     public function getRoles(): array
     {
@@ -121,60 +126,132 @@ class Employee implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * @param list<string> $roles
+     * Set user roles.
+     *
+     * @param array $roles
+     * @return self
      */
     public function setRoles(array $roles): static
     {
         $this->roles = $roles;
-
         return $this;
     }
 
     /**
-     * @see PasswordAuthenticatedUserInterface
+     * Get the password.
+     *
+     * @return string
      */
     public function getPassword(): string
     {
         return $this->password;
     }
 
+    /**
+     * Set the password.
+     *
+     * @param string $password
+     * @return self
+     */
     public function setPassword(string $password): static
     {
         $this->password = $password;
-
         return $this;
     }
 
+    /**
+     * Get the email.
+     *
+     * @return string|null
+     */
     public function getEmail(): string
     {
         return $this->email;
     }
 
+    /**
+     * Set the email.
+     *
+     * @param string $email
+     * @return self
+     */
     public function setEmail(string $email): static
     {
         $this->email = $email;
-
         return $this;
     }
 
+    /**
+     * Get the phone number.
+     *
+     * @return string|null
+     */
     public function getPhoneNumber(): string
     {
         return $this->phoneNumber;
     }
 
+    /**
+     * Set the phone number.
+     *
+     * @param string $phoneNumber
+     * @return self
+     */
     public function setPhoneNumber(string $phoneNumber): static
     {
         $this->phoneNumber = $phoneNumber;
-
         return $this;
     }
 
     /**
-     * @see UserInterface
+     * Get creation timestamp.
+     *
+     * @return \DateTimeInterface|null
+     */
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->created_at;
+    }
+
+    /**
+     * Set creation timestamp.
+     *
+     * @param \DateTimeInterface $created_at
+     * @return self
+     */
+    public function setCreatedAt(\DateTimeInterface $created_at): self
+    {
+        $this->created_at = $created_at;
+        return $this;
+    }
+
+    /**
+     * Get update timestamp.
+     *
+     * @return \DateTimeInterface|null
+     */
+    public function getUpdatedAt(): ?\DateTimeInterface
+    {
+        return $this->updated_at;
+    }
+
+    /**
+     * Set update timestamp.
+     *
+     * @param \DateTimeInterface $updated_at
+     * @return self
+     */
+    public function setUpdatedAt(\DateTimeInterface $updated_at): self
+    {
+        $this->updated_at = $updated_at;
+        return $this;
+    }
+
+    /**
+     * Erase sensitive credentials.
      */
     public function eraseCredentials(): void
     {
-        // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
+        // No temporary sensitive data stored
     }
 }

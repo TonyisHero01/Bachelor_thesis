@@ -60,7 +60,7 @@ class MoneyExtension extends AbstractExtension
     }
 
     /**
-     * Returns the currently selected currency code (e.g. EUR, USD).
+     * Returns the currently selected currency code (e.g. CZK, USD).
      */
     public function activeCurrency(): string
     {
@@ -72,7 +72,7 @@ class MoneyExtension extends AbstractExtension
      *
      * Example:
      * {
-     *   "EUR": 1.0,
+     *   "CZK": 1.0,
      *   "USD": 24.5
      * }
      *

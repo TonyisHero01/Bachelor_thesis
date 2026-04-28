@@ -17,21 +17,42 @@ class Size
     #[ORM\Column(type: 'string', length: 50, unique: true)]
     private ?string $name = null;
 
+    /**
+     * Convert size to string.
+     *
+     * @return string
+     */
     public function __toString(): string
     {
-        return $this->name;
+        return $this->name ?? '';
     }
 
+    /**
+     * Get the size ID.
+     *
+     * @return int|null
+     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
+    /**
+     * Get the size name.
+     *
+     * @return string|null
+     */
     public function getName(): ?string
     {
         return $this->name;
     }
 
+    /**
+     * Set the size name.
+     *
+     * @param string $name
+     * @return self
+     */
     public function setName(string $name): static
     {
         $this->name = $name;

@@ -27,7 +27,7 @@ class CurrencyWriteApiController extends AbstractController
      * Creates a new currency.
      *
      * Expected body:
-     * - name: 3-letter currency code (e.g. "EUR")
+     * - name: 3-letter currency code (e.g. "CZK")
      * - value: positive number
      * - isDefault: optional boolean
      */
@@ -41,7 +41,7 @@ class CurrencyWriteApiController extends AbstractController
             return $this->json(
                 [
                     'status' => 'error',
-                    'message' => 'Invalid currency name. Expect 3-letter code, e.g. "EUR".',
+                    'message' => 'Invalid currency name. Expect 3-letter code, e.g. "CZK".',
                 ],
                 400
             );
@@ -123,7 +123,7 @@ class CurrencyWriteApiController extends AbstractController
                 return $this->json(
                     [
                         'status' => 'error',
-                        'message' => 'Invalid currency name. Expect 3-letter code, e.g. "EUR".',
+                        'message' => 'Invalid currency name. Expect 3-letter code, e.g. "CZK".',
                     ],
                     400
                 );
