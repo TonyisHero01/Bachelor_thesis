@@ -55,8 +55,8 @@ class HomeController extends BaseController
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
 
         $sales = $entityManager->createQueryBuilder()
-            ->select("SUBSTRING(o.orderCreatedAt, 1, 10) AS date")
-            ->addSelect("SUM(o.totalPrice) AS total")
+            ->select('DATE(o.orderCreatedAt) AS date')
+            ->addSelect('SUM(o.totalPrice) AS total')
             ->from(\App\Entity\Order::class, 'o')
             ->where('o.orderCreatedAt >= :fromDate')
             ->setParameter('fromDate', new \DateTimeImmutable('-30 days'))
