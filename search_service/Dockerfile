@@ -11,13 +11,12 @@ RUN set -eux; \
     pip install --no-cache-dir --upgrade pip; \
     rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
+COPY search_service/requirements.txt /app/requirements.txt
 
 RUN set -eux; \
     pip install --no-cache-dir -r /app/requirements.txt
 
-COPY requirements.txt /app/requirements.txt
-COPY . /app/
+COPY search_service/ /app/
 
 EXPOSE 8000
 
