@@ -54,16 +54,42 @@ class HomeController extends BaseController
         $roles = \is_object($user) && method_exists($user, 'getRoles') ? $user->getRoles() : [];
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
 
-        $sales = $entityManager->createQueryBuilder()
-            ->select('DATE(o.orderCreatedAt) AS date')
-            ->addSelect('SUM(o.totalPrice) AS total')
+        $orderRows = $entityManager->createQueryBuilder()
+            ->select('o.orderCreatedAt AS createdAt')
+            ->addSelect('o.totalPrice AS totalPrice')
             ->from(\App\Entity\Order::class, 'o')
             ->where('o.orderCreatedAt >= :fromDate')
             ->setParameter('fromDate', new \DateTimeImmutable('-30 days'))
-            ->groupBy('date')
-            ->orderBy('date', 'ASC')
+            ->orderBy('o.orderCreatedAt', 'ASC')
             ->getQuery()
             ->getArrayResult();
+
+        $salesMap = [];
+
+        foreach ($orderRows as $row) {
+            $createdAt = $row['createdAt'];
+
+            if ($createdAt instanceof \DateTimeInterface) {
+                $date = $createdAt->format('Y-m-d');
+            } else {
+                $date = (new \DateTimeImmutable((string) $createdAt))->format('Y-m-d');
+            }
+
+            if (!isset($salesMap[$date])) {
+                $salesMap[$date] = 0.0;
+            }
+
+            $salesMap[$date] += (float) $row['totalPrice'];
+        }
+
+        $sales = [];
+
+        foreach ($salesMap as $date => $total) {
+            $sales[] = [
+                'date' => $date,
+                'total' => $total,
+            ];
+        }
 
         $topProducts = $entityManager->createQueryBuilder()
             ->select('oi.productName AS product_name')
