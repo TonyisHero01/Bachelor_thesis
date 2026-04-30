@@ -12,6 +12,7 @@ services:
         autoconfigure: true
         bind:
             $projectDir: '%kernel.project_dir%'
+            $searchServiceBaseUrl: '%search_service_base_url%'
 
     App\:
         resource: '../src/'
