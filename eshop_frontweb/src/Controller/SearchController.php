@@ -32,7 +32,7 @@ class SearchController extends BaseController
     ) {
         parent::__construct($twig, $logger);
 
-        $this->searchServiceBaseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+        $this->searchServiceBaseUrl = rtrim($searchServiceBaseUrl, '/');
 
         if ($this->searchServiceBaseUrl === '') {
             $this->logger->error('[SearchController] SEARCH_SERVICE_BASE_URL missing');
