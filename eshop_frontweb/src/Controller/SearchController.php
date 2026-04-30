@@ -26,6 +26,7 @@ class SearchController extends BaseController
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly HttpClientInterface $httpClient,
+        string $searchServiceBaseUrl,
         Environment $twig,
         LoggerInterface $logger,
     ) {
