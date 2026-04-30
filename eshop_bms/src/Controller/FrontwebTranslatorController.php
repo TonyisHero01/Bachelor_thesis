@@ -30,8 +30,6 @@ class FrontwebTranslatorController extends AbstractController
             'lang' => $lang,
             'bmsPages' => [],
             'frontwebPages' => [
-                // 这里按你自己维护的 frontweb 页面列表写
-                // key 用来显示标题，value 是 templates 下的相对路径（不带 templates/ 前缀）
                 'frontweb_home' => 'eshop/index.html.twig',
                 // 'frontweb_cart' => 'eshop/cart.html.twig',
             ],

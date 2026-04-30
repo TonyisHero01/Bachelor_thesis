@@ -4,7 +4,8 @@ parameters:
   NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
   CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
   images_directory: '%kernel.project_dir%/public/images'
-  search_service: '%env(SEARCH_SERVICE_BASE_URL)%'
+  search_service_base_url: '%env(SEARCH_SERVICE_BASE_URL)%'
+  search_api_key: '%env(SEARCH_API_KEY)%'
 
 services:
   _defaults:

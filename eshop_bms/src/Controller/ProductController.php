@@ -8,7 +8,6 @@ use App\Entity\Currency;
 use App\Entity\Product;
 use App\Entity\Size;
 use App\Form\ProductType;
-use App\Service\TfidfTrainer;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;
@@ -18,7 +17,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
-use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\String\Slugger\AsciiSlugger;
@@ -67,39 +65,47 @@ final class ProductController extends BaseController
         string $event,
         array $payload = []
     ): void {
-        $baseUrl = rtrim((string) $this->getParameter('search_service'), '/');
+        $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
         if ($baseUrl === '') {
-            $logger->warning('SEARCH_SERVICE_BASE_URL is empty, skipping reindex notification.');
+            $logger->warning('[ProductController] SEARCH_SERVICE_BASE_URL is empty, skipping reindex.');
             return;
         }
 
+        $apiKey = (string) $this->getParameter('search_api_key');
+
         try {
             $response = $httpClient->request('POST', $baseUrl . '/reindex', [
-                'json' => [
-                    'event' => $event,
-                    'payload' => $payload,
+                'headers' => [
+                    'X-API-KEY' => $apiKey,
                 ],
-                'timeout' => 5,
+                'json' => [
+                    'mode' => 'full',
+                    'reason' => $event,
+                    'context' => $payload,
+                ],
+                'timeout' => 10,
             ]);
 
             $statusCode = $response->getStatusCode();
 
             if ($statusCode >= 400) {
-                $logger->error('Reindex notification failed.', [
+                $logger->error('[ProductController] Reindex request failed.', [
                     'statusCode' => $statusCode,
                     'event' => $event,
                     'payload' => $payload,
                     'response' => $response->getContent(false),
                 ]);
-            } else {
-                $logger->info('Reindex notification sent.', [
-                    'event' => $event,
-                    'payload' => $payload,
-                ]);
+
+                return;
             }
+
+            $logger->info('[ProductController] Search index rebuilt.', [
+                'event' => $event,
+                'payload' => $payload,
+            ]);
         } catch (\Throwable $e) {
-            $logger->error('Failed to notify search-service for reindex: ' . $e->getMessage(), [
+            $logger->error('[ProductController] Failed to notify search-service: ' . $e->getMessage(), [
                 'event' => $event,
                 'payload' => $payload,
             ]);
@@ -321,7 +327,6 @@ final class ProductController extends BaseController
                 $currentProduct->setUpdatedAt(new DateTimeImmutable());
                 $em->flush();
 
-                // ✅ notify reindex
                 $this->notifyReindex($httpClient, $logger, 'product_update_in_place', [
                     'id' => $currentProduct->getId(),
                     'sku' => $currentProduct->getSku(),
@@ -395,7 +400,6 @@ final class ProductController extends BaseController
             $em->persist($newProduct);
             $em->flush();
 
-            // ✅ notify reindex
             $this->notifyReindex($httpClient, $logger, 'product_new_version', [
                 'oldId' => $currentProduct->getId(),
                 'newId' => $newProduct->getId(),

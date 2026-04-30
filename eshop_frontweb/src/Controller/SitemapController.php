@@ -40,7 +40,6 @@ class SitemapController extends BaseController
 
         $urls = [];
 
-        // 首页
         $urls[] = [
             'loc' => $host . $this->generateUrl('app_eshop_home', ['_locale' => $locale]),
             'lastmod' => null,
@@ -48,7 +47,6 @@ class SitemapController extends BaseController
             'priority' => '1.0',
         ];
 
-        // 商品总览页
         $urls[] = [
             'loc' => $host . $this->generateUrl('app_eshop_product', ['_locale' => $locale]),
             'lastmod' => null,
@@ -56,7 +54,6 @@ class SitemapController extends BaseController
             'priority' => '0.8',
         ];
 
-        // 分类页
         foreach ($categories as $category) {
             $urls[] = [
                 'loc' => $host . $this->generateUrl('app_eshop_category', [
@@ -69,7 +66,6 @@ class SitemapController extends BaseController
             ];
         }
 
-        // 商品详情页
         foreach ($products as $product) {
             $lastmod = null;
 

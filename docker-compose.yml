@@ -53,21 +53,24 @@ services:
     networks:
       - backend
 
-  search-service:
-    image: ${GHCR_NAMESPACE}/eshop-search-service:${IMAGE_TAG}
-    container_name: eshop_search_service
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      PYTHONDONTWRITEBYTECODE: ${PYTHONDONTWRITEBYTECODE}
-      PYTHONUNBUFFERED: ${PYTHONUNBUFFERED}
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8081:8000"
-    networks:
-      - backend
+    search-service:
+      image: ${GHCR_NAMESPACE}/eshop-search-service:${IMAGE_TAG}
+      container_name: eshop_search_service
+      restart: unless-stopped
+      environment:
+        DATABASE_URL: ${DATABASE_URL}
+        SEARCH_API_KEY: ${SEARCH_API_KEY}
+        MAX_SEARCH_LIMIT: ${MAX_SEARCH_LIMIT:-200}
+        DEFAULT_SEARCH_LIMIT: ${DEFAULT_SEARCH_LIMIT:-50}
+        PYTHONDONTWRITEBYTECODE: ${PYTHONDONTWRITEBYTECODE:-1}
+        PYTHONUNBUFFERED: ${PYTHONUNBUFFERED:-1}
+      depends_on:
+        db:
+          condition: service_healthy
+      ports:
+        - "8081:8000"
+      networks:
+        - backend
 
   frontweb:
     image: ${GHCR_NAMESPACE}/eshop-frontweb:${IMAGE_TAG}

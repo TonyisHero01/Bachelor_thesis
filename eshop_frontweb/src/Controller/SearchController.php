@@ -21,7 +21,7 @@ use Twig\Environment;
 class SearchController extends BaseController
 {
     private ?ShopInfo $shopInfo = null;
-    private string $pythonApiBaseUrl;
+    private string $searchServiceBaseUrl;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -31,9 +31,10 @@ class SearchController extends BaseController
     ) {
         parent::__construct($twig, $logger);
 
-        $this->pythonApiBaseUrl = rtrim((string) getenv('SEARCH_SERVICE_BASE_URL'), '/');
-        if ($this->pythonApiBaseUrl === '') {
-            $this->logger->error('[SEARCH] SEARCH_SERVICE_BASE_URL missing');
+        $this->searchServiceBaseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+        if ($this->searchServiceBaseUrl === '') {
+            $this->logger->error('[SearchController] SEARCH_SERVICE_BASE_URL missing');
         }
 
         $this->shopInfo = $this->entityManager
@@ -295,16 +296,16 @@ class SearchController extends BaseController
      */
     private function callPythonApiSearch(string $query, int $limit): ?array
     {
-        if ($this->pythonApiBaseUrl === '') {
-            $this->logger->error('[SEARCH] SEARCH_SERVICE_BASE_URL empty');
+        if ($this->searchServiceBaseUrl === '') {
+            $this->logger->error('[SearchController] SEARCH_SERVICE_BASE_URL empty');
             return null;
         }
 
         $limit = max(1, min($limit, 200));
-        $url = $this->pythonApiBaseUrl . '/search';
+        $url = $this->searchServiceBaseUrl . '/search';
 
         try {
-            $resp = $this->httpClient->request('POST', $url, [
+            $response = $this->httpClient->request('POST', $url, [
                 'json' => [
                     'query' => $query,
                     'limit' => $limit,
@@ -312,41 +313,44 @@ class SearchController extends BaseController
                 'timeout' => 5,
             ]);
 
-            $status = $resp->getStatusCode();
-            $body = $resp->getContent(false);
+            $statusCode = $response->getStatusCode();
 
-            if ($status < 200 || $status >= 300) {
-                $this->logger->error('[SEARCH] search-service non-2xx', [
+            if ($statusCode < 200 || $statusCode >= 300) {
+                $this->logger->error('[SearchController] Search service returned non-2xx response', [
                     'url' => $url,
-                    'status' => $status,
-                    'body_head' => substr((string) $body, 0, 800),
+                    'statusCode' => $statusCode,
+                    'body' => substr($response->getContent(false), 0, 800),
                 ]);
+
                 return null;
             }
 
-            $data = json_decode((string) $body, true);
-            if (!is_array($data)) {
-                $this->logger->error('[SEARCH] search-service invalid JSON', [
+            $data = $response->toArray(false);
+
+            if (!isset($data['results']) || !is_array($data['results'])) {
+                $this->logger->error('[SearchController] Invalid search service response', [
                     'url' => $url,
-                    'status' => $status,
-                    'body_head' => substr((string) $body, 0, 800),
+                    'response' => $data,
                 ]);
+
                 return null;
             }
 
             return $data;
         } catch (TransportExceptionInterface $e) {
-            $this->logger->error('[SEARCH] search-service transport error', [
+            $this->logger->error('[SearchController] Search service transport error', [
                 'url' => $url,
-                'msg' => $e->getMessage(),
+                'message' => $e->getMessage(),
             ]);
+
             return null;
         } catch (\Throwable $e) {
-            $this->logger->error('[SEARCH] search-service exception', [
+            $this->logger->error('[SearchController] Search service exception', [
                 'url' => $url,
-                'msg' => $e->getMessage(),
+                'message' => $e->getMessage(),
                 'class' => get_class($e),
             ]);
+
             return null;
         }
     }

@@ -17,6 +17,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use App\Entity\Order;
+use App\Entity\OrderItem;
 
 class HomeController extends BaseController
 {
@@ -52,32 +54,37 @@ class HomeController extends BaseController
         $roles = \is_object($user) && method_exists($user, 'getRoles') ? $user->getRoles() : [];
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
 
-        $conn = $entityManager->getConnection();
+        $sales = $entityManager->createQueryBuilder()
+            ->select("SUBSTRING(o.orderCreatedAt, 1, 10) AS date")
+            ->addSelect("SUM(o.totalPrice) AS total")
+            ->from(\App\Entity\Order::class, 'o')
+            ->where('o.orderCreatedAt >= :fromDate')
+            ->setParameter('fromDate', new \DateTimeImmutable('-30 days'))
+            ->groupBy('date')
+            ->orderBy('date', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
 
-        $sales = $conn->executeQuery("
-            SELECT DATE(order_created_at) AS date, SUM(total_price) AS total
-            FROM orders
-            WHERE order_created_at >= NOW() - INTERVAL '30 days'
-            GROUP BY DATE(order_created_at)
-            ORDER BY date ASC
-        ")->fetchAllAssociative();
+        $topProducts = $entityManager->createQueryBuilder()
+            ->select('oi.productName AS product_name')
+            ->addSelect('SUM(oi.quantity) AS total_quantity')
+            ->from(\App\Entity\OrderItem::class, 'oi')
+            ->groupBy('oi.productName')
+            ->orderBy('total_quantity', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()
+            ->getArrayResult();
 
-        $topProducts = $conn->executeQuery("
-            SELECT product_name, SUM(quantity) AS total_quantity
-            FROM order_items
-            GROUP BY product_name
-            ORDER BY total_quantity DESC
-            LIMIT 5
-        ")->fetchAllAssociative();
-
-        $topCustomers = $conn->executeQuery("
-            SELECT c.email, SUM(o.total_price) AS total_spent
-            FROM orders o
-            JOIN customer c ON c.id = o.customer_id
-            GROUP BY c.email
-            ORDER BY total_spent DESC
-            LIMIT 5
-        ")->fetchAllAssociative();
+        $topCustomers = $entityManager->createQueryBuilder()
+            ->select('c.email AS email')
+            ->addSelect('SUM(o.totalPrice) AS total_spent')
+            ->from(\App\Entity\Order::class, 'o')
+            ->join('o.customer', 'c')
+            ->groupBy('c.email')
+            ->orderBy('total_spent', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()
+            ->getArrayResult();
 
         return $this->renderLocalized('bms_home/home.html.twig', [
             'shopInfo' => $shopInfo,

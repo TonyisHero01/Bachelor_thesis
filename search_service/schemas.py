@@ -1,0 +1,35 @@
+from typing import Dict, Any, List
+from pydantic import BaseModel, Field
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(default="", max_length=200)
+    limit: int = Field(default=50, ge=1, le=200)
+
+
+class SearchResult(BaseModel):
+    product_sku: str
+    similarity: float
+
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult]
+
+
+class ReindexRequest(BaseModel):
+    mode: str = Field(default="full", pattern="^(full|check)$")
+    reason: str = Field(default="unknown", max_length=64)
+    context: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ReindexResponse(BaseModel):
+    ok: bool
+    mode: str
+    updated: int | None = None
+    product_rows: int | None = None
+    distinct_skus: int | None = None
+    vector_rows: int | None = None
+    reason: str
+    context: Dict[str, Any]
+    ip: str
+    ts: str

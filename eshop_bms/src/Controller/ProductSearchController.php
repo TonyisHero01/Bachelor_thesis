@@ -66,24 +66,26 @@ final class ProductSearchController extends BaseController
         HttpClientInterface $httpClient,
     ): Response {
         $payload = json_decode((string) $request->getContent(), true);
+
         if (!is_array($payload)) {
-            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
         }
 
         $query = trim((string) ($payload['query'] ?? ''));
+
         if ($query === '') {
-            return new JsonResponse(['error' => 'Empty search query'], 400);
+            return new JsonResponse(['error' => 'Empty search query'], Response::HTTP_BAD_REQUEST);
         }
 
         if (mb_strlen($query) > 200) {
-            return new JsonResponse(['error' => 'Query too long'], 400);
+            return new JsonResponse(['error' => 'Query too long'], Response::HTTP_BAD_REQUEST);
         }
 
-        $baseUrl = (string) $this->getParameter('search_service');
-        $baseUrl = rtrim($baseUrl, '/');
+        $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
         if ($baseUrl === '') {
-            $logger->error('SEARCH_SERVICE_BASE_URL is empty');
-            return new JsonResponse(['error' => 'Search backend not available'], 500);
+            $logger->error('[ProductSearchController] SEARCH_SERVICE_BASE_URL is empty');
+            return new JsonResponse(['error' => 'Search backend not available'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         try {
@@ -94,66 +96,92 @@ final class ProductSearchController extends BaseController
                 ],
                 'timeout' => 5,
             ]);
+
+            if ($response->getStatusCode() >= 400) {
+                $logger->error('[ProductSearchController] Search service returned error', [
+                    'status_code' => $response->getStatusCode(),
+                    'body' => $response->getContent(false),
+                ]);
+
+                return new JsonResponse(['error' => 'Search system error'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+
             $data = $response->toArray(false);
         } catch (\Throwable $e) {
-            $logger->error('python-api request failed: ' . $e->getMessage());
-            return new JsonResponse(['error' => 'Search system error'], 500);
+            $logger->error('[ProductSearchController] Search service request failed: ' . $e->getMessage());
+
+            return new JsonResponse(['error' => 'Search system error'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        if (!is_array($data) || !isset($data['results']) || !is_array($data['results'])) {
-            $logger->error('python-api invalid response: ' . json_encode($data));
-            return new JsonResponse(['error' => 'Search system error'], 500);
+        if (!isset($data['results']) || !is_array($data['results'])) {
+            $logger->error('[ProductSearchController] Invalid search response', [
+                'response' => $data,
+            ]);
+
+            return new JsonResponse(['error' => 'Search system error'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         $skuToSimilarity = [];
+
         foreach ($data['results'] as $result) {
             if (!is_array($result)) {
                 continue;
             }
-            if (!isset($result['product_sku'], $result['similarity'])) {
+
+            $sku = isset($result['product_sku']) ? trim((string) $result['product_sku']) : '';
+            $similarity = isset($result['similarity']) ? (float) $result['similarity'] : 0.0;
+
+            if ($sku === '' || $similarity <= 0) {
                 continue;
             }
-            $sku = (string) $result['product_sku'];
-            $sim = (float) $result['similarity'];
-            $skuToSimilarity[$sku] = $sim;
+
+            $skuToSimilarity[$sku] = $similarity;
         }
 
-        $productSkus = array_keys($skuToSimilarity);
-        if ($productSkus === []) {
+        if ($skuToSimilarity === []) {
             $session->set('search_results', []);
             return new JsonResponse(['results' => []]);
         }
 
-        $qb = $em->createQueryBuilder();
-        $qb->select('p.id, p.sku')
-            ->from(Product::class, 'p')
-            ->where($qb->expr()->in('p.sku', ':skus'))
-            ->setParameter('skus', $productSkus)
-            ->orderBy('p.id', 'DESC');
+        $productSkus = array_keys($skuToSimilarity);
 
-        $rows = $qb->getQuery()->getArrayResult();
+        $rows = $em->createQueryBuilder()
+            ->select('p.id, p.sku')
+            ->from(Product::class, 'p')
+            ->where('p.sku IN (:skus)')
+            ->setParameter('skus', $productSkus)
+            ->orderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
 
         $skuToLatestId = [];
+
         foreach ($rows as $row) {
             $sku = (string) $row['sku'];
+
             if (!isset($skuToLatestId[$sku])) {
                 $skuToLatestId[$sku] = (int) $row['id'];
             }
         }
 
         $sortedResults = [];
+
         foreach ($productSkus as $sku) {
-            if (isset($skuToLatestId[$sku])) {
-                $sortedResults[] = [
-                    'id' => $skuToLatestId[$sku],
-                    'similarity' => $skuToSimilarity[$sku],
-                ];
+            if (!isset($skuToLatestId[$sku])) {
+                continue;
             }
+
+            $sortedResults[] = [
+                'id' => $skuToLatestId[$sku],
+                'similarity' => $skuToSimilarity[$sku],
+            ];
         }
 
         $session->set('search_results', $sortedResults);
 
-        return new JsonResponse(['results' => $sortedResults]);
+        return new JsonResponse([
+            'results' => $sortedResults,
+        ]);
     }
 
     /**
@@ -164,7 +192,7 @@ final class ProductSearchController extends BaseController
     {
         $searchResults = $session->get('search_results', []);
         if (empty($searchResults)) {
-            return $this->renderLocalized('product/no_results.html.twig', []);
+            return $this->renderLocalized('product/no_results.html.twig', [], $request);
         }
 
         $ids = array_column($searchResults, 'id');
@@ -201,6 +229,6 @@ final class ProductSearchController extends BaseController
             'colors' => $colors,
             'sizes' => $sizes,
             'categories' => $categories,
-        ]);
+        ], $request);
     }
 }
