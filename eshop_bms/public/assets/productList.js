@@ -105,33 +105,37 @@ function enableColorAddButton() {
  * @returns {Promise<void>}
  */
 async function create() {
-    const editRoute = document
+    const createRoute = document
         .getElementById('routeData')
         .getAttribute('data-create-route');
 
-    const response = await fetch(editRoute, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-            name: nameElement.value,
-            sku: sku.value,
-            number_in_stock: numberInStockElement.value,
-            add_time: formatDateTime(),
-            price: priceElement.value,
-        }),
-    });
+    try {
+        const response = await fetch(createRoute, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: nameElement.value.trim(),
+                sku: skuElement.value.trim(),
+                number_in_stock: numberInStockElement.value,
+                add_time: formatDateTime(),
+                price: priceElement.value,
+            }),
+        });
 
-    const result = await response.json();
+        const result = await response.json();
 
-    if (!result.success) {
-        alert(result.message || 'Failed to create product.');
-        return;
+        if (!response.ok || !result.success) {
+            alert(result.message || result.error || 'Failed to create product.');
+            return;
+        }
+
+        window.location.href = `/bms/product_edit/${result.id}`;
+    } catch (error) {
+        console.error('Create product error:', error);
+        alert('Failed to create product. Please try again.');
     }
-
-    const id = result.id;
-    window.location.href = `/bms/product_edit/${id}`;
 }
 
 /**

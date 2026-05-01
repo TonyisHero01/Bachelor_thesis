@@ -262,7 +262,7 @@
 
         const rates = {
           {% for c in (__currs|default([])) %}
-            "{{ c.name|e('js') }}": {{ (c.value ?? 1)|default(1) }}{{ not loop.last ? ',' : '' }}
+            "{{ c.name|upper|e('js') }}": {{ (c.value ?? 1)|default(1) }}{{ not loop.last ? ',' : '' }}
           {% endfor %}
         };
         const postUrl = sel.dataset.setUrl;
@@ -291,13 +291,22 @@
 
         const LS_KEY = 'active_currency';
         const stored = localStorage.getItem(LS_KEY);
-        if (stored && stored !== sel.value) sel.value = stored;
+
+        if (stored && rates[stored]) {
+          sel.value = stored;
+        } else {
+          localStorage.setItem(LS_KEY, sel.value);
+        }
+
+        if (!sel.value) {
+          sel.value = 'CZK';
+        }
 
         redrawAll(sel.value);
         syncToServer(sel.value);
 
         sel.addEventListener('change', ()=>{
-          const code = sel.value;
+          const code = sel.value.toUpperCase();
           localStorage.setItem(LS_KEY, code);
           redrawAll(code);
           syncToServer(code);

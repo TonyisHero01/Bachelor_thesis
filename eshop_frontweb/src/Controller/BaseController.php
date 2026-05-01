@@ -200,7 +200,7 @@ class BaseController extends AbstractController
             ]);
         }
 
-        $parameters['activeCurrency'] = $activeCurrency;
+        $parameters['activeCurrency'] = strtoupper((string) $activeCurrency);
 
         $this->logger?->debug('[BASE] withGlobalParameters() leave', [
             'locale' => $parameters['locale'],

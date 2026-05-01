@@ -121,17 +121,31 @@ final class ProductController extends BaseController
     ): Response {
         $input = json_decode((string) $request->getContent(), true);
         if (!is_array($input)) {
-            return new JsonResponse(['error' => 'Invalid JSON'], 400);
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Invalid JSON',
+                'message' => 'Invalid request body.',
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         $sku = trim((string) ($input['sku'] ?? ''));
         if ($sku === '' || mb_strlen($sku) > 64) {
-            return new JsonResponse(['error' => 'Invalid SKU'], 400);
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Invalid SKU',
+                'message' => 'SKU cannot be empty and must be at most 64 characters.',
+                'field' => 'sku',
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         $existing = $em->getRepository(Product::class)->findOneBy(['sku' => $sku]);
         if ($existing !== null) {
-            return new JsonResponse(['error' => 'SKU already exists'], 400);
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'SKU already exists',
+                'message' => sprintf('Product with SKU "%s" already exists. Please use another SKU.', $sku),
+                'field' => 'sku',
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         $name = trim((string) ($input['name'] ?? 'Unnamed Product'));
@@ -144,7 +158,12 @@ final class ProductController extends BaseController
             : $em->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
 
         if ($currency === null) {
-            return new JsonResponse(['error' => 'Currency not found'], 400);
+            return new JsonResponse([
+                'success' => false,
+                'error' => 'Currency not found',
+                'message' => 'Default currency was not found. Please configure a default currency first.',
+                'field' => 'currency_id',
+            ], Response::HTTP_BAD_REQUEST);
         }
 
         $now = new DateTimeImmutable();

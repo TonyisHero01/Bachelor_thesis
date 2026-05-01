@@ -53,7 +53,12 @@ const handleImageUpload = (event) => {
         method: 'POST',
         body: formData,
     })
-        .then((response) => response.text())
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.error) {
+                alert(data.error);
+            }
+        })
         .then((text) => {
             try {
                 JSON.parse(text);
@@ -105,72 +110,84 @@ document.querySelector('.image_upload_input').addEventListener('change', handleI
  * @returns {Promise<void>}
  */
 async function save_() {
-    const nameElement = document.getElementById('name');
-    const categoryElement = document.getElementById('categoryOptions');
-    const descriptionElement = document.getElementById('description');
-    const numberInStockElement = document.getElementById('number_in_stock');
-    const sizeElement = document.getElementById('sizeOptions');
-    const size = sizeElement.options[sizeElement.selectedIndex].value;
-    const widthElement = document.getElementById('width');
-    const heightElement = document.getElementById('height');
-    const lengthElement = document.getElementById('length');
-    const weightElement = document.getElementById('weight');
-    const materialElement = document.getElementById('material');
-    const colorElement = document.getElementById('colorOptions');
-    const priceElement = document.getElementById('price');
-    const discountElement = document.getElementById('discount');
-    const hideBox = document.getElementById('hideBox');
-    const hide = hideBox.checked ? 1 : 0;
-    const category = categoryElement.value;
-    const attributes = {};
-    const keys = document.getElementsByName('attributeKey[]');
-    const values = document.getElementsByName('attributeValue[]');
-    const taxRate = document.getElementById('tax_rate');
-    const noVersionUpdateBox = document.getElementById('noVersionUpdate');
-    const noVersionUpdate = noVersionUpdateBox.checked;
+    try {
+        const nameElement = document.getElementById('name');
+        const categoryElement = document.getElementById('categoryOptions');
+        const descriptionElement = document.getElementById('description');
+        const numberInStockElement = document.getElementById('number_in_stock');
+        const sizeElement = document.getElementById('sizeOptions');
+        const size = sizeElement.options[sizeElement.selectedIndex].value;
+        const widthElement = document.getElementById('width');
+        const heightElement = document.getElementById('height');
+        const lengthElement = document.getElementById('length');
+        const weightElement = document.getElementById('weight');
+        const materialElement = document.getElementById('material');
+        const colorElement = document.getElementById('colorOptions');
+        const priceElement = document.getElementById('price');
+        const discountElement = document.getElementById('discount');
+        const hideBox = document.getElementById('hideBox');
+        const hide = hideBox.checked ? 1 : 0;
+        const category = categoryElement.value;
+        const taxRate = document.getElementById('tax_rate');
+        const noVersionUpdateBox = document.getElementById('noVersionUpdate');
+        const noVersionUpdate = noVersionUpdateBox.checked;
 
-    for (let i = 0; i < keys.length; i += 1) {
-        const key = keys[i].value.trim();
-        const value = values[i].value.trim();
+        const attributes = {};
+        const keys = document.getElementsByName('attributeKey[]');
+        const values = document.getElementsByName('attributeValue[]');
 
-        if (key && value) {
-            attributes[key] = value;
+        for (let i = 0; i < keys.length; i += 1) {
+            const key = keys[i].value.trim();
+            const value = values[i].value.trim();
+            if (key && value) {
+                attributes[key] = value;
+            }
         }
+
+        const imagePaths = Array.from(document.querySelectorAll('.image_path'))
+            .map((input) => input.value);
+
+        const response = await fetch(`/bms/product_save/${idElement}`, {
+            method: 'POST',
+            headers: {
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: nameElement.value,
+                category: parseInt(category, 10) || null,
+                description: descriptionElement.value,
+                number_in_stock: numberInStockElement.value,
+                image_urls: imagePaths,
+                size,
+                width: widthElement.value,
+                height: heightElement.value,
+                length: lengthElement.value,
+                weight: weightElement.value,
+                material: materialElement.value,
+                color: colorElement.value,
+                price: priceElement.value,
+                hidden: hide,
+                discount: discountElement.value,
+                edit_time: formatDateTime(),
+                attributes,
+                tax_rate: taxRate.value,
+                no_version_update: noVersionUpdate,
+            }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.status === 'Error') {
+            alert(result.message || 'Failed to save product.');
+            return;
+        }
+
+        window.location.href = '/bms/product_list';
+
+    } catch (error) {
+        console.error('Save product error:', error);
+        alert('Unexpected error while saving product.');
     }
-
-    const imagePaths = Array.from(document.querySelectorAll('.image_path')).map(
-        (input) => input.value,
-    );
-
-    await fetch(`/bms/product_save/${idElement}`, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-            name: nameElement.value,
-            category: parseInt(category, 10) || null,
-            description: descriptionElement.value,
-            number_in_stock: numberInStockElement.value,
-            image_urls: imagePaths,
-            size,
-            width: widthElement.value,
-            height: heightElement.value,
-            length: lengthElement.value,
-            weight: weightElement.value,
-            material: materialElement.value,
-            color: colorElement.value,
-            price: priceElement.value,
-            hidden: hide,
-            discount: discountElement.value,
-            edit_time: formatDateTime(),
-            attributes,
-            tax_rate: taxRate.value,
-            no_version_update: noVersionUpdate,
-        }),
-    });
-
-    window.location.href = '/bms/product_list';
 }
 
 /**
