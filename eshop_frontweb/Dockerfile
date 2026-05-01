@@ -57,8 +57,7 @@ RUN cat > /etc/apache2/sites-enabled/000-default.conf <<'EOF'
 </VirtualHost>
 EOF
 
-RUN composer dump-autoload --optimize \
-    && php bin/console cache:clear || true
+RUN composer dump-autoload --optimize
 
 RUN mkdir -p /var/www/html/var \
     && chown -R www-data:www-data /var/www/html/var \

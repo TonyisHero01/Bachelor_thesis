@@ -4,6 +4,8 @@ set -e
 echo "🚀 BMS container startup initiated."
 
 cd /var/www/html
+echo "🧹 Clearing Symfony cache..."
+php bin/console cache:clear || true
 
 if [ ! -f "vendor/autoload.php" ]; then
   echo "❌ vendor/autoload.php not found."

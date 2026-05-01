@@ -11,6 +11,9 @@ if [ ! -f "vendor/autoload.php" ]; then
   exit 1
 fi
 
+echo "🧹 Clearing Symfony cache..."
+php bin/console cache:clear || true
+
 mkdir -p var
 chown -R www-data:www-data var || true
 

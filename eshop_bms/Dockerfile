@@ -63,8 +63,7 @@ RUN { \
     echo "max_file_uploads=20"; \
 } > /usr/local/etc/php/conf.d/uploads.ini
 
-RUN composer dump-autoload --optimize \
-    && php bin/console cache:clear || true
+RUN composer dump-autoload --optimize
 
 RUN mkdir -p /var/www/html/var /var/www/html/public/images \
     && chown -R www-data:www-data /var/www/html/var /var/www/html/public/images \
