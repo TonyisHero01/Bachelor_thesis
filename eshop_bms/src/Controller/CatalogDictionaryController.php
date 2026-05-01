@@ -213,11 +213,10 @@ final class CatalogDictionaryController extends BaseController
         string $reason,
         array $context = []
     ): void {
-        $baseUrl = (string) $this->getParameter('search_service');
-        $baseUrl = rtrim($baseUrl, '/');
+        $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
         if ($baseUrl === '') {
-            $logger->warning('[TFIDF] search_service is empty, skip reindex', [
+            $logger->warning('[TFIDF] search_service_base_url is empty, skip reindex', [
                 'reason' => $reason,
                 'context' => $context,
             ]);
@@ -225,13 +224,20 @@ final class CatalogDictionaryController extends BaseController
         }
 
         try {
-            $resp = $httpClient->request('POST', $baseUrl . '/reindex', [
-                'json' => ['mode' => 'full'],
+            $response = $httpClient->request('POST', $baseUrl . '/reindex', [
+                'headers' => [
+                    'X-API-KEY' => (string) $this->getParameter('search_api_key'),
+                ],
+                'json' => [
+                    'mode' => 'full',
+                    'reason' => $reason,
+                    'context' => $context,
+                ],
                 'timeout' => 10,
             ]);
 
-            $status = $resp->getStatusCode();
-            $body = $resp->toArray(false);
+            $status = $response->getStatusCode();
+            $body = $response->toArray(false);
 
             if ($status < 200 || $status >= 300) {
                 $logger->error('[TFIDF] reindex non-2xx', [
