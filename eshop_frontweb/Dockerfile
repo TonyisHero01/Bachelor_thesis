@@ -25,7 +25,7 @@ RUN set -eux; \
         gcc \
         make \
         pkg-config; \
-    docker-php-ext-install pdo pdo_pgsql zip; \
+    docker-php-ext-install pdo_pgsql zip; \
     a2enmod rewrite; \
     rm -rf /var/lib/apt/lists/*; \
     apt-get clean; \
