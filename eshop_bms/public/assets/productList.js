@@ -144,18 +144,27 @@ async function create() {
  * @returns {Promise<void>}
  */
 async function createCategory() {
-    const response = await fetch('/bms/save_category', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-            name: categoryNameElement.value,
-        }),
-    });
+    try {
+        const response = await fetch('/bms/save_category', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+                name: categoryNameElement.value.trim(),
+            }),
+        });
 
-    const id = (await response.json()).id;
-    window.location.href = '/bms/product_list';
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            alert(result.message || result.error || 'Failed to create category.');
+            return;
+        }
+
+        window.location.href = '/bms/product_list';
+    } catch (error) {
+        console.error('Create category error:', error);
+        alert('Failed to create category.');
+    }
 }
 
 /**
@@ -172,19 +181,28 @@ async function createColor() {
         return;
     }
 
-    const response = await fetch('/bms/save_color', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-            name: colorNameElement.value,
-            hex: colorHex,
-        }),
-    });
+    try {
+        const response = await fetch('/bms/save_color', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+                name: colorName,
+                hex: colorHex,
+            }),
+        });
 
-    const id = (await response.json()).id;
-    window.location.href = '/bms/product_list';
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            alert(result.message || result.error || 'Failed to create color.');
+            return;
+        }
+
+        window.location.href = '/bms/product_list';
+    } catch (error) {
+        console.error('Create color error:', error);
+        alert('Failed to create color.');
+    }
 }
 
 /**
@@ -333,24 +351,33 @@ function enableSizeAddButton() {
 /**
  * Sends a request to create a new size and reloads the page.
  */
-function createSize() {
+async function createSize() {
     const sizeName = document.getElementById('sizeName').value.trim();
-    if (!sizeName) return;
 
-    fetch('/bms/create_size', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: sizeName }),
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(`Error: ${data.message}`);
-            }
-        })
-        .catch((error) => console.error('Error:', error));
+    if (!sizeName) {
+        alert('Size name cannot be empty.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/bms/create_size', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: sizeName }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            alert(result.message || result.error || 'Failed to create size.');
+            return;
+        }
+
+        location.reload();
+    } catch (error) {
+        console.error('Create size error:', error);
+        alert('Failed to create size.');
+    }
 }
 
 /**

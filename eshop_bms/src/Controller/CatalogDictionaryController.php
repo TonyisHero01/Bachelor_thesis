@@ -38,13 +38,24 @@ final class CatalogDictionaryController extends BaseController
         HttpClientInterface $httpClient,
     ): Response {
         $data = json_decode((string) $request->getContent(), true);
+
         if (!is_array($data) || empty($data['name'])) {
-            return new JsonResponse(['error' => 'Invalid JSON or missing name'], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON or missing name.'], 400);
         }
 
         $name = trim((string) $data['name']);
+
         if ($name === '') {
-            return new JsonResponse(['error' => 'Category name cannot be empty'], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Category name cannot be empty.'], 400);
+        }
+
+        $existing = $em->getRepository(Category::class)->findOneBy(['name' => $name]);
+
+        if ($existing !== null) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => sprintf('Category "%s" already exists.', $name),
+            ], 400);
         }
 
         $category = (new Category())->setName($name);
@@ -57,7 +68,10 @@ final class CatalogDictionaryController extends BaseController
             'name' => $name,
         ]);
 
-        return new JsonResponse([]);
+        return new JsonResponse([
+            'success' => true,
+            'id' => $category->getId(),
+        ]);
     }
 
     /**
@@ -107,18 +121,49 @@ final class CatalogDictionaryController extends BaseController
     public function createColor(Request $request, EntityManagerInterface $em): Response
     {
         $data = json_decode((string) $request->getContent(), true);
+
         if (!is_array($data) || empty($data['name']) || empty($data['hex'])) {
-            return new JsonResponse(['error' => 'Invalid JSON or missing fields'], 400);
+            return new JsonResponse(['success' => false, 'message' => 'Invalid JSON or missing fields.'], 400);
+        }
+
+        $name = trim((string) $data['name']);
+        $hex = trim((string) $data['hex']);
+
+        if ($name === '') {
+            return new JsonResponse(['success' => false, 'message' => 'Color name cannot be empty.'], 400);
+        }
+
+        if (!preg_match('/^#[A-Fa-f0-9]{6}$/', $hex)) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid color hex code.'], 400);
+        }
+
+        $existingName = $em->getRepository(Color::class)->findOneBy(['name' => $name]);
+        if ($existingName !== null) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => sprintf('Color "%s" already exists.', $name),
+            ], 400);
+        }
+
+        $existingHex = $em->getRepository(Color::class)->findOneBy(['hex' => $hex]);
+        if ($existingHex !== null) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => sprintf('Color hex "%s" already exists.', $hex),
+            ], 400);
         }
 
         $color = (new Color())
-            ->setName((string) $data['name'])
-            ->setHex((string) $data['hex']);
+            ->setName($name)
+            ->setHex($hex);
 
         $em->persist($color);
         $em->flush();
 
-        return new JsonResponse([]);
+        return new JsonResponse([
+            'success' => true,
+            'id' => $color->getId(),
+        ]);
     }
 
     /**
@@ -159,13 +204,24 @@ final class CatalogDictionaryController extends BaseController
     public function createSize(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $data = json_decode((string) $request->getContent(), true);
+
         if (!is_array($data)) {
             return new JsonResponse(['success' => false, 'message' => 'Invalid JSON.'], 400);
         }
 
         $sizeName = trim((string) ($data['name'] ?? ''));
+
         if ($sizeName === '') {
             return new JsonResponse(['success' => false, 'message' => 'Size name cannot be empty.'], 400);
+        }
+
+        $existing = $em->getRepository(Size::class)->findOneBy(['name' => $sizeName]);
+
+        if ($existing !== null) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => sprintf('Size "%s" already exists.', $sizeName),
+            ], 400);
         }
 
         $size = (new Size())->setName($sizeName);
@@ -173,7 +229,10 @@ final class CatalogDictionaryController extends BaseController
         $em->persist($size);
         $em->flush();
 
-        return new JsonResponse(['success' => true]);
+        return new JsonResponse([
+            'success' => true,
+            'id' => $size->getId(),
+        ]);
     }
 
     /**
