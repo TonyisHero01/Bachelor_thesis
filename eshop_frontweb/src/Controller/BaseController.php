@@ -164,17 +164,12 @@ class BaseController extends AbstractController
 
         $parameters['locale'] ??= $locale;
 
-        $langs = $parameters['languages']
+        $languages = $parameters['languages']
             ?? $parameters['availableLanguages']
             ?? $this->scanAvailableLanguages();
 
-        $parameters['languages'] = $langs;
-        $parameters['availableLanguages'] ??= $langs;
-
-        $this->logger?->debug('[LOCALE] available languages', [
-            'count' => count($langs),
-            'list' => $langs,
-        ]);
+        $parameters['languages'] = $languages;
+        $parameters['availableLanguages'] ??= $languages;
 
         $parameters['translations'] ??= $this->getTranslations($request);
 
@@ -184,32 +179,35 @@ class BaseController extends AbstractController
 
         if (!array_key_exists('currencies', $parameters)) {
             $parameters['currencies'] = $this->loadCurrencies();
-        } else {
-            $this->logger?->debug('[CURRENCY] currencies provided by caller', [
-                'count' => count($parameters['currencies']),
+        }
+
+        if (!is_array($parameters['currencies'])) {
+            $parameters['currencies'] = [];
+        }
+
+        $session = $request->hasSession() ? $request->getSession() : null;
+        $activeCurrency = $session?->get('active_currency');
+
+        if (!$activeCurrency) {
+            $activeCurrency = $this->resolveDefaultCurrencyCode($parameters['currencies']);
+
+            if ($session !== null) {
+                $session->set('active_currency', $activeCurrency);
+            }
+
+            $this->logger?->info('[CURRENCY] Set default active_currency', [
+                'active' => $activeCurrency,
             ]);
         }
 
-        $session = $request->getSession();
-        $active = $session?->get('active_currency');
-
-        $this->logger?->debug('[CURRENCY] session before resolve', [
-            'active_currency' => $active,
-            'session_id' => $session?->getId(),
-        ]);
-
-        if (!$active) {
-            $active = $this->resolveDefaultCurrencyCode((array) $parameters['currencies']);
-            $session?->set('active_currency', $active);
-            $this->logger?->info('[CURRENCY] Set default active_currency', ['active' => $active]);
-        }
-
-        $parameters['activeCurrency'] = $active;
+        $parameters['activeCurrency'] = $activeCurrency;
 
         $this->logger?->debug('[BASE] withGlobalParameters() leave', [
-            'activeCurrency' => $parameters['activeCurrency'],
-            'currencies.count' => count((array) $parameters['currencies']),
+            'locale' => $parameters['locale'],
             'languages.count' => count((array) $parameters['languages']),
+            'currencies.count' => count((array) $parameters['currencies']),
+            'activeCurrency' => $parameters['activeCurrency'],
+            'shopInfo.exists' => $parameters['shopInfo'] !== null,
         ]);
 
         return $parameters;
@@ -286,7 +284,7 @@ class BaseController extends AbstractController
      * - prefer CZK if present
      * - entity default flag (isDefault/getIsDefault/isIsDefault)
      * - first currency entry
-     * - fallback to EUR
+     * - fallback to CZK
      *
      * @param array<int, mixed> $currencies
      */
@@ -302,28 +300,27 @@ class BaseController extends AbstractController
         }
 
         foreach ($currencies as $c) {
-            if (is_object($c) && $this->currencyCodeFromEntity($c) === 'CZK') {
-                $this->logger?->info('[CURRENCY] prefer CZK as default');
-                return 'CZK';
-            }
-        }
-
-        foreach ($currencies as $c) {
             if (is_object($c) && $this->isDefaultCurrency($c)) {
                 $code = $this->currencyCodeFromEntity($c);
-                $this->logger?->info('[CURRENCY] default by isDefault flag', ['code' => $code]);
-                return $code;
+
+                if ($code !== '') {
+                    $this->logger?->info('[CURRENCY] default by isDefault flag', ['code' => $code]);
+                    return $code;
+                }
             }
         }
 
         if (!empty($currencies) && is_object($currencies[0])) {
             $code = $this->currencyCodeFromEntity($currencies[0]);
-            $this->logger?->info('[CURRENCY] default by first row', ['code' => $code]);
-            return $code;
+
+            if ($code !== '') {
+                $this->logger?->info('[CURRENCY] default by first row', ['code' => $code]);
+                return $code;
+            }
         }
 
-        $this->logger?->warning('[CURRENCY] fallback to EUR');
-        return 'EUR';
+        $this->logger?->warning('[CURRENCY] fallback to CZK');
+        return 'CZK';
     }
 
     /**
