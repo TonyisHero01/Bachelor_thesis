@@ -256,8 +256,12 @@ final class ProductController extends BaseController
         $colors = $em->getRepository(Color::class)->findAll();
         $sizes = $em->getRepository(Size::class)->findAll();
 
-        $locale = strtolower((string) $request->query->get('_locale', $request->getLocale()));
+        $defaultCurrency = $em->getRepository(Currency::class)->findOneBy(['isDefault' => true]);
+        $defaultCurrencyCode = $defaultCurrency !== null
+            ? (string) $defaultCurrency->getName()
+            : 'CZK';
 
+        $locale = strtolower((string) $request->query->get('_locale', $request->getLocale()));
 
         return $this->renderLocalized('product/product_edit.html.twig', [
             'product' => $product,
@@ -269,6 +273,7 @@ final class ProductController extends BaseController
             'colors' => $colors,
             'sizes' => $sizes,
             'locale' => $locale,
+            'defaultCurrencyCode' => $defaultCurrencyCode,
         ]);
     }
 

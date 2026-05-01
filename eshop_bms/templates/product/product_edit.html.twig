@@ -111,14 +111,20 @@
           </div>
 
           <div class="form-field">
-            <label for="price" class="form-label">Base price</label>
+            <label for="price" class="form-label">
+              Base price
+              <span class="currency-label">
+                ({{ defaultCurrencyCode|default('CZK') }})
+              </span>
+            </label>
+
             <input type="number"
-                   id="price"
-                   name="price"
-                   value="{{ product.price }}"
-                   step="0.01"
-                   min="0"
-                   class="form-input">
+                  id="price"
+                  name="price"
+                  value="{{ product.price }}"
+                  step="0.01"
+                  min="0"
+                  class="form-input">
           </div>
 
           <div class="form-field">
