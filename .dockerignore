@@ -7,12 +7,12 @@
 .github
 
 #################################
-# macOS / OS
+# OS / macOS
 #################################
 .DS_Store
 
 #################################
-# IDE / Editor
+# IDE
 #################################
 .vscode
 .idea
@@ -27,33 +27,45 @@
 #################################
 # Symfony (BMS + Frontend)
 #################################
-
-# Do not include local vendor directories
-# Dependencies are installed during Docker build
 eshop_bms/vendor
 eshop_frontweb/vendor
-
-# Runtime/cache files (should not be part of the image)
 eshop_bms/var
 eshop_frontweb/var
-
-# PHPUnit cache files
 eshop_bms/.phpunit.result.cache
 eshop_frontweb/.phpunit.result.cache
 
 #################################
-# Python
-#################################
-# Bytecode cache
-python_scripts/__pycache__
-python_scripts/*.pyc
-
-#################################
-# Node / frontend
+# Node
 #################################
 node_modules
 
 #################################
-# Docker / Development only
+# Python (IMPORTANT)
+#################################
+
+# virtual env
+venv/
+.env
+.env.*
+
+# cache 
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+
+#################################
+# Search service specific
+#################################
+search_service/venv/
+search_service/__pycache__/
+search_service/*.pyc
+
+#################################
+# Docker dev only
 #################################
 docker-compose.override.yml
