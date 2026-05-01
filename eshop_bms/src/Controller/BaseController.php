@@ -194,6 +194,23 @@ class BaseController extends AbstractController
             $parameters['currencies'] = $this->loadCurrencies();
         }
 
+        if (!\is_array($parameters['currencies'])) {
+            $parameters['currencies'] = [];
+        }
+
+        $session = $request->hasSession() ? $request->getSession() : null;
+        $activeCurrency = $session?->get('active_currency');
+
+        if (!$activeCurrency) {
+            $activeCurrency = $this->resolveDefaultCurrencyCode($parameters['currencies']);
+
+            if ($session !== null) {
+                $session->set('active_currency', $activeCurrency);
+            }
+        }
+
+        $parameters['activeCurrency'] = $activeCurrency;
+
         return $parameters;
     }
 
@@ -202,11 +219,25 @@ class BaseController extends AbstractController
      */
     private function buildGlobalParameters(Request $request): array
     {
+        $currencies = $this->loadCurrencies();
+
+        $session = $request->hasSession() ? $request->getSession() : null;
+        $activeCurrency = $session?->get('active_currency');
+
+        if (!$activeCurrency) {
+            $activeCurrency = $this->resolveDefaultCurrencyCode($currencies);
+
+            if ($session !== null) {
+                $session->set('active_currency', $activeCurrency);
+            }
+        }
+
         return [
             'translations' => $this->getTranslations($request),
             'availableLanguages' => $this->scanAvailableLanguages(),
             'shopInfo' => $this->loadShopInfo(),
-            'currencies' => $this->loadCurrencies(),
+            'currencies' => $currencies,
+            'activeCurrency' => $activeCurrency,
         ];
     }
 
@@ -250,5 +281,60 @@ class BaseController extends AbstractController
 
             return [];
         }
+    }
+
+    private function resolveDefaultCurrencyCode(array $currencies): string
+    {
+        foreach ($currencies as $currency) {
+            if (\is_object($currency) && $this->isDefaultCurrency($currency)) {
+                $code = $this->currencyCodeFromEntity($currency);
+
+                if ($code !== '') {
+                    return $code;
+                }
+            }
+        }
+
+        foreach ($currencies as $currency) {
+            if (\is_object($currency) && $this->currencyCodeFromEntity($currency) === 'CZK') {
+                return 'CZK';
+            }
+        }
+
+        if (!empty($currencies) && \is_object($currencies[0])) {
+            $code = $this->currencyCodeFromEntity($currencies[0]);
+
+            if ($code !== '') {
+                return $code;
+            }
+        }
+
+        return 'CZK';
+    }
+
+    private function currencyCodeFromEntity(object $currency): string
+    {
+        foreach (['getName', 'getCode', 'getSymbol'] as $method) {
+            if (\method_exists($currency, $method)) {
+                $value = \strtoupper((string) $currency->$method());
+
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    private function isDefaultCurrency(object $currency): bool
+    {
+        foreach (['isDefault', 'getIsDefault', 'isIsDefault'] as $method) {
+            if (\method_exists($currency, $method)) {
+                return (bool) $currency->$method();
+            }
+        }
+
+        return false;
     }
 }

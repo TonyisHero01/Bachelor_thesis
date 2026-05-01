@@ -50,20 +50,11 @@
         </form>
       {% endif %}
 
-      {% set __currs = (currencies is defined and currencies is not empty) ? currencies : [] %}
-      {% set __active = app.session.get('currency') %}
+      {% set __currs = currencies is defined and currencies is not empty ? currencies : [] %}
+      {% set __active = activeCurrency is defined and activeCurrency ? activeCurrency : app.session.get('active_currency') %}
 
-      {% if __active is null %}
-        {% set __activeTmp = null %}
-        {% for c in __currs %}
-          {% if c.isIsDefault() %}
-            {% set __activeTmp = c.name %}
-          {% endif %}
-        {% endfor %}
-        {% if __activeTmp is null and __currs is not empty %}
-          {% set __activeTmp = (__currs|first).name %}
-        {% endif %}
-        {% set __active = __activeTmp is not null ? __activeTmp : 'EUR' %}
+      {% if not __active %}
+        {% set __active = 'CZK' %}
       {% endif %}
 
       <select
@@ -74,10 +65,14 @@
       >
         {% if __currs is not empty %}
           {% for c in __currs %}
-            <option value="{{ c.name }}" {% if c.name == __active %}selected{% endif %}>{{ c.name }}</option>
+            {% set currencyName = c.name|upper %}
+            <option value="{{ currencyName }}" {% if currencyName == __active|upper %}selected{% endif %}>
+              {{ currencyName }}
+            </option>
           {% endfor %}
         {% else %}
-          <option value="{{ __active }}" selected>{{ __active }}</option>
+          <option value="CZK" {% if __active|upper == 'CZK' %}selected{% endif %}>CZK</option>
+          <option value="{{ __active|upper }}" {% if __active|upper != 'CZK' %}selected{% endif %}>{{ __active|upper }}</option>
         {% endif %}
       </select>
 
