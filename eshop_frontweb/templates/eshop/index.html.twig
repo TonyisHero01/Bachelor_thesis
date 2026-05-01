@@ -2,36 +2,49 @@
 
 {% block body %}
 <link rel="stylesheet" href="{{ asset('assets/eshop_styles/homepage.css') }}">
+
+{% set carouselPictures = shopInfo ? (shopInfo.carouselPictures ?? []) : [] %}
+
 <div class="container">
   <div class="bar" id="nav-menu">
-    {% for category in categories %}
+    {% for category in categories|default([]) %}
       <a href="{{ path('app_eshop_category', {'id': category.id}) }}">
-        {{ category.getTranslatedName(locale) }}<span></span>
+        {{ category.getTranslatedName(locale|default('en')) }}<span></span>
       </a>
+    {% else %}
+      <span></span>
     {% endfor %}
   </div>
 
-  <div class="swiper-container">
-    <div class="swiper-wrapper">
-      {% for imageURL in shopInfo.carouselPictures %}
-        <div class="swiper-slide" style="background-image: url('{{ BMS_URL }}/images/{{ imageURL }}');"></div>
-      {% endfor %}
+  {% if carouselPictures is not empty %}
+    <div class="swiper-container">
+      <div class="swiper-wrapper">
+        {% for imageURL in carouselPictures %}
+          <div class="swiper-slide" style="background-image: url('{{ BMS_URL|default('') }}/images/{{ imageURL }}');"></div>
+        {% endfor %}
+      </div>
+      <div class="swiper-pagination"></div>
+      <div class="swiper-button-next"></div>
+      <div class="swiper-button-prev"></div>
     </div>
-    <div class="swiper-pagination"></div>
-    <div class="swiper-button-next"></div>
-    <div class="swiper-button-prev"></div>
-  </div>
+  {% endif %}
 
   <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 
   <h2>New Products</h2>
   <div class="new_products_grid">
-    {% for product in new_products %}
+    {% for product in new_products|default([]) %}
+      {% set imageUrls = product.getImageUrls() ?? [] %}
       {% set hasDiscount = product.discount is not null and product.discount < 100 %}
       {% set discountedRaw = (product.price * product.discount / 100) %}
+
       <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
-        <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
+        {% if imageUrls is not empty %}
+          <img src="{{ BMS_URL|default('') }}/images/{{ imageUrls[0] }}" alt="{{ product.name }}">
+        {% endif %}
+
+        <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>
+
         <div class="product-price">
           {% if hasDiscount %}
             <div class="original-price">
@@ -46,17 +59,25 @@
           {% endif %}
         </div>
       </a>
+    {% else %}
+      <p>No new products available.</p>
     {% endfor %}
   </div>
 
   <h2>Popular Products</h2>
   <div class="popular_products_grid">
-    {% for product in popular_products %}
+    {% for product in popular_products|default([]) %}
+      {% set imageUrls = product.getImageUrls() ?? [] %}
       {% set hasDiscount = product.discount is not null and product.discount < 100 %}
       {% set discountedRaw = (product.price * product.discount / 100) %}
+
       <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
-        <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}" alt="{{ product.name }}">
-        <div class="product-name">{{ product.getTranslatedName(locale) }}</div>
+        {% if imageUrls is not empty %}
+          <img src="{{ BMS_URL|default('') }}/images/{{ imageUrls[0] }}" alt="{{ product.name }}">
+        {% endif %}
+
+        <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>
+
         <div class="product-price">
           {% if hasDiscount %}
             <div class="original-price">
@@ -71,6 +92,8 @@
           {% endif %}
         </div>
       </a>
+    {% else %}
+      <p>No popular products available.</p>
     {% endfor %}
   </div>
 </div>
