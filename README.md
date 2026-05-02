@@ -89,6 +89,27 @@ php bin/console app:init-shopinfo
 
 ---
 
+## API Documentation
+
+Detailed API documentation is available in a separate file:
+
+[API Documentation](./docs/api.md)
+
+The API includes endpoints for:
+
+- Products
+- Categories
+- Orders
+- Customers
+- Inventory (colors, sizes, currencies)
+- Employees
+- Returns
+- Shop configuration
+
+All endpoints require authentication using an API token.
+
+---
+
 ## Notes
 
 - Images are built via GitHub Actions and pulled from GHCR
