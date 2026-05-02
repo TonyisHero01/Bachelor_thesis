@@ -105,8 +105,16 @@ final class ApiTokenAuthenticator extends AbstractAuthenticator
         Request $request,
         AuthenticationException $exception
     ): ?Response {
+        $this->logger->error('API AUTH FAILED', [
+            'path' => $request->getPathInfo(),
+            'message' => $exception->getMessage(),
+        ]);
+
         return new JsonResponse(
-            ['status' => 'error', 'message' => 'Unauthorized'],
+            [
+                'status' => 'error',
+                'message' => $exception->getMessage(),
+            ],
             Response::HTTP_UNAUTHORIZED
         );
     }
