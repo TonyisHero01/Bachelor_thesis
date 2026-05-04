@@ -53,6 +53,14 @@
       {% set __currs = currencies is defined and currencies is not empty ? currencies : [] %}
       {% set __active = activeCurrency is defined and activeCurrency ? activeCurrency : app.session.get('active_currency') %}
 
+      {% if not __active and currencies is defined and currencies is not empty %}
+        {% for c in currencies %}
+          {% if c.isDefault is defined and c.isDefault %}
+            {% set __active = c.name %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
       {% if not __active %}
         {% set __active = 'CZK' %}
       {% endif %}
