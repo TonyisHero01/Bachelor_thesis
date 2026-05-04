@@ -43,15 +43,6 @@ def verify_api_key(request: Request) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-@app.on_event("startup")
-def startup_event():
-    try:
-        updated = rebuild_search_index()
-        logger.info("Search index loaded on startup: %s documents", updated)
-    except Exception:
-        logger.exception("Failed to build search index on startup")
-
-
 @app.get("/health")
 def health():
     return {

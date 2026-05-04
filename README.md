@@ -2,7 +2,9 @@
 
 ## About
 
-This project is a modular e-commerce system built with Symfony (PHP) and FastAPI (Python).
+This project is a modular e-commerce system built with Symfony (PHP) and FastAPI (Python),
+consisting of a customer-facing frontend (Frontweb), an administrative backend (BMS),
+and a separate search service for product retrieval.
 It uses Docker and GitHub Container Registry (GHCR) for fully remote image builds and local runtime.
 
 ---
@@ -55,11 +57,12 @@ docker compose up -d
 
 ---
 
-## Architecture (Docker Services)
+## System Architecture (Docker Services)
+The system is composed of multiple services running in isolated Docker containers:
 
 - bms → http://localhost:8083  
 - frontweb → http://localhost:8082  
-- python-api → internal service  
+- python-api → search service (TF-IDF based, HTTP API) 
 - db → PostgreSQL  
 
 ---
@@ -112,6 +115,6 @@ All endpoints require authentication using an API token.
 
 ## Notes
 
-- Images are built via GitHub Actions and pulled from GHCR
-- No local build is required
+- Images are built via GitHub Actions and published to GHCR
+- The system is deployed using prebuilt images (no local build required)
 - `.env` is not committed, use `.env.example`
