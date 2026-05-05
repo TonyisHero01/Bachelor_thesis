@@ -93,8 +93,10 @@ services:
     image: ${GHCR_NAMESPACE}/eshop-benchmark:${IMAGE_TAG}
     depends_on:
       - search-service
+      - bms
     environment:
       SEARCH_URL: http://search-service:8000
+      BMS_URL: http://bms
     profiles:
       - tools
     networks:

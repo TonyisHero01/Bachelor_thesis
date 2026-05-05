@@ -15,7 +15,7 @@ QUERIES = [
 
 RESULTS = []
 
-FRONTWEB_URL = os.getenv("BMS_URL")
+BMS_URL = os.getenv("BMS_URL")
 
 def run_test():
     print("Running benchmark...")
@@ -44,7 +44,7 @@ def run_test():
         times_sql = []
         for _ in range(5):
             start = time.perf_counter()
-            r = requests.get(f"{FRONTWEB_URL}/search-like", params={"q": q})
+            r = requests.get(f"{BMS_URL}/search-like", params={"q": q})
             times_sql.append((time.perf_counter() - start) * 1000)
 
         avg_sql = sum(times_sql) / len(times_sql)
