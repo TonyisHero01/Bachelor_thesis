@@ -143,8 +143,16 @@ class SearchController extends BaseController
 
         $query = $request->query->get('query');
         if (is_string($query) && trim($query) !== '') {
+            $query = trim($query);
+
             $searchResults = $this->runSearchAndResolveLatestProductIds($query);
             $session->set('search_results', $searchResults);
+
+            $this->saveCustomerSearchLog(
+                $request,
+                $query,
+                count($searchResults)
+            );
         }
 
         $categoriesRepo = $this->entityManager->getRepository(Category::class);
