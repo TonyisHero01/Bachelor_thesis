@@ -231,4 +231,27 @@ final class ProductSearchController extends BaseController
             'categories' => $categories,
         ], $request);
     }
+
+    #[Route('/search-like', methods: ['GET'])]
+    public function searchLike(Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $query = $request->query->get('q', '');
+
+        $results = $em->createQueryBuilder()
+            ->select('p')
+            ->from(Product::class, 'p')
+            ->where('p.name LIKE :q OR p.description LIKE :q')
+            ->andWhere('p.hidden = false')
+            ->setParameter('q', '%' . $query . '%')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getResult();
+
+        return $this->json([
+            'results' => array_map(fn($p) => [
+                'id' => $p->getId(),
+                'name' => $p->getName(),
+            ], $results)
+        ]);
+    }
 }
