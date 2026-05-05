@@ -89,6 +89,15 @@ services:
         condition: service_started
     networks:
       - backend
+  benchmark:
+    build:
+      context: ./benchmark
+    depends_on:
+      - search-service
+    environment:
+      SEARCH_URL: http://search-service:8000
+    profiles:
+      - tools
 
 networks:
   backend:

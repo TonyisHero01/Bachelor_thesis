@@ -2,7 +2,7 @@ import random
 import psycopg2
 from datetime import datetime
 
-DB_HOST = "localhost"
+DB_HOST = "db"
 DB_PORT = 5432
 DB_NAME = "app"
 DB_USER = "user"
