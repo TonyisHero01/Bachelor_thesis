@@ -17,6 +17,10 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Twig\Environment;
+use App\Entity\CustomerSearchLog;
+use App\Entity\Order;
+use App\Entity\OrderItem;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class EshopProductController extends BaseController
 {
@@ -63,7 +67,7 @@ class EshopProductController extends BaseController
      * Displays product detail page for the given product id.
      */
     #[Route('/product/{id}', name: 'show_eshop_product', methods: ['GET'])]
-    public function show(Request $request, int $id, SearchController $searchController): Response
+    public function show(Request $request, int $id, HttpClientInterface $httpClient): Response
     {
         $productRepo = $this->entityManager->getRepository(Product::class);
 
@@ -82,48 +86,12 @@ class EshopProductController extends BaseController
 
         $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
 
-        $recommendedProducts = [];
-
-        if ($product->getSku()) {
-            $recommendedRows = $searchController->getRecommendedProductIdsBySku($product->getSku(), 5);
-
-            $recommendedIds = array_values(array_unique(array_filter(array_map(
-                static fn (array $row): int => (int) ($row['id'] ?? 0),
-                $recommendedRows
-            ))));
-
-            if ($recommendedIds !== []) {
-                $recommendedRaw = $this->entityManager
-                    ->getRepository(Product::class)
-                    ->findBy(['id' => $recommendedIds]);
-
-                $recommendedMap = [];
-
-                foreach ($recommendedRaw as $recommendedProduct) {
-                    if (!$recommendedProduct instanceof Product) {
-                        continue;
-                    }
-
-                    if ($recommendedProduct->getImageUrls() === null || $recommendedProduct->getImageUrls() === []) {
-                        continue;
-                    }
-
-                    $recommendedMap[$recommendedProduct->getId()] = $recommendedProduct;
-                }
-
-                foreach ($recommendedRows as $row) {
-                    $recommendedId = (int) ($row['id'] ?? 0);
-
-                    if ($recommendedId <= 0 || !isset($recommendedMap[$recommendedId])) {
-                        continue;
-                    }
-
-                    $recommendedProduct = $recommendedMap[$recommendedId];
-                    $recommendedProduct->similarity = (float) ($row['similarity'] ?? 0.0);
-                    $recommendedProducts[] = $recommendedProduct;
-                }
-            }
-        }
+        $recommendedProducts = $this->buildHybridRecommendations(
+            $request,
+            $product,
+            $httpClient,
+            5
+        );
 
         return $this->renderLocalized(
             'eshop_product/index.html.twig',
@@ -236,5 +204,284 @@ class EshopProductController extends BaseController
             ->getSingleScalarResult();
 
         return new JsonResponse(['cartCount' => (int) $cartTotalQuantity]);
+    }
+
+    private function buildHybridRecommendations(
+        Request $request,
+        Product $currentProduct,
+        HttpClientInterface $httpClient,
+        int $limit = 5
+    ): array {
+        $scores = [];
+
+        $this->addTfidfScores($scores, $currentProduct, $httpClient);
+        $this->addAttributeScores($scores, $currentProduct);
+        $this->addWishlistScores($scores, $request);
+        $this->addOrderHistoryScores($scores, $request);
+        $this->addSearchHistoryScores($scores, $request, $httpClient);
+
+        unset($scores[$currentProduct->getSku()]);
+
+        arsort($scores);
+
+        $skus = array_slice(array_keys($scores), 0, $limit * 3);
+
+        if ($skus === []) {
+            return [];
+        }
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.id, p.sku')
+            ->from(Product::class, 'p')
+            ->where('p.sku IN (:skus)')
+            ->andWhere('p.hidden = false')
+            ->setParameter('skus', $skus)
+            ->orderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $skuToLatestId = [];
+
+        foreach ($rows as $row) {
+            $sku = (string) ($row['sku'] ?? '');
+            $id = (int) ($row['id'] ?? 0);
+
+            if ($sku !== '' && $id > 0 && !isset($skuToLatestId[$sku])) {
+                $skuToLatestId[$sku] = $id;
+            }
+        }
+
+        $ids = [];
+
+        foreach ($skus as $sku) {
+            if (isset($skuToLatestId[$sku])) {
+                $ids[] = $skuToLatestId[$sku];
+            }
+        }
+
+        $ids = array_slice($ids, 0, $limit);
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $productsRaw = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $ids]);
+
+        $productMap = [];
+
+        foreach ($productsRaw as $product) {
+            if ($product instanceof Product) {
+                $productMap[$product->getId()] = $product;
+            }
+        }
+
+        $products = [];
+
+        foreach ($ids as $productId) {
+            if (isset($productMap[$productId])) {
+                $products[] = $productMap[$productId];
+            }
+        }
+
+        return $products;
+    }
+
+    private function addTfidfScores(array &$scores, Product $product, HttpClientInterface $httpClient): void
+    {
+        $sku = trim((string) $product->getSku());
+
+        if ($sku === '') {
+            return;
+        }
+
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+            $response = $httpClient->request('GET', $baseUrl . '/recommend/' . rawurlencode($sku), [
+                'query' => ['limit' => 20],
+                'timeout' => 5,
+            ]);
+
+            if ($response->getStatusCode() >= 400) {
+                return;
+            }
+
+            $data = $response->toArray(false);
+
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $recommendedSku = trim((string) ($row['product_sku'] ?? ''));
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($recommendedSku === '' || $similarity <= 0) {
+                    continue;
+                }
+
+                $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0) + ($similarity * 1.0);
+            }
+        } catch (\Throwable) {
+            return;
+        }
+    }
+
+    private function addAttributeScores(array &$scores, Product $currentProduct): void
+    {
+        $queryBuilder = $this->entityManager->createQueryBuilder();
+
+        $candidates = $queryBuilder
+            ->select('p')
+            ->from(Product::class, 'p')
+            ->where('p.sku != :currentSku')
+            ->andWhere('p.hidden = false')
+            ->setParameter('currentSku', $currentProduct->getSku())
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($candidates as $candidate) {
+            if (!$candidate instanceof Product || !$candidate->getSku()) {
+                continue;
+            }
+
+            $score = 0.0;
+
+            if ($currentProduct->getCategory() && $candidate->getCategory()
+                && $currentProduct->getCategory()->getId() === $candidate->getCategory()->getId()) {
+                $score += 0.35;
+            }
+
+            if ($currentProduct->getColor() && $candidate->getColor()
+                && $currentProduct->getColor()->getId() === $candidate->getColor()->getId()) {
+                $score += 0.10;
+            }
+
+            if ($currentProduct->getSize() && $candidate->getSize()
+                && $currentProduct->getSize()->getId() === $candidate->getSize()->getId()) {
+                $score += 0.10;
+            }
+
+            if ($score > 0) {
+                $scores[$candidate->getSku()] = ($scores[$candidate->getSku()] ?? 0) + $score;
+            }
+        }
+    }
+
+    private function addWishlistScores(array &$scores, Request $request): void
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return;
+        }
+
+        $wishlistIds = $user->getWishlist();
+
+        if ($wishlistIds === []) {
+            return;
+        }
+
+        $products = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $wishlistIds]);
+
+        foreach ($products as $product) {
+            if ($product instanceof Product && $product->getSku()) {
+                $scores[$product->getSku()] = ($scores[$product->getSku()] ?? 0) + 0.30;
+            }
+        }
+    }
+
+    private function addOrderHistoryScores(array &$scores, Request $request): void
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return;
+        }
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('oi.sku AS sku')
+            ->from(OrderItem::class, 'oi')
+            ->join('oi.order', 'o')
+            ->where('o.customer = :customer')
+            ->setParameter('customer', $user)
+            ->setMaxResults(50)
+            ->getQuery()
+            ->getArrayResult();
+
+        foreach ($rows as $row) {
+            $sku = trim((string) ($row['sku'] ?? ''));
+
+            if ($sku !== '') {
+                $scores[$sku] = ($scores[$sku] ?? 0) + 0.25;
+            }
+        }
+    }
+
+    private function addSearchHistoryScores(array &$scores, Request $request, HttpClientInterface $httpClient): void
+    {
+        $user = $this->getUser();
+
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('l.query')
+            ->from(CustomerSearchLog::class, 'l')
+            ->orderBy('l.createdAt', 'DESC')
+            ->setMaxResults(5);
+
+        if ($user instanceof Customer) {
+            $qb->where('l.customer = :customer')
+                ->setParameter('customer', $user);
+        } else {
+            $qb->where('l.sessionId = :sessionId')
+                ->setParameter('sessionId', $request->getSession()->getId());
+        }
+
+        $logs = $qb->getQuery()->getArrayResult();
+
+        foreach ($logs as $log) {
+            $query = trim((string) ($log['query'] ?? ''));
+
+            if ($query === '') {
+                continue;
+            }
+
+            try {
+                $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+                $response = $httpClient->request('POST', $baseUrl . '/search', [
+                    'json' => [
+                        'query' => $query,
+                        'limit' => 10,
+                    ],
+                    'timeout' => 5,
+                ]);
+
+                if ($response->getStatusCode() >= 400) {
+                    continue;
+                }
+
+                $data = $response->toArray(false);
+
+                foreach (($data['results'] ?? []) as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+
+                    $sku = trim((string) ($row['product_sku'] ?? ''));
+                    $similarity = (float) ($row['similarity'] ?? 0);
+
+                    if ($sku !== '' && $similarity > 0) {
+                        $scores[$sku] = ($scores[$sku] ?? 0) + ($similarity * 0.20);
+                    }
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
     }
 }

@@ -59,6 +59,27 @@ class SearchRelevanceConfig
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    #[ORM\Column(type: 'float', options: ['default' => 1.0])]
+    private float $tfidfRecommendationWeight = 1.0;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.35])]
+    private float $sameCategoryRecommendationWeight = 0.35;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.10])]
+    private float $sameColorRecommendationWeight = 0.10;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.10])]
+    private float $sameSizeRecommendationWeight = 0.10;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.30])]
+    private float $wishlistRecommendationWeight = 0.30;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.25])]
+    private float $orderHistoryRecommendationWeight = 0.25;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.20])]
+    private float $searchHistoryRecommendationWeight = 0.20;
+
     public function __construct()
     {
         $now = new \DateTimeImmutable();
@@ -116,5 +137,82 @@ class SearchRelevanceConfig
     public function touch(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+        public function getTfidfRecommendationWeight(): float
+    {
+        return $this->tfidfRecommendationWeight;
+    }
+
+    public function setTfidfRecommendationWeight(float $weight): static
+    {
+        $this->tfidfRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getSameCategoryRecommendationWeight(): float
+    {
+        return $this->sameCategoryRecommendationWeight;
+    }
+
+    public function setSameCategoryRecommendationWeight(float $weight): static
+    {
+        $this->sameCategoryRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getSameColorRecommendationWeight(): float
+    {
+        return $this->sameColorRecommendationWeight;
+    }
+
+    public function setSameColorRecommendationWeight(float $weight): static
+    {
+        $this->sameColorRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getSameSizeRecommendationWeight(): float
+    {
+        return $this->sameSizeRecommendationWeight;
+    }
+
+    public function setSameSizeRecommendationWeight(float $weight): static
+    {
+        $this->sameSizeRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getWishlistRecommendationWeight(): float
+    {
+        return $this->wishlistRecommendationWeight;
+    }
+
+    public function setWishlistRecommendationWeight(float $weight): static
+    {
+        $this->wishlistRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getOrderHistoryRecommendationWeight(): float
+    {
+        return $this->orderHistoryRecommendationWeight;
+    }
+
+    public function setOrderHistoryRecommendationWeight(float $weight): static
+    {
+        $this->orderHistoryRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getSearchHistoryRecommendationWeight(): float
+    {
+        return $this->searchHistoryRecommendationWeight;
+    }
+
+    public function setSearchHistoryRecommendationWeight(float $weight): static
+    {
+        $this->searchHistoryRecommendationWeight = $weight;
+        return $this;
     }
 }

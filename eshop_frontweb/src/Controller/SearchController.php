@@ -17,6 +17,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Twig\Environment;
+use App\Entity\Customer;
+use App\Entity\CustomerSearchLog;
 
 class SearchController extends BaseController
 {
@@ -118,6 +120,12 @@ class SearchController extends BaseController
         }
 
         $session->set('search_results', $sortedResults);
+
+        $this->saveCustomerSearchLog(
+            $request,
+            $query,
+            count($sortedResults)
+        );
 
         return new JsonResponse(['results' => $sortedResults]);
     }
@@ -496,6 +504,28 @@ class SearchController extends BaseController
             ]);
 
             return null;
+        }
+    }
+
+    private function saveCustomerSearchLog(Request $request, string $query, int $resultCount): void
+    {
+        try {
+            $user = $this->getUser();
+            $customer = $user instanceof Customer ? $user : null;
+
+            $log = new CustomerSearchLog();
+            $log->setCustomer($customer);
+            $log->setQuery($query);
+            $log->setResultCount($resultCount);
+            $log->setSessionId($request->getSession()->getId());
+
+            $this->entityManager->persist($log);
+            $this->entityManager->flush();
+        } catch (\Throwable $e) {
+            $this->logger->warning('[SearchController] Failed to save customer search log', [
+                'query' => $query,
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 }

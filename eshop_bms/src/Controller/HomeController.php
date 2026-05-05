@@ -298,6 +298,14 @@ class HomeController extends BaseController
                 $searchConfig->setSameColorBonus((float) ($config['sameColorBonus'] ?? 0.10));
                 $searchConfig->setSameSizeBonus((float) ($config['sameSizeBonus'] ?? 0.10));
 
+                $searchConfig->setTfidfRecommendationWeight((float) ($config['tfidfRecommendationWeight'] ?? 1.0));
+                $searchConfig->setSameCategoryRecommendationWeight((float) ($config['sameCategoryRecommendationWeight'] ?? 0.35));
+                $searchConfig->setSameColorRecommendationWeight((float) ($config['sameColorRecommendationWeight'] ?? 0.10));
+                $searchConfig->setSameSizeRecommendationWeight((float) ($config['sameSizeRecommendationWeight'] ?? 0.10));
+                $searchConfig->setWishlistRecommendationWeight((float) ($config['wishlistRecommendationWeight'] ?? 0.30));
+                $searchConfig->setOrderHistoryRecommendationWeight((float) ($config['orderHistoryRecommendationWeight'] ?? 0.25));
+                $searchConfig->setSearchHistoryRecommendationWeight((float) ($config['searchHistoryRecommendationWeight'] ?? 0.20));
+
                 $searchConfig->touch();
             }
 
