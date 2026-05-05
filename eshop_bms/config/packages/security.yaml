@@ -50,6 +50,7 @@ security:
     - { path: ^/css, roles: PUBLIC_ACCESS }
     - { path: ^/js, roles: PUBLIC_ACCESS }
     - { path: ^/api/v1/health, roles: PUBLIC_ACCESS }
+    - { path: ^/search-like$, roles: PUBLIC_ACCESS }
     - { path: ^/api/v1, roles: IS_AUTHENTICATED_FULLY }
     - {
         path: ^/,
