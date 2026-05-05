@@ -63,7 +63,9 @@ final class ProductController extends BaseController
         HttpClientInterface $httpClient,
         LoggerInterface $logger,
         string $event,
-        array $payload = []
+        array $payload = [],
+        string $mode = 'partial',
+        ?string $sku = null
     ): void {
         $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
@@ -74,16 +76,32 @@ final class ProductController extends BaseController
 
         $apiKey = (string) $this->getParameter('search_api_key');
 
+        $body = [
+            'mode' => $mode,
+            'reason' => $event,
+            'context' => $payload,
+        ];
+
+        if ($mode === 'partial') {
+            $sku = trim((string) ($sku ?? ($payload['sku'] ?? '')));
+
+            if ($sku === '') {
+                $logger->warning('[ProductController] Missing SKU for partial reindex.', [
+                    'event' => $event,
+                    'payload' => $payload,
+                ]);
+                return;
+            }
+
+            $body['sku'] = $sku;
+        }
+
         try {
             $response = $httpClient->request('POST', $baseUrl . '/reindex', [
                 'headers' => [
                     'X-API-KEY' => $apiKey,
                 ],
-                'json' => [
-                    'mode' => 'full',
-                    'reason' => $event,
-                    'context' => $payload,
-                ],
+                'json' => $body,
                 'timeout' => 10,
             ]);
 
@@ -93,6 +111,8 @@ final class ProductController extends BaseController
                 $logger->error('[ProductController] Reindex request failed.', [
                     'statusCode' => $statusCode,
                     'event' => $event,
+                    'mode' => $mode,
+                    'sku' => $sku,
                     'payload' => $payload,
                     'response' => $response->getContent(false),
                 ]);
@@ -100,13 +120,17 @@ final class ProductController extends BaseController
                 return;
             }
 
-            $logger->info('[ProductController] Search index rebuilt.', [
+            $logger->info('[ProductController] Search index updated.', [
                 'event' => $event,
+                'mode' => $mode,
+                'sku' => $sku,
                 'payload' => $payload,
             ]);
         } catch (\Throwable $e) {
             $logger->error('[ProductController] Failed to notify search-service: ' . $e->getMessage(), [
                 'event' => $event,
+                'mode' => $mode,
+                'sku' => $sku,
                 'payload' => $payload,
             ]);
         }
@@ -185,7 +209,7 @@ final class ProductController extends BaseController
         $this->notifyReindex($httpClient, $logger, 'product_create', [
             'sku' => $sku,
             'productId' => $product->getId(),
-        ]);
+        ], 'partial', $sku);
 
         return new JsonResponse(['success' => true, 'id' => $product->getId()]);
     }
@@ -355,7 +379,7 @@ final class ProductController extends BaseController
                     'id' => $currentProduct->getId(),
                     'sku' => $currentProduct->getSku(),
                     'noVersionUpdate' => true,
-                ]);
+                ], 'partial', $currentProduct->getSku());
 
                 return new JsonResponse(['status' => 'Success', 'message' => 'Updated current version']);
             }
@@ -429,7 +453,7 @@ final class ProductController extends BaseController
                 'newId' => $newProduct->getId(),
                 'sku' => $currentProduct->getSku(),
                 'noVersionUpdate' => false,
-            ]);
+            ], 'partial', $currentProduct->getSku());
 
             return new JsonResponse(['status' => 'Success', 'new_product_id' => $newProduct->getId()]);
         } catch (\Throwable $e) {
@@ -464,7 +488,7 @@ final class ProductController extends BaseController
         $this->notifyReindex($httpClient, $logger, 'product_delete', [
             'sku' => $sku,
             'deletedVersions' => count($productsWithSameSku),
-        ]);
+        ], 'partial', $sku);
 
         return new JsonResponse(['success' => true]);
     }
