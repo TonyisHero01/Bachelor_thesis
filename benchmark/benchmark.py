@@ -29,19 +29,24 @@ app = FastAPI(title="E-shop Search Benchmark")
 def request_json(method: str, url: str, **kwargs):
     start = time.perf_counter()
 
-    if method == "POST":
-        response = requests.post(url, timeout=10, **kwargs)
-    else:
-        response = requests.get(url, timeout=10, **kwargs)
-
-    elapsed_ms = (time.perf_counter() - start) * 1000
-
     try:
-        data = response.json()
-    except Exception:
-        data = {"error": response.text[:500]}
+        if method == "POST":
+            response = requests.post(url, timeout=10, **kwargs)
+        else:
+            response = requests.get(url, timeout=10, **kwargs)
 
-    return response.status_code, data, elapsed_ms
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        try:
+            data = response.json()
+        except Exception:
+            data = {"error": response.text[:500]}
+
+        return response.status_code, data, elapsed_ms
+
+    except Exception as exc:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        return 0, {"error": str(exc)}, elapsed_ms
 
 
 def run_benchmark():
@@ -109,6 +114,112 @@ def run_benchmark():
     return rows
 
 
+def build_comparison_rows(rows):
+    grouped = {}
+
+    for row in rows:
+        if row["type"] == "vector_cold":
+            continue
+
+        query = row["query"]
+
+        if query not in grouped:
+            grouped[query] = {
+                "vector_ms": None,
+                "sql_ms": None,
+                "vector_count": None,
+                "sql_count": None,
+                "vector_status": None,
+                "sql_status": None,
+            }
+
+        if row["type"] == "vector":
+            grouped[query]["vector_ms"] = row["response_time_ms"]
+            grouped[query]["vector_count"] = row["result_count"]
+            grouped[query]["vector_status"] = row["status"]
+
+        if row["type"] == "sql_like":
+            grouped[query]["sql_ms"] = row["response_time_ms"]
+            grouped[query]["sql_count"] = row["result_count"]
+            grouped[query]["sql_status"] = row["status"]
+
+    table_rows = ""
+
+    for query, data in grouped.items():
+        vector_ms = data["vector_ms"]
+        sql_ms = data["sql_ms"]
+
+        vector_ms_text = f"{vector_ms:.2f}" if vector_ms is not None else "-"
+        sql_ms_text = f"{sql_ms:.2f}" if sql_ms is not None else "-"
+
+        if vector_ms is not None and sql_ms is not None:
+            faster = "Vector" if vector_ms < sql_ms else "SQL LIKE"
+            difference = abs(vector_ms - sql_ms)
+            difference_text = f"{difference:.2f} ms"
+        else:
+            faster = "-"
+            difference_text = "-"
+
+        table_rows += f"""
+        <tr>
+            <td>{query}</td>
+            <td>{vector_ms_text}</td>
+            <td>{sql_ms_text}</td>
+            <td>{data["vector_count"] if data["vector_count"] is not None else "-"}</td>
+            <td>{data["sql_count"] if data["sql_count"] is not None else "-"}</td>
+            <td>{faster}</td>
+            <td>{difference_text}</td>
+            <td>{data["vector_status"] if data["vector_status"] is not None else "-"}</td>
+            <td>{data["sql_status"] if data["sql_status"] is not None else "-"}</td>
+        </tr>
+        """
+
+    return table_rows
+
+
+def build_summary(rows):
+    vector_rows = [r for r in rows if r["type"] == "vector" and r["status"] == 200]
+    sql_rows = [r for r in rows if r["type"] == "sql_like" and r["status"] == 200]
+    cold_rows = [r for r in rows if r["type"] == "vector_cold" and r["status"] == 200]
+
+    if not vector_rows or not sql_rows:
+        return """
+        <div class="summary">
+            <div class="summary-box">No complete benchmark data available.</div>
+        </div>
+        """
+
+    vector_avg = statistics.mean(r["response_time_ms"] for r in vector_rows)
+    sql_avg = statistics.mean(r["response_time_ms"] for r in sql_rows)
+    cold_avg = statistics.mean(r["response_time_ms"] for r in cold_rows) if cold_rows else 0.0
+
+    if vector_avg < sql_avg:
+        faster_text = f"Vector search is {(sql_avg / vector_avg):.2f}× faster on average."
+    else:
+        faster_text = f"SQL LIKE is {(vector_avg / sql_avg):.2f}× faster on average."
+
+    return f"""
+    <div class="summary">
+        <div class="summary-box">
+            <strong>Vector avg</strong><br>
+            {vector_avg:.2f} ms
+        </div>
+        <div class="summary-box">
+            <strong>SQL LIKE avg</strong><br>
+            {sql_avg:.2f} ms
+        </div>
+        <div class="summary-box">
+            <strong>Vector cold start</strong><br>
+            {cold_avg:.2f} ms
+        </div>
+        <div class="summary-box">
+            <strong>Result</strong><br>
+            {faster_text}
+        </div>
+    </div>
+    """
+
+
 def rows_to_csv(rows):
     output = io.StringIO()
     writer = csv.DictWriter(
@@ -123,24 +234,15 @@ def rows_to_csv(rows):
 @app.get("/", response_class=HTMLResponse)
 def index():
     if not LAST_RESULTS:
+        summary_html = ""
         table_rows = """
         <tr>
-            <td colspan="5">No benchmark has been run yet. Click "Run benchmark again" to start.</td>
+            <td colspan="9">No benchmark has been run yet. Click "Run benchmark again" to start.</td>
         </tr>
         """
     else:
-        table_rows = ""
-
-        for row in LAST_RESULTS:
-            table_rows += f"""
-            <tr>
-                <td>{row["type"]}</td>
-                <td>{row["query"]}</td>
-                <td>{row["response_time_ms"]:.2f}</td>
-                <td>{row["result_count"]}</td>
-                <td>{row["status"]}</td>
-            </tr>
-            """
+        summary_html = build_summary(LAST_RESULTS)
+        table_rows = build_comparison_rows(LAST_RESULTS)
 
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -161,7 +263,7 @@ def index():
                 padding: 24px;
                 border-radius: 14px;
                 box-shadow: 0 6px 20px rgba(0,0,0,.08);
-                max-width: 1000px;
+                max-width: 1200px;
                 margin: auto;
             }}
             h1 {{
@@ -190,13 +292,23 @@ def index():
                 background: #222;
                 color: white;
                 text-decoration: none;
-                border: 0;
-                cursor: pointer;
                 margin-right: 8px;
             }}
             .meta {{
                 color: #666;
                 margin-bottom: 16px;
+            }}
+            .summary {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 14px;
+                margin-top: 20px;
+            }}
+            .summary-box {{
+                background: #f3f3f3;
+                border-radius: 12px;
+                padding: 16px;
+                line-height: 1.5;
             }}
         </style>
     </head>
@@ -215,14 +327,20 @@ def index():
                 <a href="/csv">Download CSV</a>
             </div>
 
+            {summary_html}
+
             <table>
                 <thead>
                     <tr>
-                        <th>Type</th>
                         <th>Query</th>
-                        <th>Avg response time (ms)</th>
-                        <th>Result count</th>
-                        <th>Status</th>
+                        <th>Vector avg time (ms)</th>
+                        <th>SQL LIKE avg time (ms)</th>
+                        <th>Vector result count</th>
+                        <th>SQL LIKE result count</th>
+                        <th>Faster method</th>
+                        <th>Difference</th>
+                        <th>Vector status</th>
+                        <th>SQL LIKE status</th>
                     </tr>
                 </thead>
                 <tbody>

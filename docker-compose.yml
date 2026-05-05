@@ -101,8 +101,6 @@ services:
       BMS_URL: http://bms
     ports:
       - "8084:8000"
-    profiles:
-      - tools
     networks:
       - backend
 
