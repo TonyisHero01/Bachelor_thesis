@@ -238,13 +238,9 @@
                             {% endif %}>
                         </div>
 
-                        <div class="recommended-product-info">
+                        <div class="recommended-product-body">
                             <div class="recommended-product-name">
                                 {{ recommendedName }}
-                            </div>
-
-                            <div class="recommended-product-sku">
-                                #{{ recommendedProduct.sku ?? recommendedProduct.id }}
                             </div>
 
                             {% if not shopInfo.hidePrices %}
