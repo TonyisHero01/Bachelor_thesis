@@ -91,12 +91,16 @@ services:
       - backend
   benchmark:
     image: ${GHCR_NAMESPACE}/eshop-benchmark:${IMAGE_TAG}
+    container_name: eshop_benchmark
+    restart: unless-stopped
     depends_on:
       - search-service
       - bms
     environment:
       SEARCH_URL: http://search-service:8000
       BMS_URL: http://bms
+    ports:
+      - "8084:8000"
     profiles:
       - tools
     networks:
