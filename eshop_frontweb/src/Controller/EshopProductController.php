@@ -63,7 +63,7 @@ class EshopProductController extends BaseController
      * Displays product detail page for the given product id.
      */
     #[Route('/product/{id}', name: 'show_eshop_product', methods: ['GET'])]
-    public function show(Request $request, int $id): Response
+    public function show(Request $request, int $id, SearchController $searchController): Response
     {
         $productRepo = $this->entityManager->getRepository(Product::class);
 
@@ -82,6 +82,49 @@ class EshopProductController extends BaseController
 
         $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
 
+        $recommendedProducts = [];
+
+        if ($product->getSku()) {
+            $recommendedRows = $searchController->getRecommendedProductIdsBySku($product->getSku(), 5);
+
+            $recommendedIds = array_values(array_unique(array_filter(array_map(
+                static fn (array $row): int => (int) ($row['id'] ?? 0),
+                $recommendedRows
+            ))));
+
+            if ($recommendedIds !== []) {
+                $recommendedRaw = $this->entityManager
+                    ->getRepository(Product::class)
+                    ->findBy(['id' => $recommendedIds]);
+
+                $recommendedMap = [];
+
+                foreach ($recommendedRaw as $recommendedProduct) {
+                    if (!$recommendedProduct instanceof Product) {
+                        continue;
+                    }
+
+                    if ($recommendedProduct->getImageUrls() === null || $recommendedProduct->getImageUrls() === []) {
+                        continue;
+                    }
+
+                    $recommendedMap[$recommendedProduct->getId()] = $recommendedProduct;
+                }
+
+                foreach ($recommendedRows as $row) {
+                    $recommendedId = (int) ($row['id'] ?? 0);
+
+                    if ($recommendedId <= 0 || !isset($recommendedMap[$recommendedId])) {
+                        continue;
+                    }
+
+                    $recommendedProduct = $recommendedMap[$recommendedId];
+                    $recommendedProduct->similarity = (float) ($row['similarity'] ?? 0.0);
+                    $recommendedProducts[] = $recommendedProduct;
+                }
+            }
+        }
+
         return $this->renderLocalized(
             'eshop_product/index.html.twig',
             [
@@ -92,6 +135,7 @@ class EshopProductController extends BaseController
                 'product' => $product,
                 'BMS_URL' => $this->getParameter('BMS_URL'),
                 'categories' => $categories,
+                'recommendedProducts' => $recommendedProducts,
             ],
             $request,
         );

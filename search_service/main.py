@@ -4,10 +4,17 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, Request
 
 from config import settings
-from schemas import SearchRequest, SearchResponse, ReindexRequest, ReindexResponse
+from schemas import (
+    SearchRequest,
+    SearchResponse,
+    ReindexRequest,
+    ReindexResponse,
+    RecommendResponse,
+)
 from services.search_service import (
     rebuild_search_index,
     search_products,
+    recommend_products,
     get_index_status,
 )
 
@@ -107,3 +114,15 @@ def reindex(req: ReindexRequest, request: Request):
 @app.post("/train")
 def train_compat(req: ReindexRequest, request: Request):
     return reindex(req, request)
+
+@app.get("/recommend/{sku}", response_model=RecommendResponse)
+def recommend_api(sku: str, limit: int = 10):
+    sku = sku.strip()
+
+    if not sku:
+        return {"results": []}
+
+    limit = min(limit, settings.max_search_limit)
+    results = recommend_products(sku, limit)
+
+    return {"results": results}

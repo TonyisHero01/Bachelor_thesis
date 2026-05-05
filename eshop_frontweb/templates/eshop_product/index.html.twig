@@ -219,7 +219,45 @@
             </div>
         </section>
     </div>
+    {% if recommendedProducts is defined and recommendedProducts is not empty %}
+        <section class="recommended-products-section">
+            <h2 class="section-title">Similar products</h2>
 
+            <div class="recommended-products-grid">
+                {% for recommendedProduct in recommendedProducts %}
+                    {% set recommendedName = recommendedProduct.getTranslatedName(locale) %}
+                    {% set recommendedImages = recommendedProduct.getImageUrls() %}
+                    {% set recommendedFirstImage = recommendedImages is not empty ? recommendedImages|first : null %}
+
+                    <a class="recommended-product-card"
+                    href="{{ path('product_detail', { id: recommendedProduct.id, _locale: locale }) }}">
+
+                        <div class="recommended-product-image"
+                            {% if recommendedFirstImage %}
+                                style="background-image: url('{{ BMS_URL }}/images/{{ recommendedFirstImage }}');"
+                            {% endif %}>
+                        </div>
+
+                        <div class="recommended-product-info">
+                            <div class="recommended-product-name">
+                                {{ recommendedName }}
+                            </div>
+
+                            <div class="recommended-product-sku">
+                                #{{ recommendedProduct.sku ?? recommendedProduct.id }}
+                            </div>
+
+                            {% if not shopInfo.hidePrices %}
+                                <div class="recommended-product-price">
+                                    {{ money(recommendedProduct.price) }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
 </div>
 
 <script>

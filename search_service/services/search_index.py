@@ -73,6 +73,46 @@ class SearchIndex:
         ]
 
         return results
+    
+    def recommend_by_sku(self, sku: str, limit: int = 10):
+        """
+        Recommend similar products based on TF-IDF cosine similarity.
+        """
+        if self.matrix is None:
+            logger.warning("Recommendation requested but index is empty")
+            return []
+
+        sku = (sku or "").strip()
+
+        if not sku or sku not in self.skus:
+            return []
+
+        product_index = self.skus.index(sku)
+        product_vector = self.matrix[product_index]
+
+        scores = cosine_similarity(product_vector, self.matrix).flatten()
+        idx = np.argsort(scores)[::-1]
+
+        results = []
+
+        for i in idx:
+            if self.skus[i] == sku:
+                continue
+
+            if scores[i] <= 0:
+                continue
+
+            results.append(
+                {
+                    "product_sku": self.skus[i],
+                    "similarity": float(scores[i]),
+                }
+            )
+
+            if len(results) >= limit:
+                break
+
+        return results
 
 
 # global singleton index (shared across requests)

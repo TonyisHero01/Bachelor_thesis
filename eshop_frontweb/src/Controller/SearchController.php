@@ -355,4 +355,147 @@ class SearchController extends BaseController
             return null;
         }
     }
+
+    /**
+     * Gets recommended product IDs from search-service by product SKU.
+     *
+     * @return array<int, array{id:int, similarity:float}>
+     */
+    public function getRecommendedProductIdsBySku(string $sku, int $limit = 5): array
+    {
+        $sku = trim($sku);
+
+        if ($sku === '') {
+            return [];
+        }
+
+        $raw = $this->callPythonApiRecommend($sku, $limit);
+
+        if ($raw === null) {
+            return [];
+        }
+
+        $skuToSimilarity = [];
+
+        foreach (($raw['results'] ?? []) as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $recommendedSku = isset($row['product_sku']) ? trim((string) $row['product_sku']) : '';
+            $similarity = $row['similarity'] ?? null;
+
+            if ($recommendedSku === '' || !is_numeric($similarity)) {
+                continue;
+            }
+
+            $skuToSimilarity[$recommendedSku] = (float) $similarity;
+        }
+
+        $recommendedSkus = array_keys($skuToSimilarity);
+
+        if ($recommendedSkus === []) {
+            return [];
+        }
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.id, p.sku')
+            ->from(Product::class, 'p')
+            ->where('p.sku IN (:skus)')
+            ->setParameter('skus', $recommendedSkus)
+            ->orderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $skuToLatestId = [];
+
+        foreach ($rows as $row) {
+            $rowSku = (string) ($row['sku'] ?? '');
+            $id = (int) ($row['id'] ?? 0);
+
+            if ($rowSku !== '' && $id > 0 && !isset($skuToLatestId[$rowSku])) {
+                $skuToLatestId[$rowSku] = $id;
+            }
+        }
+
+        $results = [];
+
+        foreach ($recommendedSkus as $recommendedSku) {
+            if (!isset($skuToLatestId[$recommendedSku])) {
+                continue;
+            }
+
+            $results[] = [
+                'id' => $skuToLatestId[$recommendedSku],
+                'similarity' => $skuToSimilarity[$recommendedSku],
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Call search-service GET /recommend/{sku}
+     *
+     * @return array<string, mixed>|null
+     */
+    private function callPythonApiRecommend(string $sku, int $limit): ?array
+    {
+        if ($this->searchServiceBaseUrl === '') {
+            $this->logger->error('[SearchController] SEARCH_SERVICE_BASE_URL empty');
+            return null;
+        }
+
+        $limit = max(1, min($limit, 50));
+        $url = $this->searchServiceBaseUrl . '/recommend/' . rawurlencode($sku);
+
+        try {
+            $response = $this->httpClient->request('GET', $url, [
+                'query' => [
+                    'limit' => $limit,
+                ],
+                'timeout' => 5,
+            ]);
+
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode < 200 || $statusCode >= 300) {
+                $this->logger->error('[SearchController] Recommend service returned non-2xx response', [
+                    'url' => $url,
+                    'statusCode' => $statusCode,
+                    'body' => substr($response->getContent(false), 0, 800),
+                ]);
+
+                return null;
+            }
+
+            $data = $response->toArray(false);
+
+            if (!isset($data['results']) || !is_array($data['results'])) {
+                $this->logger->error('[SearchController] Invalid recommend service response', [
+                    'url' => $url,
+                    'response' => $data,
+                ]);
+
+                return null;
+            }
+
+            return $data;
+        } catch (TransportExceptionInterface $e) {
+            $this->logger->error('[SearchController] Recommend service transport error', [
+                'url' => $url,
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        } catch (\Throwable $e) {
+            $this->logger->error('[SearchController] Recommend service exception', [
+                'url' => $url,
+                'message' => $e->getMessage(),
+                'class' => get_class($e),
+            ]);
+
+            return null;
+        }
+    }
 }

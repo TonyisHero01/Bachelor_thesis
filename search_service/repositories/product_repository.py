@@ -5,7 +5,8 @@ from database import get_connection
 
 def fetch_products() -> list[dict]:
     """
-    Fetch products with category name.
+    Fetch latest product version for each SKU with category name.
+    Latest version means the product row with the highest id.
     """
     with get_connection() as conn:
         with conn.cursor() as cursor:
@@ -13,7 +14,14 @@ def fetch_products() -> list[dict]:
                 """
                 SELECT p.*, c.name AS category
                 FROM product p
+                INNER JOIN (
+                    SELECT sku, MAX(id) AS max_id
+                    FROM product
+                    WHERE sku IS NOT NULL AND sku <> ''
+                    GROUP BY sku
+                ) latest ON latest.max_id = p.id
                 LEFT JOIN category c ON p.category_id = c.id
+                ORDER BY p.id DESC
                 """
             )
             return cursor.fetchall()

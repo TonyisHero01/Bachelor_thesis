@@ -33,3 +33,10 @@ class ReindexResponse(BaseModel):
     context: Dict[str, Any]
     ip: str
     ts: str
+
+class RecommendResult(BaseModel):
+    product_sku: str
+    similarity: float
+
+class RecommendResponse(BaseModel):
+    results: List[RecommendResult]

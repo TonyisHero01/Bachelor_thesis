@@ -19,6 +19,8 @@ def rebuild_search_index() -> int:
 def search_products(query: str, limit: int = 50):
     return search_index.search(query, limit)
 
+def recommend_products(sku: str, limit: int = 10):
+    return search_index.recommend_by_sku(sku, limit)
 
 def get_index_status() -> dict:
     return {
