@@ -230,7 +230,7 @@
                     {% set recommendedFirstImage = recommendedImages is not empty ? recommendedImages|first : null %}
 
                     <a class="recommended-product-card"
-                    href="{{ path('product_detail', { id: recommendedProduct.id, _locale: locale }) }}">
+                    href="{{ path('product', { id: recommendedProduct.id, _locale: locale }) }}">
 
                         <div class="recommended-product-image"
                             {% if recommendedFirstImage %}
