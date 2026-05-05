@@ -10,12 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class SearchIndex:
-    """
-    In-memory TF-IDF index.
-    - build once (on startup or /reindex)
-    - search many times (no re-fit on each query)
-    """
-
     def __init__(self):
         self.vectorizer = TfidfVectorizer(
             token_pattern=r"\b\w+\b",
@@ -25,15 +19,21 @@ class SearchIndex:
         self.skus: List[str] = []
         self.documents: List[str] = []
         self.matrix = None
+        self.metadata: Dict[str, dict] = {}
+        self.config: dict = {}
 
-    def rebuild(self, documents: Dict[str, str]) -> int:
-        """
-        Rebuild TF-IDF matrix from documents.
-        """
+    def rebuild(
+        self,
+        documents: Dict[str, str],
+        metadata: Dict[str, dict] | None = None,
+        config: dict | None = None,
+    ) -> int:
         logger.info("Rebuilding search index...")
 
         self.skus = list(documents.keys())
         self.documents = list(documents.values())
+        self.metadata = metadata or {}
+        self.config = config or {}
 
         if not self.documents:
             self.matrix = None
@@ -46,9 +46,6 @@ class SearchIndex:
         return len(self.documents)
 
     def search(self, query: str, limit: int = 50):
-        """
-        Search using cosine similarity.
-        """
         if self.matrix is None:
             logger.warning("Search requested but index is empty")
             return []
@@ -63,7 +60,7 @@ class SearchIndex:
 
         idx = np.argsort(scores)[::-1][:limit]
 
-        results = [
+        return [
             {
                 "product_sku": self.skus[i],
                 "similarity": float(scores[i]),
@@ -72,12 +69,7 @@ class SearchIndex:
             if scores[i] > 0
         ]
 
-        return results
-    
     def recommend_by_sku(self, sku: str, limit: int = 10):
-        """
-        Recommend similar products based on TF-IDF cosine similarity.
-        """
         if self.matrix is None:
             logger.warning("Recommendation requested but index is empty")
             return []
@@ -88,24 +80,65 @@ class SearchIndex:
             return []
 
         product_index = self.skus.index(sku)
-        product_vector = self.matrix[product_index]
+        base_sku = self.skus[product_index]
+        base_meta = self.metadata.get(base_sku, {})
 
-        scores = cosine_similarity(product_vector, self.matrix).flatten()
-        idx = np.argsort(scores)[::-1]
+        product_vector = self.matrix[product_index]
+        base_scores = cosine_similarity(product_vector, self.matrix).flatten()
+        adjusted_scores = base_scores.copy()
+
+        same_category_bonus = float(self.config.get("same_category_bonus", 0.0))
+        same_material_bonus = float(self.config.get("same_material_bonus", 0.0))
+        same_color_bonus = float(self.config.get("same_color_bonus", 0.0))
+        same_size_bonus = float(self.config.get("same_size_bonus", 0.0))
+
+        for i, candidate_sku in enumerate(self.skus):
+            if candidate_sku == base_sku:
+                adjusted_scores[i] = -1
+                continue
+
+            candidate_meta = self.metadata.get(candidate_sku, {})
+
+            if (
+                same_category_bonus > 0
+                and base_meta.get("category")
+                and base_meta.get("category") == candidate_meta.get("category")
+            ):
+                adjusted_scores[i] += same_category_bonus
+
+            if (
+                same_material_bonus > 0
+                and base_meta.get("material")
+                and base_meta.get("material") == candidate_meta.get("material")
+            ):
+                adjusted_scores[i] += same_material_bonus
+
+            if (
+                same_color_bonus > 0
+                and base_meta.get("color")
+                and base_meta.get("color") == candidate_meta.get("color")
+            ):
+                adjusted_scores[i] += same_color_bonus
+
+            if (
+                same_size_bonus > 0
+                and base_meta.get("size")
+                and base_meta.get("size") == candidate_meta.get("size")
+            ):
+                adjusted_scores[i] += same_size_bonus
+
+        idx = np.argsort(adjusted_scores)[::-1]
 
         results = []
 
         for i in idx:
-            if self.skus[i] == sku:
-                continue
-
-            if scores[i] <= 0:
+            if adjusted_scores[i] <= 0:
                 continue
 
             results.append(
                 {
                     "product_sku": self.skus[i],
-                    "similarity": float(scores[i]),
+                    "similarity": float(adjusted_scores[i]),
                 }
             )
 
@@ -115,5 +148,4 @@ class SearchIndex:
         return results
 
 
-# global singleton index (shared across requests)
 search_index = SearchIndex()

@@ -3,16 +3,69 @@ from typing import Dict
 from database import get_connection
 
 
+DEFAULT_RELEVANCE_CONFIG = {
+    "name_weight": 20,
+    "description_weight": 5,
+    "category_weight": 4,
+    "material_weight": 2,
+    "color_weight": 2,
+    "size_weight": 2,
+    "attributes_weight": 2,
+    "same_category_bonus": 0.35,
+    "same_material_bonus": 0.15,
+    "same_color_bonus": 0.10,
+    "same_size_bonus": 0.10,
+}
+
+
+def fetch_active_relevance_config() -> dict:
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    name_weight,
+                    description_weight,
+                    category_weight,
+                    material_weight,
+                    color_weight,
+                    size_weight,
+                    attributes_weight,
+                    same_category_bonus,
+                    same_material_bonus,
+                    same_color_bonus,
+                    same_size_bonus
+                FROM search_relevance_config
+                WHERE active = true
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            )
+
+            row = cursor.fetchone()
+
+            if not row:
+                return DEFAULT_RELEVANCE_CONFIG.copy()
+
+            config = DEFAULT_RELEVANCE_CONFIG.copy()
+            config.update(row)
+
+            return config
+
+
 def fetch_products() -> list[dict]:
     """
-    Fetch latest product version for each SKU with category name.
-    Latest version means the product row with the highest id.
+    Fetch latest product version for each SKU with category, color and size.
     """
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT p.*, c.name AS category
+                SELECT
+                    p.*,
+                    c.name AS category,
+                    co.name AS color,
+                    s.name AS size
                 FROM product p
                 INNER JOIN (
                     SELECT sku, MAX(id) AS max_id
@@ -21,6 +74,9 @@ def fetch_products() -> list[dict]:
                     GROUP BY sku
                 ) latest ON latest.max_id = p.id
                 LEFT JOIN category c ON p.category_id = c.id
+                LEFT JOIN ProductColor co ON p.color_id = co.id
+                LEFT JOIN Size s ON p.size_id = s.id
+                WHERE p.hidden = false
                 ORDER BY p.id DESC
                 """
             )
@@ -47,11 +103,7 @@ def count_distinct_skus() -> int:
             return int(cursor.fetchone()["cnt"])
 
 
-def build_documents(rows: list[dict], builder_fn) -> Dict[str, str]:
-    """
-    Convert DB rows into {sku: document}.
-    Deduplicate by SKU.
-    """
+def build_documents(rows: list[dict], builder_fn, config: dict) -> Dict[str, str]:
     documents: Dict[str, str] = {}
     seen = set()
 
@@ -66,7 +118,7 @@ def build_documents(rows: list[dict], builder_fn) -> Dict[str, str]:
         if not sku or sku in seen:
             continue
 
-        doc = builder_fn(row)
+        doc = builder_fn(row, config)
 
         if doc:
             documents[sku] = doc
