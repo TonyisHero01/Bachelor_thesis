@@ -1,8 +1,10 @@
 import logging
+import pickle
 from typing import Dict, List
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
+from scipy.sparse import vstack
+from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
@@ -11,16 +13,23 @@ logger = logging.getLogger(__name__)
 
 class SearchIndex:
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(
+        self.vectorizer = HashingVectorizer(
             token_pattern=r"\b\w+\b",
             lowercase=True,
             ngram_range=(1, 2),
+            n_features=2**18,
+            alternate_sign=False,
+            norm="l2",
         )
+
         self.skus: List[str] = []
         self.documents: List[str] = []
         self.matrix = None
         self.metadata: Dict[str, dict] = {}
         self.config: dict = {}
+
+    def vectorize_document(self, document: str):
+        return self.vectorizer.transform([document])
 
     def rebuild(
         self,
@@ -28,7 +37,7 @@ class SearchIndex:
         metadata: Dict[str, dict] | None = None,
         config: dict | None = None,
     ) -> int:
-        logger.info("Rebuilding search index...")
+        logger.info("[REINDEX][FULL] rebuilding in-memory search index")
 
         self.skus = list(documents.keys())
         self.documents = list(documents.values())
@@ -37,13 +46,104 @@ class SearchIndex:
 
         if not self.documents:
             self.matrix = None
-            logger.warning("No documents found for indexing")
+            logger.warning("[REINDEX][FULL] no documents found")
             return 0
 
-        self.matrix = self.vectorizer.fit_transform(self.documents)
+        self.matrix = self.vectorizer.transform(self.documents)
 
-        logger.info(f"Indexed {len(self.documents)} documents")
+        logger.info("[REINDEX][FULL] indexed %d documents", len(self.documents))
         return len(self.documents)
+
+    def rebuild_from_saved_vectors(
+        self,
+        rows: list[dict],
+        metadata: Dict[str, dict] | None = None,
+        config: dict | None = None,
+    ) -> int:
+        self.skus = []
+        self.documents = []
+        vectors = []
+
+        for row in rows:
+            sku = str(row.get("sku") or "").strip()
+            document = str(row.get("document") or "")
+            vector_blob = row.get("vector")
+
+            if not sku or vector_blob is None:
+                continue
+
+            vector = pickle.loads(vector_blob)
+
+            self.skus.append(sku)
+            self.documents.append(document)
+            vectors.append(vector)
+
+        self.metadata = metadata or {}
+        self.config = config or {}
+
+        if not vectors:
+            self.matrix = None
+            logger.warning("[INDEX] no saved vectors found")
+            return 0
+
+        self.matrix = vstack(vectors)
+        logger.info("[INDEX] loaded %d saved vectors", len(vectors))
+        return len(vectors)
+
+    def update_one(self, sku: str, document: str, vector, metadata: dict | None = None):
+        sku = sku.strip()
+
+        if not sku:
+            return
+
+        if sku in self.skus:
+            index = self.skus.index(sku)
+            self.documents[index] = document
+
+            if self.matrix is not None:
+                rows = [self.matrix[i] for i in range(self.matrix.shape[0])]
+                rows[index] = vector
+                self.matrix = vstack(rows)
+
+            logger.info("[REINDEX][PARTIAL] updated vector in memory for sku=%s", sku)
+        else:
+            self.skus.append(sku)
+            self.documents.append(document)
+
+            if self.matrix is None:
+                self.matrix = vector
+            else:
+                self.matrix = vstack([self.matrix, vector])
+
+            logger.info("[REINDEX][PARTIAL] added vector in memory for sku=%s", sku)
+
+        if metadata is not None:
+            self.metadata[sku] = metadata
+
+    def remove_one(self, sku: str):
+        sku = sku.strip()
+
+        if sku not in self.skus:
+            logger.info("[REINDEX][PARTIAL] sku=%s not found in memory index", sku)
+            return
+
+        index = self.skus.index(sku)
+
+        self.skus.pop(index)
+        self.documents.pop(index)
+        self.metadata.pop(sku, None)
+
+        if self.matrix is None:
+            return
+
+        rows = [
+            self.matrix[i]
+            for i in range(self.matrix.shape[0])
+            if i != index
+        ]
+
+        self.matrix = vstack(rows) if rows else None
+        logger.info("[REINDEX][PARTIAL] removed vector from memory for sku=%s", sku)
 
     def search(self, query: str, limit: int = 50):
         if self.matrix is None:
@@ -57,7 +157,6 @@ class SearchIndex:
 
         query_vector = self.vectorizer.transform([query])
         scores = cosine_similarity(query_vector, self.matrix).flatten()
-
         idx = np.argsort(scores)[::-1][:limit]
 
         return [

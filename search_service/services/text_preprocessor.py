@@ -12,13 +12,9 @@ def normalize_text(text: str) -> str:
 
 def repeat_text(text: str, weight: int) -> str:
     text = normalize_text(text)
-
-    if not text:
-        return ""
-
     weight = max(0, int(weight))
 
-    if weight <= 0:
+    if not text or weight <= 0:
         return ""
 
     return " ".join([text] * weight)

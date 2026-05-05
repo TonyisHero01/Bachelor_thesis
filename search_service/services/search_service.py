@@ -1,14 +1,23 @@
+import logging
 from typing import Dict
 
 from repositories.product_repository import (
     fetch_products,
+    fetch_latest_product_by_sku,
     fetch_active_relevance_config,
+    fetch_all_product_vectors,
+    save_product_vector,
+    delete_product_vector,
+    count_product_vectors,
     count_products,
     count_distinct_skus,
     build_documents,
 )
 from services.search_index import search_index
 from services.text_preprocessor import build_product_document, normalize_text
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_metadata(rows: list[dict]) -> Dict[str, dict]:
@@ -30,7 +39,18 @@ def build_metadata(rows: list[dict]) -> Dict[str, dict]:
     return metadata
 
 
+def build_one_metadata(row: dict) -> dict:
+    return {
+        "category": normalize_text(row.get("category") or ""),
+        "material": normalize_text(row.get("material") or ""),
+        "color": normalize_text(row.get("color") or ""),
+        "size": normalize_text(row.get("size") or ""),
+    }
+
+
 def rebuild_search_index() -> int:
+    logger.info("[REINDEX][FULL] started")
+
     config = fetch_active_relevance_config()
     rows = fetch_products()
 
@@ -42,18 +62,98 @@ def rebuild_search_index() -> int:
 
     metadata = build_metadata(rows)
 
-    return search_index.rebuild(
+    count = search_index.rebuild(
         documents=documents,
         metadata=metadata,
         config=config,
     )
 
+    for sku, document in documents.items():
+        vector = search_index.vectorize_document(document)
+        save_product_vector(sku, document, vector)
+        logger.info("[REINDEX][FULL] saved vector sku=%s", sku)
+
+    logger.info("[REINDEX][FULL] finished indexed=%d", count)
+
+    return count
+
+
+def rebuild_search_index_from_saved_vectors() -> int:
+    logger.info("[INDEX] loading saved vectors from database")
+
+    config = fetch_active_relevance_config()
+    rows = fetch_products()
+    metadata = build_metadata(rows)
+    vector_rows = fetch_all_product_vectors()
+
+    return search_index.rebuild_from_saved_vectors(
+        rows=vector_rows,
+        metadata=metadata,
+        config=config,
+    )
+
+
+def partial_reindex_product(sku: str) -> int:
+    sku = (sku or "").strip()
+
+    if not sku:
+        logger.warning("[REINDEX][PARTIAL] empty sku")
+        return 0
+
+    logger.info("[REINDEX][PARTIAL] started sku=%s", sku)
+
+    config = fetch_active_relevance_config()
+    search_index.config = config
+
+    row = fetch_latest_product_by_sku(sku)
+
+    if not row:
+        delete_product_vector(sku)
+        search_index.remove_one(sku)
+        logger.info("[REINDEX][PARTIAL] deleted sku=%s reason=not_found", sku)
+        return 0
+
+    if bool(row.get("hidden")):
+        delete_product_vector(sku)
+        search_index.remove_one(sku)
+        logger.info("[REINDEX][PARTIAL] deleted sku=%s reason=hidden", sku)
+        return 0
+
+    document = build_product_document(row, config)
+
+    if not document:
+        delete_product_vector(sku)
+        search_index.remove_one(sku)
+        logger.info("[REINDEX][PARTIAL] deleted sku=%s reason=empty_document", sku)
+        return 0
+
+    vector = search_index.vectorize_document(document)
+    metadata = build_one_metadata(row)
+
+    save_product_vector(sku, document, vector)
+    search_index.update_one(sku, document, vector, metadata)
+
+    logger.info(
+        "[REINDEX][PARTIAL] finished sku=%s product_id=%s document_length=%d",
+        sku,
+        row.get("id"),
+        len(document),
+    )
+
+    return 1
+
 
 def search_products(query: str, limit: int = 50):
+    if search_index.matrix is None:
+        rebuild_search_index_from_saved_vectors()
+
     return search_index.search(query, limit)
 
 
 def recommend_products(sku: str, limit: int = 10):
+    if search_index.matrix is None:
+        rebuild_search_index_from_saved_vectors()
+
     return search_index.recommend_by_sku(sku, limit)
 
 
@@ -61,5 +161,6 @@ def get_index_status() -> dict:
     return {
         "product_rows": count_products(),
         "distinct_skus": count_distinct_skus(),
+        "vector_rows": count_product_vectors(),
         "indexed_documents": len(search_index.documents),
     }

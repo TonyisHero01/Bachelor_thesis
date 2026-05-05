@@ -17,8 +17,9 @@ class SearchResponse(BaseModel):
 
 
 class ReindexRequest(BaseModel):
-    mode: str = Field(default="full", pattern="^(full|check)$")
+    mode: str = Field(default="full", pattern="^(full|check|partial)$")
     reason: str = Field(default="unknown", max_length=64)
+    sku: str | None = Field(default=None, max_length=255)
     context: Dict[str, Any] = Field(default_factory=dict)
 
 

@@ -1,3 +1,4 @@
+import pickle
 from typing import Dict
 
 from database import get_connection
@@ -54,9 +55,6 @@ def fetch_active_relevance_config() -> dict:
 
 
 def fetch_products() -> list[dict]:
-    """
-    Fetch latest product version for each SKU with category, color and size.
-    """
     with get_connection() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
@@ -81,6 +79,81 @@ def fetch_products() -> list[dict]:
                 """
             )
             return cursor.fetchall()
+
+
+def fetch_latest_product_by_sku(sku: str) -> dict | None:
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    p.*,
+                    c.name AS category,
+                    co.name AS color,
+                    s.name AS size
+                FROM product p
+                LEFT JOIN category c ON p.category_id = c.id
+                LEFT JOIN ProductColor co ON p.color_id = co.id
+                LEFT JOIN Size s ON p.size_id = s.id
+                WHERE p.sku = %s
+                ORDER BY p.id DESC
+                LIMIT 1
+                """,
+                (sku,),
+            )
+            return cursor.fetchone()
+
+
+def save_product_vector(sku: str, document: str, vector) -> None:
+    vector_blob = pickle.dumps(vector)
+
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO product_document_vector (sku, document, vector)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (sku)
+                DO UPDATE SET
+                    document = EXCLUDED.document,
+                    vector = EXCLUDED.vector
+                """,
+                (sku, document, vector_blob),
+            )
+        conn.commit()
+
+
+def delete_product_vector(sku: str) -> None:
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM product_document_vector
+                WHERE sku = %s
+                """,
+                (sku,),
+            )
+        conn.commit()
+
+
+def fetch_all_product_vectors() -> list[dict]:
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT sku, document, vector
+                FROM product_document_vector
+                WHERE vector IS NOT NULL
+                """
+            )
+            return cursor.fetchall()
+
+
+def count_product_vectors() -> int:
+    with get_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) AS cnt FROM product_document_vector;")
+            return int(cursor.fetchone()["cnt"])
 
 
 def count_products() -> int:
@@ -108,12 +181,7 @@ def build_documents(rows: list[dict], builder_fn, config: dict) -> Dict[str, str
     seen = set()
 
     for row in rows:
-        sku = row.get("sku")
-
-        if not sku:
-            continue
-
-        sku = str(sku).strip()
+        sku = str(row.get("sku") or "").strip()
 
         if not sku or sku in seen:
             continue

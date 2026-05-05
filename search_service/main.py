@@ -13,6 +13,7 @@ from schemas import (
 )
 from services.search_service import (
     rebuild_search_index,
+    partial_reindex_product,
     search_products,
     recommend_products,
     get_index_status,
@@ -87,7 +88,26 @@ def reindex(req: ReindexRequest, request: Request):
                 "mode": "check",
                 "product_rows": status["product_rows"],
                 "distinct_skus": status["distinct_skus"],
-                "vector_rows": status["indexed_documents"],
+                "vector_rows": status["vector_rows"],
+                "reason": req.reason,
+                "context": req.context,
+                "ip": client_ip(request),
+                "ts": started.isoformat() + "Z",
+            }
+
+        if req.mode == "partial":
+            if not req.sku:
+                raise HTTPException(
+                    status_code=400,
+                    detail="SKU is required for partial reindex",
+                )
+
+            updated = partial_reindex_product(req.sku)
+
+            return {
+                "ok": True,
+                "mode": "partial",
+                "updated": updated,
                 "reason": req.reason,
                 "context": req.context,
                 "ip": client_ip(request),
@@ -106,10 +126,11 @@ def reindex(req: ReindexRequest, request: Request):
             "ts": started.isoformat() + "Z",
         }
 
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Reindex failed")
         raise HTTPException(status_code=500, detail="Reindex failed")
-
 
 @app.post("/train")
 def train_compat(req: ReindexRequest, request: Request):
