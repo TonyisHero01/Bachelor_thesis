@@ -19,6 +19,7 @@ use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use App\Entity\Order;
 use App\Entity\OrderItem;
+use App\Entity\SearchRelevanceConfig;
 
 class HomeController extends BaseController
 {
@@ -53,6 +54,17 @@ class HomeController extends BaseController
         $shopInfo = $entityManager->getRepository(ShopInfo::class)->findOneBy([], ['id' => 'DESC']);
         $roles = \is_object($user) && method_exists($user, 'getRoles') ? $user->getRoles() : [];
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
+
+        $searchConfig = $entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        if ($searchConfig === null) {
+            $searchConfig = new SearchRelevanceConfig();
+            $searchConfig->setActive(true);
+            $entityManager->persist($searchConfig);
+            $entityManager->flush();
+        }
 
         $orderRows = $entityManager->createQueryBuilder()
             ->select('o.orderCreatedAt AS createdAt')
@@ -116,6 +128,7 @@ class HomeController extends BaseController
             'shopInfo' => $shopInfo,
             'roles' => $roles,
             'currencies' => $currencies,
+            'searchConfig' => $searchConfig,
             'sales' => $sales,
             'topProducts' => $topProducts,
             'topCustomers' => $topCustomers,
@@ -256,6 +269,37 @@ class HomeController extends BaseController
             $shopInfo->setShippingInfo(isset($input['shipping']) ? (string) $input['shipping'] : null);
             $shopInfo->setPayment(isset($input['payment']) ? (string) $input['payment'] : null);
             $shopInfo->setRefund(isset($input['refund']) ? (string) $input['refund'] : null);
+
+            $searchConfig = $entityManager
+                ->getRepository(SearchRelevanceConfig::class)
+                ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+            if ($searchConfig === null) {
+                $searchConfig = new SearchRelevanceConfig();
+                $searchConfig->setActive(true);
+                $entityManager->persist($searchConfig);
+            }
+
+            if (isset($input['searchConfig']) && is_array($input['searchConfig'])) {
+                $config = $input['searchConfig'];
+
+                $searchConfig->setName((string) ($config['name'] ?? 'Default relevance configuration'));
+
+                $searchConfig->setNameWeight((int) ($config['nameWeight'] ?? 20));
+                $searchConfig->setDescriptionWeight((int) ($config['descriptionWeight'] ?? 5));
+                $searchConfig->setCategoryWeight((int) ($config['categoryWeight'] ?? 4));
+                $searchConfig->setMaterialWeight((int) ($config['materialWeight'] ?? 2));
+                $searchConfig->setColorWeight((int) ($config['colorWeight'] ?? 2));
+                $searchConfig->setSizeWeight((int) ($config['sizeWeight'] ?? 2));
+                $searchConfig->setAttributesWeight((int) ($config['attributesWeight'] ?? 2));
+
+                $searchConfig->setSameCategoryBonus((float) ($config['sameCategoryBonus'] ?? 0.35));
+                $searchConfig->setSameMaterialBonus((float) ($config['sameMaterialBonus'] ?? 0.15));
+                $searchConfig->setSameColorBonus((float) ($config['sameColorBonus'] ?? 0.10));
+                $searchConfig->setSameSizeBonus((float) ($config['sameSizeBonus'] ?? 0.10));
+
+                $searchConfig->touch();
+            }
 
             if (isset($input['currencies']) && \is_array($input['currencies'])) {
                 $currencyRepo = $entityManager->getRepository(Currency::class);

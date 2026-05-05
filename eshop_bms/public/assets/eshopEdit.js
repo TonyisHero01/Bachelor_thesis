@@ -155,6 +155,20 @@ async function save_() {
         const companyNameElement = document.getElementById('company_name');
         const cinElement = document.getElementById('cin');
         const hidePricesElement = document.getElementById('hide_prices');
+        const searchConfigNameElement = document.getElementById('search_config_name');
+
+        const nameWeightElement = document.getElementById('name_weight');
+        const descriptionWeightElement = document.getElementById('description_weight');
+        const categoryWeightElement = document.getElementById('category_weight');
+        const materialWeightElement = document.getElementById('material_weight');
+        const colorWeightElement = document.getElementById('color_weight');
+        const sizeWeightElement = document.getElementById('size_weight');
+        const attributesWeightElement = document.getElementById('attributes_weight');
+
+        const sameCategoryBonusElement = document.getElementById('same_category_bonus');
+        const sameMaterialBonusElement = document.getElementById('same_material_bonus');
+        const sameColorBonusElement = document.getElementById('same_color_bonus');
+        const sameSizeBonusElement = document.getElementById('same_size_bonus');
 
         const imagePaths = Array.from(
             document.querySelectorAll('.image_path'),
@@ -230,6 +244,22 @@ async function save_() {
             cin: cinElement?.value ?? '',
             hidePrices: !!hidePricesElement?.checked,
             currencies,
+            searchConfig: {
+                name: searchConfigNameElement?.value || 'Default relevance configuration',
+
+                nameWeight: parseInt(nameWeightElement?.value || '20', 10),
+                descriptionWeight: parseInt(descriptionWeightElement?.value || '5', 10),
+                categoryWeight: parseInt(categoryWeightElement?.value || '4', 10),
+                materialWeight: parseInt(materialWeightElement?.value || '2', 10),
+                colorWeight: parseInt(colorWeightElement?.value || '2', 10),
+                sizeWeight: parseInt(sizeWeightElement?.value || '2', 10),
+                attributesWeight: parseInt(attributesWeightElement?.value || '2', 10),
+
+                sameCategoryBonus: parseFloat(sameCategoryBonusElement?.value || '0.35'),
+                sameMaterialBonus: parseFloat(sameMaterialBonusElement?.value || '0.15'),
+                sameColorBonus: parseFloat(sameColorBonusElement?.value || '0.10'),
+                sameSizeBonus: parseFloat(sameSizeBonusElement?.value || '0.10'),
+            },
         };
 
         if (logoUrlElement && logoUrlElement.value) {

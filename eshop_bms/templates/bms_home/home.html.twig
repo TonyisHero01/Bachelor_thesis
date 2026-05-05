@@ -69,6 +69,53 @@
       <label for="hide_prices">{{ translations.hide_prices ?? 'Hide Prices' }}</label>
       <input type="checkbox" id="hide_prices" name="hide_prices" {% if shopInfo.hidePrices %}checked{% endif %}>
 
+      <hr>
+
+      <h2>Search Relevance Configuration</h2>
+
+      <label for="search_config_name">Configuration Name</label>
+      <input type="text"
+            id="search_config_name"
+            value="{{ searchConfig.name }}"
+            maxlength="100"><br>
+
+      <h3>Field Weights</h3>
+
+      <label for="name_weight">Name Weight</label>
+      <input type="number" id="name_weight" value="{{ searchConfig.nameWeight }}" min="0" step="1"><br>
+
+      <label for="description_weight">Description Weight</label>
+      <input type="number" id="description_weight" value="{{ searchConfig.descriptionWeight }}" min="0" step="1"><br>
+
+      <label for="category_weight">Category Weight</label>
+      <input type="number" id="category_weight" value="{{ searchConfig.categoryWeight }}" min="0" step="1"><br>
+
+      <label for="material_weight">Material Weight</label>
+      <input type="number" id="material_weight" value="{{ searchConfig.materialWeight }}" min="0" step="1"><br>
+
+      <label for="color_weight">Color Weight</label>
+      <input type="number" id="color_weight" value="{{ searchConfig.colorWeight }}" min="0" step="1"><br>
+
+      <label for="size_weight">Size Weight</label>
+      <input type="number" id="size_weight" value="{{ searchConfig.sizeWeight }}" min="0" step="1"><br>
+
+      <label for="attributes_weight">Attributes Weight</label>
+      <input type="number" id="attributes_weight" value="{{ searchConfig.attributesWeight }}" min="0" step="1"><br>
+
+      <h3>Recommendation Bonuses</h3>
+
+      <label for="same_category_bonus">Same Category Bonus</label>
+      <input type="number" id="same_category_bonus" value="{{ searchConfig.sameCategoryBonus }}" min="0" step="0.01"><br>
+
+      <label for="same_material_bonus">Same Material Bonus</label>
+      <input type="number" id="same_material_bonus" value="{{ searchConfig.sameMaterialBonus }}" min="0" step="0.01"><br>
+
+      <label for="same_color_bonus">Same Color Bonus</label>
+      <input type="number" id="same_color_bonus" value="{{ searchConfig.sameColorBonus }}" min="0" step="0.01"><br>
+
+      <label for="same_size_bonus">Same Size Bonus</label>
+      <input type="number" id="same_size_bonus" value="{{ searchConfig.sameSizeBonus }}" min="0" step="0.01"><br>
+
       <label for="logo_url">LOGO</label><br>
       <img id="logo_preview" src="{{ shopInfo.logo ? asset('images/' ~ shopInfo.logo) : '' }}" alt="Logo" width="304" height="228"><br>
       <input id="logo_url" type="file" accept="image/*" onchange="handleLogoUpload(event)">
