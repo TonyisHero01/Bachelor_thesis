@@ -33,6 +33,9 @@ jobs:
           - service: search-service
             dockerfile: ./search_service/Dockerfile
             image: eshop-search-service
+          - service: benchmark
+            dockerfile: ./benchmark/Dockerfile
+            image: eshop-benchmark
 
     steps:
       - name: Checkout

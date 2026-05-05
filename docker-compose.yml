@@ -90,14 +90,15 @@ services:
     networks:
       - backend
   benchmark:
-    build:
-      context: ./benchmark
+    image: ${GHCR_NAMESPACE}/eshop-benchmark:${IMAGE_TAG}
     depends_on:
       - search-service
     environment:
       SEARCH_URL: http://search-service:8000
     profiles:
       - tools
+    networks:
+      - backend
 
 networks:
   backend:
