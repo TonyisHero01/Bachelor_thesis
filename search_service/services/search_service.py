@@ -1,5 +1,8 @@
 import logging
 from typing import Dict
+import time
+import psycopg2
+from config import settings
 
 from repositories.product_repository import (
     fetch_products,
@@ -144,10 +147,23 @@ def partial_reindex_product(sku: str) -> int:
 
 
 def search_products(query: str, limit: int = 50):
+    start = time.perf_counter()
+
     if search_index.matrix is None:
         rebuild_search_index_from_saved_vectors()
 
-    return search_index.search(query, limit)
+    results = search_index.search(query, limit)
+
+    elapsed_ms = (time.perf_counter() - start) * 1000
+
+    log_search(
+        query=query,
+        method="vector",
+        result_count=len(results),
+        response_time_ms=elapsed_ms,
+    )
+
+    return results
 
 
 def recommend_products(sku: str, limit: int = 10):
@@ -164,3 +180,18 @@ def get_index_status() -> dict:
         "vector_rows": count_product_vectors(),
         "indexed_documents": len(search_index.documents),
     }
+
+def log_search(query, method, result_count, response_time_ms):
+    try:
+        conn = psycopg2.connect(settings.database_url)
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO search_query_log
+            (query, method, result_count, response_time_ms)
+            VALUES (%s, %s, %s, %s)
+        """, (query, method, result_count, response_time_ms))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[LOG][ERROR] Failed to log search: {e}")

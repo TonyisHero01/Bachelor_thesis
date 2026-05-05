@@ -147,3 +147,36 @@ def recommend_api(sku: str, limit: int = 10):
     results = recommend_products(sku, limit)
 
     return {"results": results}
+
+@app.get("/search-log/stats")
+def search_log_stats():
+    import psycopg2
+
+    conn = psycopg2.connect(settings.database_url)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT method,
+               COUNT(*),
+               AVG(response_time_ms),
+               AVG(result_count)
+        FROM search_query_log
+        GROUP BY method
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return {
+        "stats": [
+            {
+                "method": r[0],
+                "count": r[1],
+                "avg_time_ms": float(r[2]),
+                "avg_results": float(r[3]),
+            }
+            for r in rows
+        ]
+    }
