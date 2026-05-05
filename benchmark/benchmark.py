@@ -122,25 +122,27 @@ def rows_to_csv(rows):
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    global LAST_RESULTS
-
     if not LAST_RESULTS:
-        LAST_RESULTS = run_benchmark()
-
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    table_rows = ""
-
-    for row in LAST_RESULTS:
-        table_rows += f"""
+        table_rows = """
         <tr>
-            <td>{row["type"]}</td>
-            <td>{row["query"]}</td>
-            <td>{row["response_time_ms"]:.2f}</td>
-            <td>{row["result_count"]}</td>
-            <td>{row["status"]}</td>
+            <td colspan="5">No benchmark has been run yet. Click "Run benchmark again" to start.</td>
         </tr>
         """
+    else:
+        table_rows = ""
+
+        for row in LAST_RESULTS:
+            table_rows += f"""
+            <tr>
+                <td>{row["type"]}</td>
+                <td>{row["query"]}</td>
+                <td>{row["response_time_ms"]:.2f}</td>
+                <td>{row["result_count"]}</td>
+                <td>{row["status"]}</td>
+            </tr>
+            """
+
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     return f"""
     <!doctype html>
@@ -181,7 +183,7 @@ def index():
             .actions {{
                 margin-top: 20px;
             }}
-            a, button {{
+            a {{
                 display: inline-block;
                 padding: 10px 14px;
                 border-radius: 8px;
@@ -201,8 +203,9 @@ def index():
     <body>
         <div class="card">
             <h1>Search Benchmark Report</h1>
+
             <div class="meta">
-                Generated at: {generated_at}<br>
+                Page generated at: {generated_at}<br>
                 Search service: {SEARCH_URL}<br>
                 SQL LIKE endpoint: {BMS_URL}/search-like
             </div>
@@ -232,28 +235,28 @@ def index():
     """
 
 
-@app.get("/run")
+@app.get("/run", response_class=HTMLResponse)
 def run():
     global LAST_RESULTS
     LAST_RESULTS = run_benchmark()
-    return HTMLResponse(
-        """
-        <html>
-        <head>
-            <meta http-equiv="refresh" content="0;url=/" />
-        </head>
-        <body>Redirecting...</body>
-        </html>
-        """
-    )
+
+    return """
+    <html>
+    <head>
+        <meta http-equiv="refresh" content="0;url=/" />
+    </head>
+    <body>Redirecting...</body>
+    </html>
+    """
 
 
 @app.get("/csv")
 def csv_report():
-    global LAST_RESULTS
-
     if not LAST_RESULTS:
-        LAST_RESULTS = run_benchmark()
+        return PlainTextResponse(
+            "No benchmark has been run yet.",
+            media_type="text/plain",
+        )
 
     return PlainTextResponse(
         rows_to_csv(LAST_RESULTS),
