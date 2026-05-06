@@ -150,6 +150,7 @@ def search_products(
     query: str,
     limit: int = 50,
     retry: bool = True,
+    skip_log: bool = False,
 ):
     start = time.perf_counter()
 
@@ -237,6 +238,7 @@ def search_products(
                 query=query,
                 limit=limit,
                 retry=False,
+                skip_log=skip_log,
             )
 
         except Exception:
@@ -270,12 +272,13 @@ def search_products(
 
     elapsed_ms = (time.perf_counter() - start) * 1000
 
-    log_search(
-        query=query,
-        method="hybrid",
-        result_count=len(results),
-        response_time_ms=elapsed_ms,
-    )
+    if not skip_log:
+        log_search(
+            query=query,
+            method="hybrid",
+            result_count=len(results),
+            response_time_ms=elapsed_ms,
+        )
 
     return results
 

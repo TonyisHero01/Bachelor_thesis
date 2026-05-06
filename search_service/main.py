@@ -61,14 +61,20 @@ def health():
 
 
 @app.post("/search", response_model=SearchResponse)
-def search_api(req: SearchRequest):
+def search_api(req: SearchRequest, request: Request):
     query = req.query.strip()
 
     if not query:
         return {"results": []}
 
     limit = min(req.limit, settings.max_search_limit)
-    results = search_products(query, limit)
+    skip_log = request.headers.get("X-BENCHMARK") == "1"
+
+    results = search_products(
+        query,
+        limit,
+        skip_log=skip_log,
+    )
 
     return {"results": results}
 

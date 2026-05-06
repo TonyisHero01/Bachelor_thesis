@@ -4,30 +4,48 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str
     api_key: str | None
+
     app_name: str = "TF-IDF Search API"
     app_version: str = "2.0.0"
+
     max_search_limit: int = 200
     default_search_limit: int = 50
+
+    enable_search_log: bool = True
 
 
 def load_settings() -> Settings:
     database_url = os.getenv("DATABASE_URL")
 
     if not database_url:
-        raise RuntimeError("DATABASE_URL is missing. Please check environment variables.")
+        raise RuntimeError(
+            "DATABASE_URL is missing. Please check environment variables."
+        )
 
-    max_search_limit = int(os.getenv("MAX_SEARCH_LIMIT", "200"))
-    default_search_limit = int(os.getenv("DEFAULT_SEARCH_LIMIT", "50"))
+    max_search_limit = int(
+        os.getenv("MAX_SEARCH_LIMIT", "200")
+    )
+
+    default_search_limit = int(
+        os.getenv("DEFAULT_SEARCH_LIMIT", "50")
+    )
+
+    enable_search_log = (
+        os.getenv("ENABLE_SEARCH_LOG", "true").lower()
+        in ("1", "true", "yes")
+    )
 
     return Settings(
         database_url=database_url,
         api_key=os.getenv("SEARCH_API_KEY"),
         max_search_limit=max_search_limit,
         default_search_limit=default_search_limit,
+        enable_search_log=enable_search_log,
     )
 
 

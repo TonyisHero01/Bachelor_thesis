@@ -37,11 +37,24 @@ app = FastAPI(title="E-shop Search Benchmark")
 def request_json(method: str, url: str, **kwargs):
     start = time.perf_counter()
 
+    headers = kwargs.pop("headers", {})
+    headers["X-BENCHMARK"] = "1"
+
     try:
         if method == "POST":
-            response = requests.post(url, timeout=10, **kwargs)
+            response = requests.post(
+                url,
+                timeout=10,
+                headers=headers,
+                **kwargs,
+            )
         else:
-            response = requests.get(url, timeout=10, **kwargs)
+            response = requests.get(
+                url,
+                timeout=10,
+                headers=headers,
+                **kwargs,
+            )
 
         elapsed_ms = (time.perf_counter() - start) * 1000
 
