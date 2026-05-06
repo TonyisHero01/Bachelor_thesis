@@ -6,8 +6,6 @@ import numpy as np
 from scipy.sparse import vstack
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import base64
-import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ class SearchIndex:
         )
 
         self.skus: List[str] = []
-        self.documents: List[str] = []
+        self.documents: Dict[str, str] = {}
         self.matrix = None
         self.metadata: Dict[str, dict] = {}
         self.config: dict = {}
@@ -41,7 +39,7 @@ class SearchIndex:
         logger.info("[REINDEX][FULL] rebuilding in-memory search index")
 
         self.skus = list(documents.keys())
-        self.documents = list(documents.values())
+        self.documents = documents.copy()
         self.metadata = metadata or {}
         self.config = config or {}
 
@@ -50,7 +48,9 @@ class SearchIndex:
             logger.warning("[REINDEX][FULL] no documents found")
             return 0
 
-        self.matrix = self.vectorizer.transform(self.documents)
+        self.matrix = self.vectorizer.transform(
+            list(self.documents.values())
+        )
 
         logger.info("[REINDEX][FULL] indexed %d documents", len(self.documents))
         return len(self.documents)
@@ -72,10 +72,6 @@ class SearchIndex:
 
             if not sku or vector_blob is None:
                 continue
-
-            if isinstance(vector_blob, str):
-
-                vector_blob = base64.b64decode(vector_blob)
 
             vector = pickle.loads(vector_blob)
 
@@ -103,7 +99,7 @@ class SearchIndex:
 
         if sku in self.skus:
             index = self.skus.index(sku)
-            self.documents[index] = document
+            self.documents[sku] = document
 
             if self.matrix is not None:
                 rows = [self.matrix[i] for i in range(self.matrix.shape[0])]
@@ -135,7 +131,7 @@ class SearchIndex:
         index = self.skus.index(sku)
 
         self.skus.pop(index)
-        self.documents.pop(index)
+        self.documents.pop(sku, None)
         self.metadata.pop(sku, None)
 
         if self.matrix is None:
