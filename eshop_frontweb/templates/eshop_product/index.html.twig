@@ -11,7 +11,8 @@
     {% set productUrl = app.request.uri %}
     {% set imageUrls = product.getImageUrls() %}
     {% set firstImage = imageUrls is not empty ? imageUrls|first : null %}
-    {% set ogImage = firstImage ? (BMS_URL ~ '/images/' ~ firstImage) : asset('images/fallback-product.png') %}
+    {% set fallbackImage = absolute_url(asset('images/fallback-product.png')) %}
+    {% set ogImage = firstImage ? (BMS_URL ~ '/images/' ~ firstImage) : fallbackImage %}
     {% set currencyCode = product.getCurrency().getName() %}
 
     <meta name="description" content="{{ productDescriptionShort|e('html_attr') }}">
@@ -46,6 +47,7 @@
 {% set productDescription = product.getTranslatedDescription(locale)|striptags|trim %}
 {% set imageUrls = product.getImageUrls() %}
 {% set firstImage = imageUrls is not empty ? imageUrls|first : null %}
+{% set fallbackImage = asset('images/fallback-product.png') %}
 {% set currencyCode = product.getCurrency().getName() %}
 
 <div id="product_id" product-id="{{ product.id }}"></div>
@@ -64,11 +66,18 @@
 
                 <div class="product-swiper swiper-container">
                     <div class="swiper-wrapper">
-                        {% for imageURL in imageUrls %}
-                            <div class="swiper-slide"
-                                 style="background-image: url('{{ BMS_URL }}/images/{{ imageURL }}');">
+                        {% if imageUrls is not empty %}
+                            {% for imageURL in imageUrls %}
+                                <div class="swiper-slide product-swiper-slide"
+                                    style="background-image: url('{{ BMS_URL }}/images/{{ imageURL }}');"
+                                    data-fallback="{{ fallbackImage }}">
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="swiper-slide product-swiper-slide"
+                                style="background-image: url('{{ fallbackImage }}');">
                             </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                     <div class="swiper-pagination"></div>
                     <div class="swiper-button-next"></div>
@@ -233,9 +242,8 @@
                     href="{{ path('show_eshop_product', { id: recommendedProduct.id, _locale: locale }) }}">
 
                         <div class="recommended-product-image"
-                            {% if recommendedFirstImage %}
-                                style="background-image: url('{{ BMS_URL }}/images/{{ recommendedFirstImage }}');"
-                            {% endif %}>
+                            style="background-image: url('{{ recommendedFirstImage ? BMS_URL ~ '/images/' ~ recommendedFirstImage : fallbackImage }}');"
+                            data-fallback="{{ fallbackImage }}">
                         </div>
 
                         <div class="recommended-product-body">
@@ -270,9 +278,13 @@
     "@type": "Product",
     "name": {{ productName|json_encode|raw }},
     "image": [
-        {% for imageURL in imageUrls %}
-            {{ (BMS_URL ~ '/images/' ~ imageURL)|json_encode|raw }}{% if not loop.last %},{% endif %}
-        {% endfor %}
+        {% if imageUrls is not empty %}
+            {% for imageURL in imageUrls %}
+                {{ (BMS_URL ~ '/images/' ~ imageURL)|json_encode|raw }}{% if not loop.last %},{% endif %}
+            {% endfor %}
+        {% else %}
+            {{ absolute_url(asset('images/fallback-product.png'))|json_encode|raw }}
+        {% endif %}
     ],
     "description": {{ productDescription|json_encode|raw }},
     "sku": {{ (product.sku ?? product.id)|json_encode|raw }},

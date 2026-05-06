@@ -128,3 +128,33 @@ function updateCartCount(count) {
         el.textContent = parseInt(count, 10);
     });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    document.querySelectorAll('[data-fallback]').forEach(function (element) {
+
+        const bg = window.getComputedStyle(element).backgroundImage;
+
+        const match = bg.match(/url\(["']?(.*?)["']?\)/);
+
+        if (!match || !match[1]) {
+
+            element.style.backgroundImage = `url('${element.dataset.fallback}')`;
+
+            return;
+
+        }
+
+        const img = new Image();
+
+        img.onerror = function () {
+
+            element.style.backgroundImage = `url('${element.dataset.fallback}')`;
+
+        };
+
+        img.src = match[1];
+
+    });
+
+});
