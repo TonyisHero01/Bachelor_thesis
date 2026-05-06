@@ -165,10 +165,17 @@ class EshopHomeController extends BaseController
         // =========================
 
         if ($customer instanceof Customer) {
-
             $this->addWishlistScores($scores, $customer, $httpClient, $wishlistWeight);
             $this->addOrderHistoryScores($scores, $customer, $httpClient, $orderWeight);
             $this->addCustomerSearchHistoryScores($scores, $customer, $httpClient, $searchWeight);
+
+            // If the logged-in customer has no usable behavior yet,
+            // fall back to global recommendation data.
+            if ($scores === []) {
+                $this->addGlobalPopularSearchScores($scores, $httpClient, $searchWeight);
+                $this->addGlobalPopularOrderScores($scores, $httpClient, $orderWeight);
+                $this->addGlobalWishlistScores($scores, $httpClient, $wishlistWeight);
+            }
         }
 
         // =========================
@@ -176,7 +183,6 @@ class EshopHomeController extends BaseController
         // =========================
 
         else {
-
             $this->addGlobalPopularSearchScores($scores, $httpClient, $searchWeight);
             $this->addGlobalPopularOrderScores($scores, $httpClient, $orderWeight);
             $this->addGlobalWishlistScores($scores, $httpClient, $wishlistWeight);
