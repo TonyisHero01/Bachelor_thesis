@@ -162,20 +162,18 @@ def search_products(query: str, limit: int = 50):
     # =========================
 
     for sku, document in search_index.documents.items():
-
         normalized_document = normalize_text(document)
 
-        if normalized_query in normalized_document:
+        document_tokens = set(normalized_document.split())
+        query_tokens = set(normalized_query.split())
 
-            score = 1.0
+        if not query_tokens:
+            continue
 
-            # prefix boost
-            if normalized_document.startswith(normalized_query):
-                score = 2.0
-
+        if query_tokens.issubset(document_tokens):
             partial_results.append({
                 "product_sku": sku,
-                "similarity": score,
+                "similarity": 1.0,
             })
 
             partial_seen.add(sku)
