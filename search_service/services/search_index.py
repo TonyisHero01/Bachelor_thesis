@@ -26,6 +26,7 @@ class SearchIndex:
         self.matrix = None
         self.metadata: Dict[str, dict] = {}
         self.config: dict = {}
+        self.document_tokens: Dict[str, set[str]] = {}
 
     def vectorize_document(self, document: str):
         return self.vectorizer.transform([document])
@@ -40,6 +41,10 @@ class SearchIndex:
 
         self.skus = list(documents.keys())
         self.documents = documents.copy()
+        self.document_tokens = {
+            sku: set(document.split())
+            for sku, document in self.documents.items()
+        }
         self.metadata = metadata or {}
         self.config = config or {}
 
@@ -64,6 +69,7 @@ class SearchIndex:
         self.skus = []
         self.documents = {}
         vectors = []
+        self.document_tokens = {}
 
         for row in rows:
             sku = str(row.get("sku") or "").strip()
@@ -77,6 +83,7 @@ class SearchIndex:
 
             self.skus.append(sku)
             self.documents[sku] = document
+            self.document_tokens[sku] = set(document.split())
             vectors.append(vector)
 
         self.metadata = metadata or {}
@@ -100,6 +107,7 @@ class SearchIndex:
         if sku in self.skus:
             index = self.skus.index(sku)
             self.documents[sku] = document
+            self.document_tokens[sku] = set(document.split())
 
             if self.matrix is not None:
                 rows = [self.matrix[i] for i in range(self.matrix.shape[0])]
@@ -110,6 +118,7 @@ class SearchIndex:
         else:
             self.skus.append(sku)
             self.documents[sku] = document
+            self.document_tokens[sku] = set(document.split())
 
             if self.matrix is None:
                 self.matrix = vector
@@ -133,6 +142,7 @@ class SearchIndex:
         self.skus.pop(index)
         self.documents.pop(sku, None)
         self.metadata.pop(sku, None)
+        self.document_tokens.pop(sku, None)
 
         if self.matrix is None:
             return

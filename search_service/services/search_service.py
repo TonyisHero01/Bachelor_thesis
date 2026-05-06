@@ -197,10 +197,7 @@ def search_products(
 
     query_tokens = set(normalized_query.split())
 
-    for sku, document in search_index.documents.items():
-        normalized_document = normalize_text(document)
-        document_tokens = set(normalized_document.split())
-
+    for sku, document_tokens in search_index.document_tokens.items():
         if not query_tokens or not query_tokens.issubset(document_tokens):
             continue
 
