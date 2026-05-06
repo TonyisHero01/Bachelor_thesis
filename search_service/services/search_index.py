@@ -6,7 +6,8 @@ import numpy as np
 from scipy.sparse import vstack
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-
+import base64
+import pickle
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,10 @@ class SearchIndex:
 
             if not sku or vector_blob is None:
                 continue
+
+            if isinstance(vector_blob, str):
+
+                vector_blob = base64.b64decode(vector_blob)
 
             vector = pickle.loads(vector_blob)
 

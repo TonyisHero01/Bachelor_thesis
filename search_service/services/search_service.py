@@ -152,13 +152,68 @@ def search_products(query: str, limit: int = 50):
     if search_index.matrix is None:
         rebuild_search_index_from_saved_vectors()
 
-    results = search_index.search(query, limit)
+    normalized_query = normalize_text(query)
+
+    partial_results = []
+    partial_seen = set()
+
+    # =========================
+    # PARTIAL MATCH SEARCH
+    # =========================
+
+    for sku, document in search_index.documents.items():
+
+        normalized_document = normalize_text(document)
+
+        if normalized_query in normalized_document:
+
+            score = 1.0
+
+            # prefix boost
+            if normalized_document.startswith(normalized_query):
+                score = 2.0
+
+            partial_results.append({
+                "product_sku": sku,
+                "similarity": score,
+            })
+
+            partial_seen.add(sku)
+
+    # =========================
+    # VECTOR SEARCH
+    # =========================
+
+    semantic_results = search_index.search(query, limit)
+
+    merged_results = []
+
+    # partial first
+    merged_results.extend(
+        sorted(
+            partial_results,
+            key=lambda x: x["similarity"],
+            reverse=True,
+        )
+    )
+
+    # semantic after
+    for item in semantic_results:
+
+        sku = item.get("product_sku")
+
+        if sku in partial_seen:
+            continue
+
+        merged_results.append(item)
+
+    results = merged_results[:limit]
 
     elapsed_ms = (time.perf_counter() - start) * 1000
 
     log_search(
         query=query,
-        method="vector",
+        method="hybrid",
         result_count=len(results),
         response_time_ms=elapsed_ms,
     )
