@@ -2,7 +2,11 @@ import json
 import random
 import psycopg2
 from datetime import datetime, timedelta
+import os
+import requests
 
+SEARCH_URL = os.getenv("SEARCH_URL", "http://search-service:8000").rstrip("/")
+SEARCH_API_KEY = os.getenv("SEARCH_API_KEY")
 
 DB_HOST = "db"
 DB_PORT = 5432
@@ -141,6 +145,31 @@ def connect():
         password=DB_PASSWORD,
     )
 
+def run_full_reindex():
+    headers = {
+        "Content-Type": "application/json",
+    }
+
+    if SEARCH_API_KEY:
+        headers["X-API-KEY"] = SEARCH_API_KEY
+
+    response = requests.post(
+        f"{SEARCH_URL}/reindex",
+        headers=headers,
+        json={
+            "mode": "full",
+            "reason": "benchmark_data_generator",
+            "context": "after product catalog generation",
+        },
+        timeout=120,
+    )
+
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"Reindex failed: {response.status_code} {response.text}"
+        )
+
+    print("Full reindex finished.")
 
 def clear_data(cur):
     cur.execute("DELETE FROM customer_product_view_log;")
@@ -510,7 +539,375 @@ def insert_orders(cur, customers, products):
             (round(total_price, 2), order_id),
         )
 
+def fetch_recommended_skus(sku: str, limit: int = 10):
+    try:
+        response = requests.get(
+            f"{SEARCH_URL}/recommend/{sku}",
+            params={"limit": limit},
+            timeout=10,
+        )
 
+        if response.status_code >= 400:
+            return []
+
+        data = response.json()
+
+        return [
+            item["product_sku"]
+            for item in data.get("results", [])
+            if item.get("product_sku")
+        ]
+
+    except Exception:
+        return []
+    
+PERSONAS = {
+    "tech_worker": {
+        "categories": ["Laptops", "Keyboards", "Mice", "Monitors", "Headphones"],
+        "queries": [
+            "business laptop",
+            "wireless keyboard",
+            "office mouse",
+            "4k monitor",
+            "noise cancelling headphones",
+        ],
+    },
+    "gamer": {
+        "categories": ["Laptops", "Keyboards", "Mice", "Headphones", "Monitors"],
+        "queries": [
+            "gaming laptop",
+            "gaming mouse",
+            "mechanical keyboard",
+            "gaming headset",
+            "gaming monitor",
+        ],
+    },
+    "fashion_user": {
+        "categories": ["T-Shirts", "Jackets", "Shoes", "Accessories"],
+        "queries": [
+            "cotton shirt",
+            "black jacket",
+            "running shoes",
+            "oversized t-shirt",
+            "winter jacket",
+        ],
+    },
+    "phone_user": {
+        "categories": ["Smartphones", "Headphones", "Accessories"],
+        "queries": [
+            "smartphone",
+            "phone case",
+            "bluetooth earbuds",
+            "usb-c cable",
+            "compact smartphone",
+        ],
+    },
+}
+
+
+def find_product_by_sku(products: list[dict], sku: str):
+    for product in products:
+        if product["sku"] == sku:
+            return product
+
+    return None
+
+
+def unique_products(products: list[dict]):
+    seen = set()
+    result = []
+
+    for product in products:
+        sku = product.get("sku")
+
+        if not sku or sku in seen:
+            continue
+
+        seen.add(sku)
+        result.append(product)
+
+    return result
+
+
+def build_products_by_category(products: list[dict]):
+    grouped = {}
+
+    for product in products:
+        category = product.get("category")
+
+        if not category:
+            continue
+
+        grouped.setdefault(category, []).append(product)
+
+    return grouped
+
+
+def insert_customer_search_logs(cur, customer_id: int, queries: list[str]):
+    now = datetime.now()
+
+    for query in random.sample(queries, k=min(len(queries), random.randint(2, 5))):
+        cur.execute(
+            """
+            INSERT INTO customer_search_log (
+                customer_id,
+                query,
+                result_count,
+                session_id,
+                created_at
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+            """,
+            (
+                customer_id,
+                query,
+                random.randint(3, 20),
+                f"session-{customer_id}",
+                now - timedelta(minutes=random.randint(1, 100000)),
+            ),
+        )
+
+
+def insert_customer_view_logs(cur, customer_id: int, products: list[dict]):
+    now = datetime.now()
+
+    for product in products:
+        cur.execute(
+            """
+            INSERT INTO customer_product_view_log (
+                customer_id,
+                product_id,
+                sku,
+                session_id,
+                viewed_at
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+            """,
+            (
+                customer_id,
+                product["id"],
+                product["sku"],
+                f"session-{customer_id}",
+                now - timedelta(minutes=random.randint(1, 100000)),
+            ),
+        )
+
+
+def insert_customer_wishlist(cur, customer_id: int, products: list[dict]):
+    wishlist_products = random.sample(
+        products,
+        k=min(len(products), random.randint(3, 10)),
+    )
+
+    wishlist_ids = [
+        product["id"]
+        for product in wishlist_products
+    ]
+
+    cur.execute(
+        """
+        UPDATE customer
+        SET wishlist = %s::json
+        WHERE id = %s
+        """,
+        (
+            json.dumps(wishlist_ids),
+            customer_id,
+        ),
+    )
+
+
+def insert_customer_orders(cur, customer_id: int, products: list[dict]):
+    if not products:
+        return
+
+    now = datetime.now()
+    order_count = random.randint(1, 4)
+
+    for _ in range(order_count):
+        order_products = random.sample(
+            products,
+            k=min(len(products), random.randint(1, 4)),
+        )
+
+        total_price = 0.0
+
+        cur.execute(
+            """
+            INSERT INTO orders (
+                customer_id,
+                total_price,
+                address,
+                order_created_at,
+                is_completed,
+                payment_status,
+                payment_method,
+                delivery_status,
+                notes,
+                discount,
+                delivery_method
+            ) VALUES (
+                %s, 0, %s, %s, true,
+                'COMPLETED',
+                'CARD',
+                'COMPLETED',
+                NULL,
+                0,
+                'delivery'
+            )
+            RETURNING id
+            """,
+            (
+                customer_id,
+                "Benchmark street 1, Prague",
+                now - timedelta(days=random.randint(1, 120)),
+            ),
+        )
+
+        order_id = cur.fetchone()[0]
+
+        for product in order_products:
+            quantity = random.randint(1, 3)
+            unit_price = round(random.uniform(199, 45000), 2)
+            subtotal = round(unit_price * quantity / 1.21, 2)
+            total_price += unit_price * quantity
+
+            cur.execute(
+                """
+                INSERT INTO order_items (
+                    order_id,
+                    product_id,
+                    product_name,
+                    quantity,
+                    unit_price,
+                    subtotal,
+                    sku
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s
+                )
+                """,
+                (
+                    order_id,
+                    product["id"],
+                    product["name"],
+                    quantity,
+                    unit_price,
+                    subtotal,
+                    product["sku"],
+                ),
+            )
+
+        cur.execute(
+            """
+            UPDATE orders
+            SET total_price = %s
+            WHERE id = %s
+            """,
+            (
+                round(total_price, 2),
+                order_id,
+            ),
+        )
+
+
+def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
+    products_by_category = build_products_by_category(products)
+    products_by_sku = {
+        product["sku"]: product
+        for product in products
+    }
+
+    persona_names = list(PERSONAS.keys())
+
+    for customer_id in customers:
+        persona_name = random.choice(persona_names)
+        persona = PERSONAS[persona_name]
+
+        seed_candidates = []
+
+        for category in persona["categories"]:
+            pool = products_by_category.get(category, [])
+
+            if not pool:
+                continue
+
+            seed_candidates.extend(
+                random.sample(
+                    pool,
+                    k=min(len(pool), 5),
+                )
+            )
+
+        seed_candidates = unique_products(seed_candidates)
+
+        if not seed_candidates:
+            continue
+
+        seed_products = random.sample(
+            seed_candidates,
+            k=min(len(seed_candidates), random.randint(5, 10)),
+        )
+
+        behavior_products = list(seed_products)
+
+        for seed_product in seed_products[:4]:
+            recommended_skus = fetch_recommended_skus(
+                seed_product["sku"],
+                limit=12,
+            )
+
+            for recommended_sku in recommended_skus:
+                recommended_product = products_by_sku.get(recommended_sku)
+
+                if recommended_product:
+                    behavior_products.append(recommended_product)
+
+        behavior_products = unique_products(behavior_products)
+
+        if len(behavior_products) > 20:
+            behavior_products = random.sample(behavior_products, k=20)
+
+        view_products = random.sample(
+            behavior_products,
+            k=min(len(behavior_products), random.randint(8, 18)),
+        )
+
+        insert_customer_view_logs(
+            cur,
+            customer_id,
+            view_products,
+        )
+
+        insert_customer_wishlist(
+            cur,
+            customer_id,
+            behavior_products,
+        )
+
+        order_pool = random.sample(
+            behavior_products,
+            k=min(len(behavior_products), random.randint(4, 12)),
+        )
+
+        insert_customer_orders(
+            cur,
+            customer_id,
+            order_pool,
+        )
+
+        insert_customer_search_logs(
+            cur,
+            customer_id,
+            persona["queries"],
+        )
+
+        print(
+            f"Customer {customer_id}: persona={persona_name}, "
+            f"seed={len(seed_products)}, behavior={len(behavior_products)}"
+        )
+    
 def main():
     conn = connect()
     cur = conn.cursor()
@@ -533,17 +930,13 @@ def main():
     print(f"Creating {CUSTOMER_COUNT} customers...")
     customers = insert_customers(cur)
 
-    print("Creating wishlists...")
-    insert_wishlists(cur, customers, products)
+    conn.commit()
 
-    print("Creating product view logs...")
-    insert_view_logs(cur, customers, products)
+    print("Running full reindex before behavior generation...")
+    run_full_reindex()
 
-    print("Creating customer search logs...")
-    insert_search_logs(cur, customers)
-
-    print("Creating orders...")
-    insert_orders(cur, customers, products)
+    print("Creating persona-based behavior...")
+    insert_persona_behavior(cur, customers, products)
 
     conn.commit()
 
@@ -553,8 +946,6 @@ def main():
     print("Done.")
     print(f"Products: {len(products)}")
     print(f"Customers: {len(customers)}")
-    print("Now run full reindex.")
-
 
 if __name__ == "__main__":
     main()
