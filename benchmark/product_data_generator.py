@@ -151,7 +151,7 @@ def clear_data(cur):
     cur.execute("DELETE FROM product_document_vector;")
     cur.execute("DELETE FROM product;")
     cur.execute("DELETE FROM category;")
-    cur.execute("DELETE FROM product_color;")
+    cur.execute("DELETE FROM ProductColor;")
     cur.execute("DELETE FROM size;")
     cur.execute("DELETE FROM customer;")
 
