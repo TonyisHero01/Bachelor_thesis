@@ -94,21 +94,37 @@ php bin/console app:init-shopinfo
 
 ## Search Evaluation & Benchmarking
 
-The system includes a dedicated FastAPI-based search service
-using a hybrid retrieval architecture:
+The project includes a dedicated FastAPI-based search service
+using a hybrid retrieval architecture.
+
+### Search Architecture
+
+The search engine combines multiple retrieval strategies:
 
 - TF-IDF / HashingVectorizer semantic retrieval
-- Keyword partial-match retrieval
-- Hybrid ranking strategy
-- Recommendation engine based on:
+- keyword partial-match retrieval
+- hybrid ranking strategy
+- cosine similarity scoring
+- recommendation engine based on:
   - customer search history
-  - order history
+  - product view history
   - wishlist behavior
-- Automatic in-memory index recovery
-- Incremental partial reindexing
+  - order history
+- automatic in-memory index recovery
+- incremental partial reindexing
 - PostgreSQL vector persistence
 
-### Benchmark Features
+The recommendation system additionally supports:
+
+- metadata-aware ranking
+- category similarity boosting
+- material similarity boosting
+- color similarity boosting
+- size similarity boosting
+
+---
+
+## Benchmark Features
 
 The benchmark system supports:
 
@@ -117,18 +133,124 @@ The benchmark system supports:
 - cold-start performance testing
 - result count comparison
 - retrieval accuracy evaluation
+- recommendation evaluation
+- recommendation diversity evaluation
+- benchmark history generation
 - CSV report export
 - generated benchmark reports
 
-### Benchmark Report Interface
+---
 
-The project provides a web interface
+## Benchmark Web Interface
+
+The project provides a dedicated benchmark UI
 for generating and viewing benchmark reports
 and search evaluation results.
 
 Available locally at:
 
 - http://localhost:8084
+
+The interface displays:
+
+- average vector-search latency
+- SQL LIKE latency comparison
+- search hit rate
+- recommendation hit rate
+- category relevance
+- recommendation diversity
+- query-by-query benchmark details
+
+---
+
+## Synthetic Benchmark Dataset Generation
+
+The project includes a synthetic data generator
+used for benchmark and recommendation evaluation.
+
+The generator creates:
+
+- product catalog
+- categories
+- colors
+- sizes
+- customers
+- wishlists
+- search history
+- product-view history
+- order history
+
+The generated customer behavior is interest-aware.
+
+Example:
+
+- users interested in gaming laptops
+  will mostly browse:
+  - gaming keyboards
+  - gaming mice
+  - monitors
+  - headphones
+
+This creates more realistic recommendation evaluation
+compared to fully random data generation.
+
+---
+
+## Generate Benchmark Dataset
+
+Run inside the benchmark container:
+
+```bash
+docker exec -it eshop_benchmark sh
+python product_data_generator.py
+```
+
+The generator will:
+
+1. clear old benchmark data
+2. generate products and customers
+3. generate realistic customer behavior
+4. create search/order/view history
+5. trigger full search reindexing
+
+## Generate Evaluation Report
+Open:
+    Generate evaluation report
+
+The system evaluates:
+
+Search Metrics
+
+* query hit rate
+* average response time
+* result availability
+* search health
+
+Recommendation Metrics
+
+* SKU hit rate
+* category hit rate
+* recommendation diversity
+* user-interest consistency
+
+### Example Evaluation Metrics
+```
+Search result hit rate: 100%
+Average search response: 13 ms
+Recommendation category hit rate: 100%
+Recommendation SKU hit rate: 70%
+Average category diversity: 1.00
+```
+Interpretation:
+
+* high hit rate indicates healthy search quality
+* low response time indicates efficient retrieval
+* high category hit rate means recommendations
+    match user interests
+* SKU hit rate measures recommendation relevance
+* diversity indicates how broad or focused
+    recommendations are
+
 
 ---
 
