@@ -159,7 +159,11 @@ def run_full_reindex():
         json={
             "mode": "full",
             "reason": "benchmark_data_generator",
-            "context": "after product catalog generation",
+            "context": {
+                "stage": "after_product_catalog_generation",
+                "product_count": PRODUCT_COUNT,
+                "customer_count": CUSTOMER_COUNT,
+            },
         },
         timeout=120,
     )
