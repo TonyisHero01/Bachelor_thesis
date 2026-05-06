@@ -80,6 +80,9 @@ class SearchRelevanceConfig
     #[ORM\Column(type: 'float', options: ['default' => 0.20])]
     private float $searchHistoryRecommendationWeight = 0.20;
 
+    #[ORM\Column(type: 'float', options: ['default' => 0.35])]
+    private float $viewHistoryRecommendationWeight = 0.35;
+
     public function __construct()
     {
         $now = new \DateTimeImmutable();
@@ -213,6 +216,18 @@ class SearchRelevanceConfig
     public function setSearchHistoryRecommendationWeight(float $weight): static
     {
         $this->searchHistoryRecommendationWeight = $weight;
+        return $this;
+    }
+
+    public function getViewHistoryRecommendationWeight(): float
+    {
+        return $this->viewHistoryRecommendationWeight;
+    }
+
+    public function setViewHistoryRecommendationWeight(float $weight): static
+    {
+        $this->viewHistoryRecommendationWeight = $weight;
+
         return $this;
     }
 }

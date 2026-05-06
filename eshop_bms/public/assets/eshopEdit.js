@@ -259,6 +259,9 @@ async function save_() {
                 sameMaterialBonus: parseFloat(sameMaterialBonusElement?.value || '0.15'),
                 sameColorBonus: parseFloat(sameColorBonusElement?.value || '0.10'),
                 sameSizeBonus: parseFloat(sameSizeBonusElement?.value || '0.10'),
+                viewHistoryRecommendationWeight: parseFloat(
+                    document.getElementById('view_history_recommendation_weight').value || '0.35'
+                ),
             },
         };
 

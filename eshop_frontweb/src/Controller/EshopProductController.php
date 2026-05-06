@@ -229,12 +229,14 @@ class EshopProductController extends BaseController
         $wishlistWeight = $config?->getWishlistRecommendationWeight() ?? 0.30;
         $orderWeight = $config?->getOrderHistoryRecommendationWeight() ?? 0.25;
         $searchWeight = $config?->getSearchHistoryRecommendationWeight() ?? 0.20;
+        $viewWeight = 0.35;
 
         $this->addTfidfScores($scores, $currentProduct, $httpClient, $tfidfWeight);
         $this->addAttributeScores($scores, $currentProduct, $sameCategoryWeight, $sameColorWeight, $sameSizeWeight);
         $this->addWishlistScores($scores, $request, $httpClient, $wishlistWeight);
         $this->addOrderHistoryScores($scores, $request, $httpClient, $orderWeight);
         $this->addSearchHistoryScores($scores, $request, $httpClient, $searchWeight);
+        $this->addViewHistoryScores($scores, $request, $httpClient, $viewWeight);
 
         unset($scores[$currentProduct->getSku()]);
 
@@ -571,32 +573,113 @@ class EshopProductController extends BaseController
         }
     }
 
-    private function saveProductViewLog(Request $request, Product $product): void
-    {
+    private function saveProductViewLog(
+        Request $request,
+        Product $product
+    ): void {
         try {
+
             $sku = trim((string) $product->getSku());
 
             if ($sku === '') {
                 return;
             }
 
+            $sessionId = $request->getSession()->getId();
+
+            $recent = $this->entityManager
+                ->getRepository(CustomerProductViewLog::class)
+                ->createQueryBuilder('v')
+                ->where('v.sku = :sku')
+                ->andWhere('v.sessionId = :sessionId')
+                ->setParameter('sku', $sku)
+                ->setParameter('sessionId', $sessionId)
+                ->orderBy('v.viewedAt', 'DESC')
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            if ($recent instanceof CustomerProductViewLog) {
+
+                $seconds =
+                    time() - $recent->getViewedAt()->getTimestamp();
+
+                if ($seconds < 300) {
+                    return;
+                }
+            }
+
             $user = $this->getUser();
             $customer = $user instanceof Customer ? $user : null;
 
             $log = new CustomerProductViewLog();
+
             $log->setCustomer($customer);
             $log->setProduct($product);
             $log->setSku($sku);
-            $log->setSessionId($request->getSession()->getId());
+            $log->setSessionId($sessionId);
 
             $this->entityManager->persist($log);
             $this->entityManager->flush();
+
         } catch (\Throwable $e) {
-            $this->logger->warning('[ProductViewLog] Failed to save product view log', [
-                'productId' => $product->getId(),
-                'sku' => $product->getSku(),
-                'message' => $e->getMessage(),
-            ]);
+
+            $this->logger->warning(
+                '[ProductViewLog] Failed to save product view log',
+                [
+                    'productId' => $product->getId(),
+                    'sku' => $product->getSku(),
+                    'message' => $e->getMessage(),
+                ]
+            );
+        }
+    }
+
+    private function addViewHistoryScores(
+        array &$scores,
+        Request $request,
+        HttpClientInterface $httpClient,
+        float $weight
+    ): void {
+
+        $user = $this->getUser();
+
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('v.sku')
+            ->from(CustomerProductViewLog::class, 'v')
+            ->orderBy('v.viewedAt', 'DESC')
+            ->setMaxResults(20);
+
+        if ($user instanceof Customer) {
+
+            $qb->where('v.customer = :customer')
+                ->setParameter('customer', $user);
+
+        } else {
+
+            $qb->where('v.sessionId = :sessionId')
+                ->setParameter(
+                    'sessionId',
+                    $request->getSession()->getId()
+                );
+        }
+
+        $rows = $qb->getQuery()->getArrayResult();
+
+        foreach ($rows as $row) {
+
+            $sku = trim((string) ($row['sku'] ?? ''));
+
+            if ($sku === '') {
+                continue;
+            }
+
+            $this->addRecommendedSkuScores(
+                $scores,
+                $sku,
+                $weight,
+                $httpClient
+            );
         }
     }
 }
