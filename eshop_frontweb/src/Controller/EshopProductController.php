@@ -524,4 +524,47 @@ class EshopProductController extends BaseController
             }
         }
     }
+
+    private function addRecommendedSkuScores(
+        array &$scores,
+        string $sku,
+        float $weight,
+        HttpClientInterface $httpClient
+    ): void {
+        $sku = trim($sku);
+
+        if ($sku === '') {
+            return;
+        }
+
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+            $response = $httpClient->request('GET', $baseUrl . '/recommend/' . rawurlencode($sku), [
+                'query' => ['limit' => 10],
+                'timeout' => 5,
+            ]);
+
+            if ($response->getStatusCode() >= 400) {
+                return;
+            }
+
+            $data = $response->toArray(false);
+
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $recommendedSku = trim((string) ($row['product_sku'] ?? ''));
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($recommendedSku !== '' && $similarity > 0) {
+                    $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0) + ($similarity * $weight);
+                }
+            }
+        } catch (\Throwable) {
+            return;
+        }
+    }
 }
