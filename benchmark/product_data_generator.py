@@ -179,7 +179,7 @@ def insert_colors(cur):
     for name, hex_value in COLORS:
         cur.execute(
             """
-            INSERT INTO product_color (name, hex)
+            INSERT INTO ProductColor (name, hex)
             VALUES (%s, %s)
             RETURNING id
             """,
