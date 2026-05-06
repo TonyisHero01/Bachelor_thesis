@@ -92,6 +92,46 @@ php bin/console app:init-shopinfo
 
 ---
 
+## Search Evaluation & Benchmarking
+
+The system includes a dedicated FastAPI-based search service
+using a hybrid retrieval architecture:
+
+- TF-IDF / HashingVectorizer semantic retrieval
+- Keyword partial-match retrieval
+- Hybrid ranking strategy
+- Recommendation engine based on:
+  - customer search history
+  - order history
+  - wishlist behavior
+- Automatic in-memory index recovery
+- Incremental partial reindexing
+- PostgreSQL vector persistence
+
+### Benchmark Features
+
+The benchmark system supports:
+
+- vector search vs SQL LIKE comparison
+- average response-time evaluation
+- cold-start performance testing
+- result count comparison
+- retrieval accuracy evaluation
+- CSV report export
+- generated benchmark reports
+
+### Benchmark Report Interface
+
+The project provides a web interface
+for generating and viewing benchmark reports
+and search evaluation results.
+
+Available locally at:
+
+- http://localhost:8084
+
+---
+
 ## API Documentation
 
 Detailed API documentation is available in a separate file:
