@@ -40,7 +40,11 @@
 
       <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
         {% if imageUrls is not empty %}
-          <img src="{{ BMS_URL|default('') }}/images/{{ imageUrls[0] }}" alt="{{ product.name }}">
+          <img
+            src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
+            alt="{{ product.name }}"
+            onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';"
+          >
         {% endif %}
 
         <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>
@@ -73,7 +77,11 @@
 
       <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
         {% if imageUrls is not empty %}
-          <img src="{{ BMS_URL|default('') }}/images/{{ imageUrls[0] }}" alt="{{ product.name }}">
+          <img
+            src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
+            alt="{{ product.name }}"
+            onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';"
+          >
         {% endif %}
 
         <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>
@@ -107,7 +115,11 @@
 
         <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
           {% if imageUrls is not empty %}
-            <img src="{{ BMS_URL|default('') }}/images/{{ imageUrls[0] }}" alt="{{ product.name }}">
+            <img
+              src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
+              alt="{{ product.name }}"
+              onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';"
+            >
           {% endif %}
 
           <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>

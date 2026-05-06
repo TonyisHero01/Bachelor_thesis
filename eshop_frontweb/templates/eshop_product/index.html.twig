@@ -11,7 +11,7 @@
     {% set productUrl = app.request.uri %}
     {% set imageUrls = product.getImageUrls() %}
     {% set firstImage = imageUrls is not empty ? imageUrls|first : null %}
-    {% set ogImage = firstImage ? (BMS_URL ~ '/images/' ~ firstImage) : asset('assets/images/default-product.jpg') %}
+    {% set ogImage = firstImage ? (BMS_URL ~ '/images/' ~ firstImage) : asset('images/fallback-product.png') %}
     {% set currencyCode = product.getCurrency().getName() %}
 
     <meta name="description" content="{{ productDescriptionShort|e('html_attr') }}">

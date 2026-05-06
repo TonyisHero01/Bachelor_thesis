@@ -1,0 +1,9 @@
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+*.svg
+
+!.gitignore
+!fallback-product.png
