@@ -146,16 +146,49 @@ def partial_reindex_product(sku: str) -> int:
     return 1
 
 
-def search_products(query: str, limit: int = 50):
+def search_products(
+    query: str,
+    limit: int = 50,
+    retry: bool = True,
+):
     start = time.perf_counter()
 
+    try:
+        if search_index.matrix is None:
+            logger.warning("[SEARCH] matrix empty -> reload vectors")
+            rebuild_search_index_from_saved_vectors()
+
+        if (
+            search_index.matrix is not None
+            and len(search_index.skus) != search_index.matrix.shape[0]
+        ):
+            logger.warning(
+                "[SEARCH] inconsistent index detected skus=%d matrix_rows=%d -> reload vectors",
+                len(search_index.skus),
+                search_index.matrix.shape[0],
+            )
+            rebuild_search_index_from_saved_vectors()
+
+    except Exception as e:
+        logger.exception("[SEARCH] failed loading vectors: %s", e)
+
+        try:
+            logger.warning("[SEARCH] fallback full rebuild")
+            rebuild_search_index()
+        except Exception:
+            logger.exception("[SEARCH] full rebuild failed")
+
     if search_index.matrix is None:
-        rebuild_search_index_from_saved_vectors()
+        try:
+            logger.warning("[SEARCH] matrix still empty -> full rebuild")
+            rebuild_search_index()
+        except Exception:
+            logger.exception("[SEARCH] final full rebuild failed")
+            return []
 
     normalized_query = normalize_text(query)
 
     partial_results = []
-    partial_seen = set()
 
     # =========================
     # PARTIAL MATCH SEARCH
@@ -176,8 +209,7 @@ def search_products(query: str, limit: int = 50):
             "product_sku": sku,
             "similarity": score,
         })
-
-        partial_seen.add(sku)
+        
 
     # =========================
     # VECTOR SEARCH
@@ -216,6 +248,25 @@ def search_products(query: str, limit: int = 50):
         result_count=len(results),
         response_time_ms=elapsed_ms,
     )
+
+    if (
+        retry
+        and len(results) == 0
+    ):
+        logger.warning("[SEARCH] empty results -> auto rebuild + retry")
+
+        try:
+
+            rebuild_search_index()
+
+            return search_products(
+                query=query,
+                limit=limit,
+                retry=False,
+            )
+
+        except Exception:
+            logger.exception("[SEARCH] retry rebuild failed")
 
     return results
 
