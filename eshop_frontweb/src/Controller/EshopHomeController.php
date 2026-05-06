@@ -66,6 +66,10 @@ class EshopHomeController extends BaseController
             ? $productsRepo->findTopSellingProducts(10)
             : [];
 
+        if ($popularProducts === []) {
+            $popularProducts = $this->findFallbackRandomProducts(10);
+        }
+
         $shopInfoWithI18n = $shopInfoRepository->findWithTranslations();
         $recommendedForYou = $this->buildRecommendedForYou($request, $httpClient, 10);
 
@@ -160,28 +164,17 @@ class EshopHomeController extends BaseController
         $orderWeight = $config?->getOrderHistoryRecommendationWeight() ?? 0.25;
         $searchWeight = $config?->getSearchHistoryRecommendationWeight() ?? 0.20;
 
-        // =========================
-        // LOGGED USER
-        // =========================
-
         if ($customer instanceof Customer) {
             $this->addWishlistScores($scores, $customer, $httpClient, $wishlistWeight);
             $this->addOrderHistoryScores($scores, $customer, $httpClient, $orderWeight);
             $this->addCustomerSearchHistoryScores($scores, $customer, $httpClient, $searchWeight);
 
-            // If the logged-in customer has no usable behavior yet,
-            // fall back to global recommendation data.
             if ($scores === []) {
                 $this->addGlobalPopularSearchScores($scores, $httpClient, $searchWeight);
                 $this->addGlobalPopularOrderScores($scores, $httpClient, $orderWeight);
                 $this->addGlobalWishlistScores($scores, $httpClient, $wishlistWeight);
             }
         }
-
-        // =========================
-        // GUEST USER
-        // =========================
-
         else {
             $this->addGlobalPopularSearchScores($scores, $httpClient, $searchWeight);
             $this->addGlobalPopularOrderScores($scores, $httpClient, $orderWeight);
@@ -532,5 +525,56 @@ class EshopHomeController extends BaseController
                 $httpClient
             );
         }
+    }
+
+    private function findFallbackRandomProducts(int $limit = 10): array
+    {
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.id')
+            ->from(Product::class, 'p')
+            ->where('p.hidden = false')
+            ->andWhere('p.imageUrls IS NOT NULL')
+            ->setMaxResults(100)
+            ->getQuery()
+            ->getArrayResult();
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $ids = array_map(
+            static fn (array $row): int => (int) $row['id'],
+            $rows
+        );
+
+        shuffle($ids);
+
+        $ids = array_slice($ids, 0, $limit);
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $productsRaw = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $ids]);
+
+        $productMap = [];
+
+        foreach ($productsRaw as $product) {
+            if ($product instanceof Product) {
+                $productMap[$product->getId()] = $product;
+            }
+        }
+
+        $products = [];
+
+        foreach ($ids as $id) {
+            if (isset($productMap[$id])) {
+                $products[] = $productMap[$id];
+            }
+        }
+
+        return $products;
     }
 }
