@@ -161,22 +161,23 @@ def search_products(query: str, limit: int = 50):
     # PARTIAL MATCH SEARCH
     # =========================
 
+    query_tokens = set(normalized_query.split())
+
     for sku, document in search_index.documents.items():
         normalized_document = normalize_text(document)
-
         document_tokens = set(normalized_document.split())
-        query_tokens = set(normalized_query.split())
 
-        if not query_tokens:
+        if not query_tokens or not query_tokens.issubset(document_tokens):
             continue
 
-        if query_tokens.issubset(document_tokens):
-            partial_results.append({
-                "product_sku": sku,
-                "similarity": 1.0,
-            })
+        score = 1.0
 
-            partial_seen.add(sku)
+        partial_results.append({
+            "product_sku": sku,
+            "similarity": score,
+        })
+
+        partial_seen.add(sku)
 
     # =========================
     # VECTOR SEARCH
@@ -184,28 +185,28 @@ def search_products(query: str, limit: int = 50):
 
     semantic_results = search_index.search(query, limit)
 
-    merged_results = []
+    merged_map = {}
 
-    # partial first
-    merged_results.extend(
-        sorted(
-            partial_results,
-            key=lambda x: x["similarity"],
-            reverse=True,
-        )
-    )
-
-    # semantic after
     for item in semantic_results:
-
         sku = item.get("product_sku")
+        if sku:
+            merged_map[sku] = item
 
-        if sku in partial_seen:
+    for item in partial_results:
+        sku = item.get("product_sku")
+        if not sku:
             continue
 
-        merged_results.append(item)
+        if sku in merged_map:
+            merged_map[sku]["similarity"] += item["similarity"] * 0.2
+        else:
+            merged_map[sku] = item
 
-    results = merged_results[:limit]
+    results = sorted(
+        merged_map.values(),
+        key=lambda x: x["similarity"],
+        reverse=True,
+    )[:limit]
 
     elapsed_ms = (time.perf_counter() - start) * 1000
 
