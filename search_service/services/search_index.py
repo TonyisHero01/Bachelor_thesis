@@ -62,7 +62,7 @@ class SearchIndex:
         config: dict | None = None,
     ) -> int:
         self.skus = []
-        self.documents = []
+        self.documents = {}
         vectors = []
 
         for row in rows:
@@ -80,7 +80,7 @@ class SearchIndex:
             vector = pickle.loads(vector_blob)
 
             self.skus.append(sku)
-            self.documents.append(document)
+            self.documents[sku] = document
             vectors.append(vector)
 
         self.metadata = metadata or {}
@@ -113,7 +113,7 @@ class SearchIndex:
             logger.info("[REINDEX][PARTIAL] updated vector in memory for sku=%s", sku)
         else:
             self.skus.append(sku)
-            self.documents.append(document)
+            self.documents[sku] = document
 
             if self.matrix is None:
                 self.matrix = vector
