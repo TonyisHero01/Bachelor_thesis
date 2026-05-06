@@ -98,11 +98,17 @@ services:
       - bms
     environment:
       DATABASE_URL: ${DATABASE_URL}
+
+      SEARCH_API_KEY: ${SEARCH_API_KEY}
+
       SEARCH_URL: http://search-service:8000
       BMS_URL: http://bms
+
       BENCHMARK_REPEAT_COUNT: ${BENCHMARK_REPEAT_COUNT:-5}
+
     ports:
       - "8084:8000"
+
     networks:
       - backend
 
