@@ -19,6 +19,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Twig\Environment;
 use App\Entity\Customer;
 use App\Entity\CustomerSearchLog;
+use App\Entity\OrderItem;
+use App\Entity\Order;
 
 class SearchController extends BaseController
 {
@@ -534,6 +536,184 @@ class SearchController extends BaseController
                 'query' => $query,
                 'message' => $e->getMessage(),
             ]);
+        }
+    }
+
+    #[Route('/recommend/for-you', name: 'recommend_for_you', methods: ['GET'])]
+    public function recommendForYou(Request $request): JsonResponse
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return new JsonResponse(['results' => []]);
+        }
+
+        $scores = [];
+
+        $this->addWishlistRecommendationScores($scores, $user);
+        $this->addOrderHistoryRecommendationScores($scores, $user);
+        $this->addSearchHistoryRecommendationScores($scores, $user);
+
+        arsort($scores);
+
+        $skus = array_slice(array_keys($scores), 0, 20);
+
+        if ($skus === []) {
+            return new JsonResponse(['results' => []]);
+        }
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.id, p.sku')
+            ->from(Product::class, 'p')
+            ->where('p.sku IN (:skus)')
+            ->andWhere('p.hidden = false')
+            ->setParameter('skus', $skus)
+            ->orderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $skuToLatestId = [];
+
+        foreach ($rows as $row) {
+            $sku = (string) ($row['sku'] ?? '');
+            $id = (int) ($row['id'] ?? 0);
+
+            if ($sku !== '' && $id > 0 && !isset($skuToLatestId[$sku])) {
+                $skuToLatestId[$sku] = $id;
+            }
+        }
+
+        $results = [];
+
+        foreach ($skus as $sku) {
+            if (!isset($skuToLatestId[$sku])) {
+                continue;
+            }
+
+            $results[] = [
+                'id' => $skuToLatestId[$sku],
+                'sku' => $sku,
+                'score' => $scores[$sku],
+            ];
+
+            if (count($results) >= 10) {
+                break;
+            }
+        }
+
+        return new JsonResponse(['results' => $results]);
+    }
+
+    private function addWishlistRecommendationScores(array &$scores, Customer $customer): void
+    {
+        $wishlistIds = $customer->getWishlist();
+
+        if ($wishlistIds === []) {
+            return;
+        }
+
+        $products = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $wishlistIds]);
+
+        foreach ($products as $product) {
+            if (!$product instanceof Product || !$product->getSku()) {
+                continue;
+            }
+
+            $recommended = $this->getRecommendedProductIdsBySku($product->getSku(), 10);
+
+            foreach ($recommended as $item) {
+                $recommendedProduct = $this->entityManager
+                    ->getRepository(Product::class)
+                    ->find($item['id']);
+
+                if (!$recommendedProduct instanceof Product || !$recommendedProduct->getSku()) {
+                    continue;
+                }
+
+                $sku = $recommendedProduct->getSku();
+                $scores[$sku] = ($scores[$sku] ?? 0) + ((float) $item['similarity'] * 0.35);
+            }
+        }
+    }
+
+    private function addOrderHistoryRecommendationScores(array &$scores, Customer $customer): void
+    {
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('oi.sku AS sku')
+            ->from(OrderItem::class, 'oi')
+            ->join('oi.order', 'o')
+            ->where('o.customer = :customer')
+            ->setParameter('customer', $customer)
+            ->orderBy('o.orderCreatedAt', 'DESC')
+            ->setMaxResults(30)
+            ->getQuery()
+            ->getArrayResult();
+
+        foreach ($rows as $row) {
+            $sku = trim((string) ($row['sku'] ?? ''));
+
+            if ($sku === '') {
+                continue;
+            }
+
+            $recommended = $this->getRecommendedProductIdsBySku($sku, 10);
+
+            foreach ($recommended as $item) {
+                $product = $this->entityManager
+                    ->getRepository(Product::class)
+                    ->find($item['id']);
+
+                if (!$product instanceof Product || !$product->getSku()) {
+                    continue;
+                }
+
+                $recommendedSku = $product->getSku();
+                $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0) + ((float) $item['similarity'] * 0.30);
+            }
+        }
+    }
+
+    private function addSearchHistoryRecommendationScores(array &$scores, Customer $customer): void
+    {
+        $logs = $this->entityManager->createQueryBuilder()
+            ->select('l.query AS query')
+            ->from(CustomerSearchLog::class, 'l')
+            ->where('l.customer = :customer')
+            ->setParameter('customer', $customer)
+            ->orderBy('l.createdAt', 'DESC')
+            ->setMaxResults(10)
+            ->getQuery()
+            ->getArrayResult();
+
+        foreach ($logs as $log) {
+            $query = trim((string) ($log['query'] ?? ''));
+
+            if ($query === '') {
+                continue;
+            }
+
+            $raw = $this->callPythonApiSearch($query, 10);
+
+            if ($raw === null) {
+                continue;
+            }
+
+            foreach (($raw['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $sku = trim((string) ($row['product_sku'] ?? ''));
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($sku === '' || $similarity <= 0) {
+                    continue;
+                }
+
+                $scores[$sku] = ($scores[$sku] ?? 0) + ($similarity * 0.25);
+            }
         }
     }
 }

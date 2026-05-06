@@ -388,3 +388,10 @@ html, body {
     font-weight: bold;
     color: #333;
 }
+
+.recommended_products_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}

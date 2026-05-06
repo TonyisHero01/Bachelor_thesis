@@ -96,6 +96,39 @@
       <p>No popular products available.</p>
     {% endfor %}
   </div>
+
+  {% if recommended_for_you|default([]) is not empty %}
+    <h2>Recommended For You</h2>
+    <div class="recommended_products_grid">
+      {% for product in recommended_for_you %}
+        {% set imageUrls = product.getImageUrls() ?? [] %}
+        {% set hasDiscount = product.discount is not null and product.discount < 100 %}
+        {% set discountedRaw = (product.price * product.discount / 100) %}
+
+        <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+          {% if imageUrls is not empty %}
+            <img src="{{ BMS_URL|default('') }}/images/{{ imageUrls[0] }}" alt="{{ product.name }}">
+          {% endif %}
+
+          <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>
+
+          <div class="product-price">
+            {% if hasDiscount %}
+              <div class="original-price">
+                <span class="strikethrough">{{ money(product.price) }}</span>
+              </div>
+              <div class="discounted-price">
+                {{ money(discountedRaw) }}
+              </div>
+              <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
+            {% else %}
+              <div class="regular-price">{{ money(product.price) }}</div>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
 </div>
 
 <script>
