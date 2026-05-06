@@ -215,6 +215,34 @@ def search_products(
     # VECTOR SEARCH
     # =========================
 
+    index_broken = (
+        search_index.matrix is None
+        or len(search_index.skus) == 0
+        or len(search_index.documents) == 0
+    )
+
+    if (
+        not index_broken
+        and len(search_index.skus) != search_index.matrix.shape[0]
+    ):
+        index_broken = True
+
+    if retry and index_broken:
+        logger.warning("[SEARCH] broken index -> auto rebuild + retry")
+
+        try:
+            rebuild_search_index()
+
+            return search_products(
+                query=query,
+                limit=limit,
+                retry=False,
+            )
+
+        except Exception:
+            logger.exception("[SEARCH] retry rebuild failed")
+            return []
+
     semantic_results = search_index.search(query, limit)
 
     merged_map = {}
@@ -249,31 +277,33 @@ def search_products(
         response_time_ms=elapsed_ms,
     )
 
-    if (
-        retry
-        and len(results) == 0
-    ):
-        logger.warning("[SEARCH] empty results -> auto rebuild + retry")
-
-        try:
-
-            rebuild_search_index()
-
-            return search_products(
-                query=query,
-                limit=limit,
-                retry=False,
-            )
-
-        except Exception:
-            logger.exception("[SEARCH] retry rebuild failed")
-
     return results
 
 
 def recommend_products(sku: str, limit: int = 10):
-    if search_index.matrix is None:
-        rebuild_search_index_from_saved_vectors()
+    try:
+        if search_index.matrix is None:
+            rebuild_search_index_from_saved_vectors()
+
+        index_broken = (
+            search_index.matrix is None
+            or len(search_index.skus) == 0
+            or len(search_index.documents) == 0
+        )
+
+        if (
+            not index_broken
+            and len(search_index.skus) != search_index.matrix.shape[0]
+        ):
+            index_broken = True
+
+        if index_broken:
+            logger.warning("[RECOMMEND] broken index -> full rebuild")
+            rebuild_search_index()
+
+    except Exception:
+        logger.exception("[RECOMMEND] failed to prepare index")
+        return []
 
     return search_index.recommend_by_sku(sku, limit)
 

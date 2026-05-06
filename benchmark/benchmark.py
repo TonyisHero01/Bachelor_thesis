@@ -17,11 +17,16 @@ SEARCH_URL = os.getenv("SEARCH_URL", "http://search-service:8000").rstrip("/")
 BMS_URL = os.getenv("BMS_URL", "http://bms").rstrip("/")
 
 QUERIES = [
-    "alpha",
-    "smart",
-    "pro product",
-    "omega",
-    "basic item",
+    "laptop",
+    "smartphone",
+    "keyboard",
+    "mouse",
+    "headphones",
+    "shirt",
+    "jacket",
+    "cotton",
+    "black",
+    "white",
 ]
 
 LAST_RESULTS = []
