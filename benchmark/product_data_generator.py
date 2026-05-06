@@ -1,6 +1,8 @@
+import json
 import random
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
+
 
 DB_HOST = "db"
 DB_PORT = 5432
@@ -8,17 +10,24 @@ DB_NAME = "app"
 DB_USER = "user"
 DB_PASSWORD = "password"
 
-PRODUCT_COUNT = 120
+PRODUCT_COUNT = 5000
+CUSTOMER_COUNT = 80
+ORDER_COUNT = 300
+VIEW_LOG_COUNT = 1500
+SEARCH_LOG_COUNT = 800
+
 
 CATEGORIES = [
-    "Computers",
-    "Mobile Devices",
-    "Accessories",
-    "Audio",
-    "Fashion",
+    "Laptops",
+    "Smartphones",
+    "Keyboards",
+    "Mice",
+    "Headphones",
+    "Monitors",
+    "T-Shirts",
+    "Jackets",
     "Shoes",
-    "Bags",
-    "Sportswear",
+    "Accessories",
 ]
 
 COLORS = [
@@ -26,133 +35,105 @@ COLORS = [
     ("Black", "#000000"),
     ("Blue", "#2563eb"),
     ("Red", "#dc2626"),
-    ("Grey", "#6b7280"),
+    ("Gray", "#6b7280"),
 ]
 
-SIZES = ["XS", "S", "M", "L", "XL"]
+SIZES = ["S", "M", "L", "XL"]
 
-PRODUCTS = {
-    "Computers": [
-        "Gaming Laptop", "Business Laptop", "Ultrabook", "Desktop PC", "4K Monitor",
-        "Mechanical Keyboard", "Wireless Keyboard", "Ergonomic Mouse", "External SSD"
+PRODUCT_TEMPLATES = {
+    "Laptops": [
+        "Gaming Laptop",
+        "Business Laptop",
+        "Ultrabook",
+        "Student Laptop",
+        "Workstation Laptop",
     ],
-    "Mobile Devices": [
-        "Smartphone", "Tablet", "Smart Watch", "Power Bank", "USB-C Charger",
-        "Phone Case", "Wireless Charging Pad"
+    "Smartphones": [
+        "Android Smartphone",
+        "Flagship Phone",
+        "Budget Smartphone",
+        "Camera Phone",
+        "Compact Smartphone",
     ],
-    "Accessories": [
-        "USB-C Hub", "Laptop Stand", "Webcam", "Memory Card", "HDMI Cable",
-        "Portable Hard Drive", "Desk Lamp"
+    "Keyboards": [
+        "Mechanical Keyboard",
+        "Wireless Keyboard",
+        "Gaming Keyboard",
+        "Office Keyboard",
     ],
-    "Audio": [
-        "Bluetooth Headphones", "Wireless Earbuds", "Gaming Headset", "Portable Speaker",
-        "Studio Microphone", "Soundbar"
+    "Mice": [
+        "Wireless Mouse",
+        "Gaming Mouse",
+        "Ergonomic Mouse",
+        "Office Mouse",
     ],
-    "Fashion": [
-        "Cotton T-Shirt", "Formal Shirt", "Hoodie", "Winter Jacket", "Slim Fit Jeans",
-        "Summer Dress", "Casual Sweater"
+    "Headphones": [
+        "Wireless Headphones",
+        "Gaming Headset",
+        "Noise Cancelling Headphones",
+        "Bluetooth Earbuds",
+    ],
+    "Monitors": [
+        "Gaming Monitor",
+        "Office Monitor",
+        "4K Monitor",
+        "Ultrawide Monitor",
+    ],
+    "T-Shirts": [
+        "Cotton T-Shirt",
+        "Oversized T-Shirt",
+        "Basic T-Shirt",
+        "Printed T-Shirt",
+    ],
+    "Jackets": [
+        "Winter Jacket",
+        "Denim Jacket",
+        "Lightweight Jacket",
+        "Outdoor Jacket",
     ],
     "Shoes": [
-        "Running Sneakers", "Leather Boots", "Casual Shoes", "Training Shoes",
-        "Outdoor Sandals"
+        "Running Shoes",
+        "Casual Sneakers",
+        "Leather Shoes",
+        "Sport Shoes",
     ],
-    "Bags": [
-        "Leather Backpack", "Laptop Bag", "Travel Backpack", "Shoulder Bag",
-        "Sports Bag"
-    ],
-    "Sportswear": [
-        "Sports Shorts", "Training T-Shirt", "Running Jacket", "Yoga Pants",
-        "Fitness Hoodie"
+    "Accessories": [
+        "Laptop Bag",
+        "Phone Case",
+        "USB-C Cable",
+        "Travel Adapter",
     ],
 }
 
-FEATURES = [
-    "lightweight", "durable", "comfortable", "premium quality", "modern design",
-    "daily use", "professional", "travel friendly", "high performance",
-    "water resistant", "breathable", "ergonomic", "compact", "reliable"
+MATERIALS = {
+    "Laptops": ["aluminum", "plastic", "magnesium"],
+    "Smartphones": ["glass", "aluminum", "plastic"],
+    "Keyboards": ["plastic", "aluminum"],
+    "Mice": ["plastic", "rubber"],
+    "Headphones": ["plastic", "leather", "metal"],
+    "Monitors": ["plastic", "metal"],
+    "T-Shirts": ["cotton", "polyester"],
+    "Jackets": ["cotton", "polyester", "denim", "leather"],
+    "Shoes": ["leather", "textile", "rubber"],
+    "Accessories": ["plastic", "nylon", "metal"],
+}
+
+SEARCH_QUERIES = [
+    "gaming laptop",
+    "wireless mouse",
+    "mechanical keyboard",
+    "black headphones",
+    "cotton shirt",
+    "winter jacket",
+    "running shoes",
+    "phone case",
+    "office monitor",
+    "smartphone",
 ]
 
-MATERIALS = [
-    "plastic", "metal", "aluminium", "cotton", "leather", "denim", "polyester"
-]
 
-
-def reset_database(cur):
-    cur.execute("""
-        TRUNCATE TABLE
-            product_document_vector,
-            search_query_log,
-            customer_search_log,
-            cart,
-            order_items,
-            orders,
-            product,
-            category,
-            ProductColor,
-            size
-        RESTART IDENTITY CASCADE;
-    """)
-
-
-def insert_categories(cur):
-    ids = {}
-
-    for name in CATEGORIES:
-        cur.execute(
-            "INSERT INTO category (name) VALUES (%s) RETURNING id",
-            (name,),
-        )
-        ids[name] = cur.fetchone()[0]
-
-    return ids
-
-
-def insert_colors(cur):
-    ids = {}
-
-    for name, hex_value in COLORS:
-        cur.execute(
-            'INSERT INTO ProductColor (name, hex) VALUES (%s, %s) RETURNING id',
-            (name, hex_value),
-        )
-        ids[name] = cur.fetchone()[0]
-
-    return ids
-
-
-def insert_sizes(cur):
-    ids = {}
-
-    for name in SIZES:
-        cur.execute(
-            "INSERT INTO size (name) VALUES (%s) RETURNING id",
-            (name,),
-        )
-        ids[name] = cur.fetchone()[0]
-
-    return ids
-
-
-def build_product(category_name):
-    base_name = random.choice(PRODUCTS[category_name])
-    color_name, _ = random.choice(COLORS)
-
-    selected_features = random.sample(FEATURES, k=random.randint(3, 5))
-    material = random.choice(MATERIALS)
-
-    name = f"{color_name} {base_name}"
-
-    description = (
-        f"{name} with {', '.join(selected_features)}. "
-        f"Designed for everyday use and suitable for customers looking for "
-        f"{category_name.lower()} products."
-    )
-
-    return name, description, color_name, material
-
-
-def main():
-    conn = psycopg2.connect(
+def connect():
+    return psycopg2.connect(
         host=DB_HOST,
         port=DB_PORT,
         dbname=DB_NAME,
@@ -160,34 +141,114 @@ def main():
         password=DB_PASSWORD,
     )
 
-    cur = conn.cursor()
-    now = datetime.now()
 
-    reset_database(cur)
+def clear_data(cur):
+    cur.execute("DELETE FROM customer_product_view_log;")
+    cur.execute("DELETE FROM customer_search_log;")
+    cur.execute("DELETE FROM order_items;")
+    cur.execute("DELETE FROM orders;")
+    cur.execute("DELETE FROM cart;")
+    cur.execute("DELETE FROM product_document_vector;")
+    cur.execute("DELETE FROM product;")
+    cur.execute("DELETE FROM category;")
+    cur.execute("DELETE FROM product_color;")
+    cur.execute("DELETE FROM size;")
+    cur.execute("DELETE FROM customer;")
 
-    category_ids = insert_categories(cur)
-    color_ids = insert_colors(cur)
-    size_ids = insert_sizes(cur)
+
+def insert_categories(cur):
+    category_ids = {}
+
+    for name in CATEGORIES:
+        cur.execute(
+            """
+            INSERT INTO category (name)
+            VALUES (%s)
+            RETURNING id
+            """,
+            (name,),
+        )
+        category_ids[name] = cur.fetchone()[0]
+
+    return category_ids
+
+
+def insert_colors(cur):
+    color_ids = {}
+
+    for name, hex_value in COLORS:
+        cur.execute(
+            """
+            INSERT INTO product_color (name, hex)
+            VALUES (%s, %s)
+            RETURNING id
+            """,
+            (name, hex_value),
+        )
+        color_ids[name] = cur.fetchone()[0]
+
+    return color_ids
+
+
+def insert_sizes(cur):
+    size_ids = {}
+
+    for name in SIZES:
+        cur.execute(
+            """
+            INSERT INTO size (name)
+            VALUES (%s)
+            RETURNING id
+            """,
+            (name,),
+        )
+        size_ids[name] = cur.fetchone()[0]
+
+    return size_ids
+
+
+def random_product_name(category):
+    base = random.choice(PRODUCT_TEMPLATES[category])
+    model = random.choice(["Pro", "Air", "Max", "Lite", "Prime", "Nova", "Plus"])
+    number = random.randint(100, 999)
+    return f"{base} {model} {number}"
+
+
+def insert_products(cur, category_ids, color_ids, size_ids):
+    products = []
 
     category_names = list(category_ids.keys())
+    color_names = list(color_ids.keys())
+    size_names = list(size_ids.keys())
+
+    now = datetime.now()
 
     for i in range(1, PRODUCT_COUNT + 1):
-        sku = f"SKU{i:03d}"
-        image = f"sku{i:03d}.jpg"
+        sku = f"SKU{i:05d}"
+        category = random.choice(category_names)
+        name = random_product_name(category)
+        color = random.choice(color_names)
+        material = random.choice(MATERIALS[category])
 
-        category_name = random.choice(category_names)
-        category_id = category_ids[category_name]
+        is_fashion = category in ["T-Shirts", "Jackets", "Shoes"]
+        size_id = size_ids[random.choice(size_names)] if is_fashion else None
 
-        name, description, color_name, material = build_product(category_name)
+        price = round(random.uniform(199, 45000), 2)
+        stock = random.randint(0, 250)
 
-        color_id = color_ids[color_name]
+        description = (
+            f"{name} is a high quality {category.lower()} product. "
+            f"It is suitable for daily use, office work, gaming, travel, and modern lifestyle. "
+            f"Color: {color}. Material: {material}."
+        )
 
-        if category_name in ["Fashion", "Shoes", "Sportswear"]:
-            size_id = random.choice(list(size_ids.values()))
-        else:
-            size_id = None
+        attributes = {
+            "brand": random.choice(["Nokasa", "NovaTech", "UrbanLine", "CoreMax", "EshopPro"]),
+            "quality": random.choice(["standard", "premium", "professional"]),
+            "usage": random.choice(["home", "office", "gaming", "travel", "sport"]),
+        }
 
-        price = round(random.uniform(150, 12000), 2)
+        image = f"product-{i:05d}.jpg"
 
         cur.execute(
             """
@@ -217,17 +278,18 @@ def main():
             ) VALUES (
                 %s, %s, %s, %s::json, %s, %s,
                 %s, %s, %s, %s,
-                %s, %s, %s, %s,
-                %s::json, %s, %s, %s,
-                %s, %s, %s, %s
+                %s, %s, false, %s,
+                %s::json, 1, %s, 21,
+                %s, %s, %s, 1
             )
+            RETURNING id
             """,
             (
                 name,
                 description,
-                random.randint(5, 300),
-                f'["{image}"]',
-                now,
+                stock,
+                json.dumps([image]),
+                now - timedelta(days=random.randint(0, 120)),
                 now,
                 round(random.uniform(5, 100), 2),
                 round(random.uniform(5, 100), 2),
@@ -235,24 +297,263 @@ def main():
                 round(random.uniform(0.1, 10), 2),
                 material,
                 price,
-                False,
-                random.choice([100.0, 95.0, 90.0, 85.0, 80.0]),
-                "{}",
-                1,
+                random.choice([100, 100, 100, 90, 80, 70]),
+                json.dumps(attributes),
                 sku,
-                21.0,
-                category_id,
+                category_ids[category],
                 size_id,
-                color_id,
-                1,
+                color_ids[color],
             ),
         )
 
+        product_id = cur.fetchone()[0]
+
+        products.append({
+            "id": product_id,
+            "sku": sku,
+            "name": name,
+            "category": category,
+        })
+
+    return products
+
+
+def insert_customers(cur):
+    customers = []
+
+    for i in range(1, CUSTOMER_COUNT + 1):
+        email = f"customer{i:03d}@example.com"
+
+        cur.execute(
+            """
+            INSERT INTO customer (
+                email,
+                password_hash,
+                created_at,
+                is_verified,
+                wishlist
+            ) VALUES (
+                %s,
+                %s,
+                %s,
+                true,
+                %s::json
+            )
+            RETURNING id
+            """,
+            (
+                email,
+                "benchmark-password-hash",
+                datetime.now() - timedelta(days=random.randint(1, 200)),
+                json.dumps([]),
+            ),
+        )
+
+        customers.append(cur.fetchone()[0])
+
+    return customers
+
+
+def insert_wishlists(cur, customers, products):
+    for customer_id in customers:
+        wishlist_products = random.sample(products, k=random.randint(3, 12))
+        wishlist_ids = [p["id"] for p in wishlist_products]
+
+        cur.execute(
+            """
+            UPDATE customer
+            SET wishlist = %s::json
+            WHERE id = %s
+            """,
+            (json.dumps(wishlist_ids), customer_id),
+        )
+
+
+def insert_view_logs(cur, customers, products):
+    now = datetime.now()
+
+    for _ in range(VIEW_LOG_COUNT):
+        customer_id = random.choice(customers)
+        product = random.choice(products)
+
+        cur.execute(
+            """
+            INSERT INTO customer_product_view_log (
+                customer_id,
+                product_id,
+                sku,
+                session_id,
+                viewed_at
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+            """,
+            (
+                customer_id,
+                product["id"],
+                product["sku"],
+                f"session-{customer_id}",
+                now - timedelta(minutes=random.randint(1, 100000)),
+            ),
+        )
+
+
+def insert_search_logs(cur, customers):
+    now = datetime.now()
+
+    for _ in range(SEARCH_LOG_COUNT):
+        customer_id = random.choice(customers)
+        query = random.choice(SEARCH_QUERIES)
+
+        cur.execute(
+            """
+            INSERT INTO customer_search_log (
+                customer_id,
+                query,
+                result_count,
+                session_id,
+                created_at
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+            """,
+            (
+                customer_id,
+                query,
+                random.randint(1, 20),
+                f"session-{customer_id}",
+                now - timedelta(minutes=random.randint(1, 100000)),
+            ),
+        )
+
+
+def insert_orders(cur, customers, products):
+    now = datetime.now()
+
+    for _ in range(ORDER_COUNT):
+        customer_id = random.choice(customers)
+        order_products = random.sample(products, k=random.randint(1, 5))
+
+        total_price = 0.0
+
+        cur.execute(
+            """
+            INSERT INTO orders (
+                customer_id,
+                total_price,
+                address,
+                order_created_at,
+                is_completed,
+                payment_status,
+                payment_method,
+                delivery_status,
+                notes,
+                discount,
+                delivery_method
+            ) VALUES (
+                %s, 0, %s, %s, true,
+                'COMPLETED',
+                'CARD',
+                'COMPLETED',
+                NULL,
+                0,
+                'delivery'
+            )
+            RETURNING id
+            """,
+            (
+                customer_id,
+                "Benchmark street 1, Prague",
+                now - timedelta(days=random.randint(1, 120)),
+            ),
+        )
+
+        order_id = cur.fetchone()[0]
+
+        for product in order_products:
+            quantity = random.randint(1, 3)
+            unit_price = round(random.uniform(199, 45000), 2)
+            subtotal = round(unit_price * quantity / 1.21, 2)
+            total_price += unit_price * quantity
+
+            cur.execute(
+                """
+                INSERT INTO order_items (
+                    order_id,
+                    product_id,
+                    product_name,
+                    quantity,
+                    unit_price,
+                    subtotal,
+                    sku
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s
+                )
+                """,
+                (
+                    order_id,
+                    product["id"],
+                    product["name"],
+                    quantity,
+                    unit_price,
+                    subtotal,
+                    product["sku"],
+                ),
+            )
+
+        cur.execute(
+            """
+            UPDATE orders
+            SET total_price = %s
+            WHERE id = %s
+            """,
+            (round(total_price, 2), order_id),
+        )
+
+
+def main():
+    conn = connect()
+    cur = conn.cursor()
+
+    print("Clearing old benchmark data...")
+    clear_data(cur)
+
+    print("Creating categories...")
+    category_ids = insert_categories(cur)
+
+    print("Creating colors...")
+    color_ids = insert_colors(cur)
+
+    print("Creating sizes...")
+    size_ids = insert_sizes(cur)
+
+    print(f"Creating {PRODUCT_COUNT} products...")
+    products = insert_products(cur, category_ids, color_ids, size_ids)
+
+    print(f"Creating {CUSTOMER_COUNT} customers...")
+    customers = insert_customers(cur)
+
+    print("Creating wishlists...")
+    insert_wishlists(cur, customers, products)
+
+    print("Creating product view logs...")
+    insert_view_logs(cur, customers, products)
+
+    print("Creating customer search logs...")
+    insert_search_logs(cur, customers)
+
+    print("Creating orders...")
+    insert_orders(cur, customers, products)
+
     conn.commit()
+
     cur.close()
     conn.close()
 
-    print(f"Reset database and inserted {PRODUCT_COUNT} realistic products.")
+    print("Done.")
+    print(f"Products: {len(products)}")
+    print(f"Customers: {len(customers)}")
+    print("Now run full reindex.")
 
 
 if __name__ == "__main__":
