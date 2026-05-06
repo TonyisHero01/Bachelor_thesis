@@ -22,6 +22,7 @@ use App\Entity\Order;
 use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Entity\SearchRelevanceConfig;
+use App\Entity\CustomerProductViewLog;
 
 class EshopProductController extends BaseController
 {
@@ -79,6 +80,8 @@ class EshopProductController extends BaseController
         if (!$product instanceof Product) {
             throw $this->createNotFoundException(sprintf('No product found for id %d', $id));
         }
+
+        $this->saveProductViewLog($request, $product);
 
         $categoriesRepo = $this->entityManager->getRepository(Category::class);
         $categories = method_exists($categoriesRepo, 'findAllCategories')
@@ -565,6 +568,35 @@ class EshopProductController extends BaseController
             }
         } catch (\Throwable) {
             return;
+        }
+    }
+
+    private function saveProductViewLog(Request $request, Product $product): void
+    {
+        try {
+            $sku = trim((string) $product->getSku());
+
+            if ($sku === '') {
+                return;
+            }
+
+            $user = $this->getUser();
+            $customer = $user instanceof Customer ? $user : null;
+
+            $log = new CustomerProductViewLog();
+            $log->setCustomer($customer);
+            $log->setProduct($product);
+            $log->setSku($sku);
+            $log->setSessionId($request->getSession()->getId());
+
+            $this->entityManager->persist($log);
+            $this->entityManager->flush();
+        } catch (\Throwable $e) {
+            $this->logger->warning('[ProductViewLog] Failed to save product view log', [
+                'productId' => $product->getId(),
+                'sku' => $product->getSku(),
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 }
