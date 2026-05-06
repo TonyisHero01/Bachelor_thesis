@@ -529,52 +529,26 @@ class EshopHomeController extends BaseController
 
     private function findFallbackRandomProducts(int $limit = 10): array
     {
-        $rows = $this->entityManager->createQueryBuilder()
-            ->select('p.id')
+        $products = $this->entityManager->createQueryBuilder()
+            ->select('p')
             ->from(Product::class, 'p')
             ->where('p.hidden = false')
-            ->andWhere('p.imageUrls IS NOT NULL')
-            ->setMaxResults(100)
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults(200)
             ->getQuery()
-            ->getArrayResult();
+            ->getResult();
 
-        if ($rows === []) {
-            return [];
+        $withImages = array_values(array_filter(
+            $products,
+            static fn (Product $product): bool => !empty($product->getImageUrls())
+        ));
+
+        if ($withImages === []) {
+            $withImages = $products;
         }
 
-        $ids = array_map(
-            static fn (array $row): int => (int) $row['id'],
-            $rows
-        );
+        shuffle($withImages);
 
-        shuffle($ids);
-
-        $ids = array_slice($ids, 0, $limit);
-
-        if ($ids === []) {
-            return [];
-        }
-
-        $productsRaw = $this->entityManager
-            ->getRepository(Product::class)
-            ->findBy(['id' => $ids]);
-
-        $productMap = [];
-
-        foreach ($productsRaw as $product) {
-            if ($product instanceof Product) {
-                $productMap[$product->getId()] = $product;
-            }
-        }
-
-        $products = [];
-
-        foreach ($ids as $id) {
-            if (isset($productMap[$id])) {
-                $products[] = $productMap[$id];
-            }
-        }
-
-        return $products;
+        return array_slice($withImages, 0, $limit);
     }
 }
