@@ -7,8 +7,11 @@ from datetime import datetime
 
 import requests
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
+import json
+import psycopg2
+from pathlib import Path
 
 SEARCH_URL = os.getenv("SEARCH_URL", "http://search-service:8000").rstrip("/")
 BMS_URL = os.getenv("BMS_URL", "http://bms").rstrip("/")
@@ -325,6 +328,7 @@ def index():
             <div class="actions">
                 <a href="/run">Run benchmark again</a>
                 <a href="/csv">Download CSV</a>
+                <a href="/evaluation">Evaluation report</a>
             </div>
 
             {summary_html}
@@ -381,3 +385,321 @@ def csv_report():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=benchmark_results.csv"},
     )
+
+DB_HOST = os.getenv("DB_HOST", "db")
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_NAME = os.getenv("DB_NAME", "app")
+DB_USER = os.getenv("DB_USER", "user")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+
+REPORT_DIR = Path("/app/reports")
+REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_db_connection():
+    return psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
+
+
+def evaluate_search(limit: int = 10):
+    rows = []
+
+    for query in QUERIES:
+        status, data, elapsed_ms = request_json(
+            "POST",
+            f"{SEARCH_URL}/search",
+            json={
+                "query": query,
+                "limit": limit,
+            },
+        )
+
+        results = data.get("results", []) if status == 200 else []
+
+        rows.append({
+            "query": query,
+            "status": status,
+            "response_time_ms": elapsed_ms,
+            "result_count": len(results),
+            "has_results": len(results) > 0,
+        })
+
+    successful = [r for r in rows if r["status"] == 200]
+    with_results = [r for r in successful if r["has_results"]]
+
+    return {
+        "queries_evaluated": len(rows),
+        "successful_queries": len(successful),
+        "queries_with_results": len(with_results),
+        "result_hit_rate": len(with_results) / len(rows) if rows else 0,
+        "avg_response_time_ms": (
+            statistics.mean(r["response_time_ms"] for r in successful)
+            if successful else 0
+        ),
+        "details": rows,
+    }
+
+
+def fetch_customers_with_behavior():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT DISTINCT customer_id
+        FROM customer_product_view_log
+        WHERE customer_id IS NOT NULL
+
+        UNION
+
+        SELECT DISTINCT customer_id
+        FROM customer_search_log
+        WHERE customer_id IS NOT NULL
+
+        UNION
+
+        SELECT DISTINCT o.customer_id
+        FROM orders o
+        WHERE o.customer_id IS NOT NULL
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return [
+        {"id": row[0]}
+        for row in rows
+        if row[0] is not None
+    ]
+
+
+def fetch_user_recent_viewed_skus(customer_id: int, limit: int = 10):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT sku
+        FROM customer_product_view_log
+        WHERE customer_id = %s
+          AND sku IS NOT NULL
+          AND sku <> ''
+        ORDER BY viewed_at DESC
+        LIMIT %s
+    """, (customer_id, limit))
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    skus = []
+
+    for row in rows:
+        sku = str(row[0]).strip()
+
+        if sku and sku not in skus:
+            skus.append(sku)
+
+    return skus
+
+
+def fetch_categories_for_skus(skus: list[str]):
+    if not skus:
+        return []
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT DISTINCT p.sku, c.name
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        INNER JOIN (
+            SELECT sku, MAX(id) AS max_id
+            FROM product
+            WHERE sku = ANY(%s)
+            GROUP BY sku
+        ) latest ON latest.max_id = p.id
+        WHERE p.sku = ANY(%s)
+    """, (skus, skus))
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    categories = []
+
+    for _, category in rows:
+        category = str(category or "").strip()
+
+        if category and category not in categories:
+            categories.append(category)
+
+    return categories
+
+
+def call_recommend_api(sku: str, limit: int = 10):
+    status, data, _ = request_json(
+        "GET",
+        f"{SEARCH_URL}/recommend/{sku}",
+        params={"limit": limit},
+    )
+
+    if status != 200:
+        return []
+
+    results = data.get("results", [])
+
+    return results if isinstance(results, list) else []
+
+
+def save_evaluation_report(report: dict):
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+    latest_path = REPORT_DIR / "evaluation_latest.json"
+    dated_path = REPORT_DIR / f"evaluation_{timestamp}.json"
+
+    text = json.dumps(report, indent=2, ensure_ascii=False)
+
+    latest_path.write_text(text, encoding="utf-8")
+    dated_path.write_text(text, encoding="utf-8")
+
+
+def load_latest_evaluation_report():
+    latest_path = REPORT_DIR / "evaluation_latest.json"
+
+    if not latest_path.exists():
+        return {
+            "error": "No evaluation report has been generated yet."
+        }
+
+    return json.loads(latest_path.read_text(encoding="utf-8"))
+
+def run_evaluation():
+    search_eval = evaluate_search()
+    recommendation_eval = evaluate_recommendations()
+
+    return {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "search_evaluation": search_eval,
+        "recommendation_evaluation": recommendation_eval,
+    }
+
+def evaluate_recommendations(limit: int = 10):
+    users = fetch_customers_with_behavior()
+
+    total = 0
+    category_hits = 0
+    sku_hits = 0
+    diversity_scores = []
+
+    for user in users:
+        seed_skus = fetch_user_recent_viewed_skus(user["id"])
+
+        if not seed_skus:
+            continue
+
+        target_categories = fetch_categories_for_skus(seed_skus)
+
+        recommended = []
+
+        for sku in seed_skus[:3]:
+            recommended.extend(call_recommend_api(sku, limit))
+
+        recommended_skus = list(dict.fromkeys(
+            item["product_sku"]
+            for item in recommended
+            if item.get("product_sku")
+        ))[:limit]
+
+        if not recommended_skus:
+            continue
+
+        recommended_categories = fetch_categories_for_skus(recommended_skus)
+
+        total += 1
+
+        if set(seed_skus) & set(recommended_skus):
+            sku_hits += 1
+
+        if set(target_categories) & set(recommended_categories):
+            category_hits += 1
+
+        diversity_scores.append(len(set(recommended_categories)))
+
+    return {
+        "evaluated_users": total,
+        "sku_hit_rate": sku_hits / total if total else 0,
+        "category_hit_rate": category_hits / total if total else 0,
+        "avg_category_diversity": (
+            sum(diversity_scores) / len(diversity_scores)
+            if diversity_scores else 0
+        ),
+    }
+
+@app.post("/evaluation/generate")
+def generate_evaluation_report():
+    report = run_evaluation()
+    save_evaluation_report(report)
+    return RedirectResponse(url="/evaluation", status_code=303)
+
+@app.get("/evaluation/latest")
+def latest_evaluation_report():
+    return load_latest_evaluation_report()
+
+@app.get("/evaluation", response_class=HTMLResponse)
+def evaluation_page():
+    report = load_latest_evaluation_report()
+
+    if "error" in report:
+        body = "<p>No evaluation report has been generated yet.</p>"
+    else:
+        search = report.get("search_evaluation", {})
+        rec = report.get("recommendation_evaluation", {})
+
+        body = f"""
+        <h2>Search Evaluation</h2>
+        <ul>
+            <li>Queries evaluated: {search.get("queries_evaluated", 0)}</li>
+            <li>Result hit rate: {search.get("result_hit_rate", 0):.2f}</li>
+            <li>Average response time: {search.get("avg_response_time_ms", 0):.2f} ms</li>
+        </ul>
+
+        <h2>Recommendation Evaluation</h2>
+        <ul>
+            <li>Evaluated users: {rec.get("evaluated_users", 0)}</li>
+            <li>SKU hit rate: {rec.get("sku_hit_rate", 0):.2f}</li>
+            <li>Category hit rate: {rec.get("category_hit_rate", 0):.2f}</li>
+            <li>Average category diversity: {rec.get("avg_category_diversity", 0):.2f}</li>
+        </ul>
+        """
+
+    return f"""
+    <html>
+    <head>
+        <title>Search Evaluation Report</title>
+    </head>
+    <body style="font-family: Arial; margin: 40px;">
+        <h1>Search & Recommendation Evaluation</h1>
+
+        <p>
+            <a href="/">Back to benchmark</a>
+        </p>
+
+        <form method="post" action="/evaluation/generate">
+            <button type="submit">Generate evaluation report</button>
+        </form>
+
+        <hr>
+
+        {body}
+    </body>
+    </html>
+    """
