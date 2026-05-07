@@ -201,6 +201,8 @@ class SearchIndex:
         same_material_bonus = float(self.config.get("same_material_bonus", 0.0))
         same_color_bonus = float(self.config.get("same_color_bonus", 0.0))
         same_size_bonus = float(self.config.get("same_size_bonus", 0.0))
+        max_per_category = int(self.config.get("max_recommendation_per_category", 3))
+        diversity_penalty = float(self.config.get("recommendation_diversity_penalty", 0.15))
 
         for i, candidate_sku in enumerate(self.skus):
             if candidate_sku == base_sku:
@@ -240,17 +242,36 @@ class SearchIndex:
         idx = np.argsort(adjusted_scores)[::-1]
 
         results = []
+        category_count = {}
 
         for i in idx:
-            if adjusted_scores[i] <= 0:
+            score = float(adjusted_scores[i])
+
+            if score <= 0:
                 continue
 
-            results.append(
-                {
-                    "product_sku": self.skus[i],
-                    "similarity": float(adjusted_scores[i]),
-                }
-            )
+            candidate_sku = self.skus[i]
+            candidate_meta = self.metadata.get(candidate_sku, {})
+            category = candidate_meta.get("category") or "unknown"
+
+            current_category_count = category_count.get(category, 0)
+
+            if current_category_count >= max_per_category:
+                score -= diversity_penalty * current_category_count
+
+            if score <= 0:
+                continue
+
+            if current_category_count >= max_per_category * 2:
+                continue
+
+            results.append({
+                "product_sku": candidate_sku,
+                "similarity": score,
+                "category": category,
+            })
+
+            category_count[category] = current_category_count + 1
 
             if len(results) >= limit:
                 break
