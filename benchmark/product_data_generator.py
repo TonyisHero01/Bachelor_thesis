@@ -818,11 +818,6 @@ def insert_customer_orders(cur, customer_id: int, products: list[dict]):
 
 def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
     products_by_category = build_products_by_category(products)
-    products_by_sku = {
-        product["sku"]: product
-        for product in products
-    }
-
     persona_names = list(PERSONAS.keys())
 
     for customer_id in customers:
@@ -840,7 +835,7 @@ def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
             seed_candidates.extend(
                 random.sample(
                     pool,
-                    k=min(len(pool), 5),
+                    k=min(len(pool), 8),
                 )
             )
 
@@ -849,33 +844,14 @@ def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
         if not seed_candidates:
             continue
 
-        seed_products = random.sample(
+        behavior_products = random.sample(
             seed_candidates,
-            k=min(len(seed_candidates), random.randint(5, 10)),
+            k=min(len(seed_candidates), random.randint(10, 20)),
         )
-
-        behavior_products = list(seed_products)
-
-        for seed_product in seed_products[:4]:
-            recommended_skus = fetch_recommended_skus(
-                seed_product["sku"],
-                limit=12,
-            )
-
-            for recommended_sku in recommended_skus:
-                recommended_product = products_by_sku.get(recommended_sku)
-
-                if recommended_product:
-                    behavior_products.append(recommended_product)
-
-        behavior_products = unique_products(behavior_products)
-
-        if len(behavior_products) > 20:
-            behavior_products = random.sample(behavior_products, k=20)
 
         view_products = random.sample(
             behavior_products,
-            k=min(len(behavior_products), random.randint(8, 18)),
+            k=min(len(behavior_products), random.randint(8, 16)),
         )
 
         insert_customer_view_logs(
@@ -892,7 +868,7 @@ def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
 
         order_pool = random.sample(
             behavior_products,
-            k=min(len(behavior_products), random.randint(4, 12)),
+            k=min(len(behavior_products), random.randint(4, 10)),
         )
 
         insert_customer_orders(
@@ -909,7 +885,7 @@ def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
 
         print(
             f"Customer {customer_id}: persona={persona_name}, "
-            f"seed={len(seed_products)}, behavior={len(behavior_products)}"
+            f"history_products={len(behavior_products)}"
         )
     
 def main():
@@ -934,18 +910,16 @@ def main():
     print(f"Creating {CUSTOMER_COUNT} customers...")
     customers = insert_customers(cur)
 
-    conn.commit()
-
-    print("Running full reindex before behavior generation...")
-    run_full_reindex()
-
-    print("Creating persona-based behavior...")
+    print("Creating persona-based historical behavior...")
     insert_persona_behavior(cur, customers, products)
 
     conn.commit()
 
     cur.close()
     conn.close()
+
+    print("Running full reindex after catalog generation...")
+    run_full_reindex()
 
     print("Done.")
     print(f"Products: {len(products)}")
