@@ -22,6 +22,7 @@ use App\Entity\Order;
 use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Entity\CustomerProductViewLog;
+use App\Entity\SearchRelevanceConfig;
 
 class EshopProductController extends BaseController
 {
@@ -217,10 +218,24 @@ class EshopProductController extends BaseController
     ): array {
         $scores = [];
 
-        $wishlistWeight = 0.30;
-        $orderWeight = 0.25;
-        $searchWeight = 0.20;
-        $viewWeight = 0.35;
+        $config = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(
+                ['active' => true],
+                ['id' => 'DESC']
+            );
+
+        $wishlistWeight =
+            (float) ($config?->getWishlistRecommendationWeight() ?? 0.30);
+
+        $orderWeight =
+            (float) ($config?->getOrderHistoryRecommendationWeight() ?? 0.25);
+
+        $searchWeight =
+            (float) ($config?->getSearchHistoryRecommendationWeight() ?? 0.20);
+
+        $viewWeight =
+            (float) ($config?->getViewHistoryRecommendationWeight() ?? 0.35);
 
         $this->addTfidfScores(
             $scores,

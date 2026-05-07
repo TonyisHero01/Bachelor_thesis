@@ -22,6 +22,7 @@ use App\Entity\Customer;
 use App\Entity\CustomerSearchLog;
 use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Entity\SearchRelevanceConfig;
 
 class EshopHomeController extends BaseController
 {
@@ -155,9 +156,32 @@ class EshopHomeController extends BaseController
         $user = $this->getUser();
         $customer = $user instanceof Customer ? $user : null;
 
-        $wishlistWeight = 0.35;
-        $orderWeight = 0.30;
-        $searchWeight = 0.15;
+        $config = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(
+                ['active' => true],
+                ['id' => 'DESC']
+            );
+
+        $wishlistWeight =
+            $config?->getWishlistRecommendationWeight()
+            ?? 0.35;
+
+        $orderWeight =
+            $config?->getOrderHistoryRecommendationWeight()
+            ?? 0.30;
+
+        $searchWeight =
+            $config?->getSearchHistoryRecommendationWeight()
+            ?? 0.15;
+
+        $maxRecommendationPerCategory =
+            $config?->getMaxRecommendationPerCategory()
+            ?? 4;
+
+        $recommendationDiversityPenalty =
+            $config?->getRecommendationDiversityPenalty()
+            ?? 0.10;
 
         if ($customer instanceof Customer) {
             $this->addWishlistScores($scores, $customer, $httpClient, $wishlistWeight);
