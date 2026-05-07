@@ -8,7 +8,7 @@ def percentage(value):
     return f"{value * 100:.0f}%"
 
 
-def status_label(value, good_threshold=0.8):
+def status_label(value, good_threshold=0.65):
     if value >= good_threshold:
         return "good"
 
@@ -381,9 +381,29 @@ def render_evaluation_page(report):
 
         hit_rate = float(search.get("result_hit_rate", 0))
         avg_time = float(search.get("avg_response_time_ms", 0))
-        category_hit = float(rec.get("category_hit_rate", 0))
-        sku_hit = float(rec.get("sku_hit_rate", 0))
-        diversity = float(rec.get("avg_category_diversity", 0))
+        interest_similarity = float(
+            rec.get("avg_interest_similarity", 0)
+        )
+
+        category_similarity = float(
+            rec.get("avg_category_similarity", 0)
+        )
+
+        material_similarity = float(
+            rec.get("avg_material_similarity", 0)
+        )
+
+        color_similarity = float(
+            rec.get("avg_color_similarity", 0)
+        )
+
+        size_similarity = float(
+            rec.get("avg_size_similarity", 0)
+        )
+
+        diversity = float(
+            rec.get("avg_category_diversity", 0)
+        )
 
         diversity_class = "good" if diversity >= 2 else "warn"
 
@@ -398,62 +418,88 @@ def render_evaluation_page(report):
             speed_class = "bad"
 
         body = f"""
-        <div class="metrics">
-            <div class="metric-card {status_label(hit_rate)}">
-                <span>Search result hit rate</span>
-                <strong>{percentage(hit_rate)}</strong>
+            <div class="metrics">
+
+                <div class="metric-card {status_label(hit_rate)}">
+                    <span>Search result hit rate</span>
+                    <strong>{percentage(hit_rate)}</strong>
+                </div>
+
+                <div class="metric-card {speed_class}">
+                    <span>Average search response</span>
+                    <strong>{avg_time:.2f} ms</strong>
+                    <span>{speed_label}</span>
+                </div>
+
+                <div class="metric-card">
+                    <span>Evaluated users</span>
+                    <strong>{rec.get("evaluated_users", 0)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(interest_similarity)}">
+                    <span>Recommendation interest similarity</span>
+                    <strong>{percentage(interest_similarity)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(category_similarity)}">
+                    <span>Category similarity</span>
+                    <strong>{percentage(category_similarity)}</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Material similarity</span>
+                    <strong>{percentage(material_similarity)}</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Color similarity</span>
+                    <strong>{percentage(color_similarity)}</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Size similarity</span>
+                    <strong>{percentage(size_similarity)}</strong>
+                </div>
+
+                <div class="metric-card {diversity_class}">
+                    <span>Average category diversity</span>
+                    <strong>{diversity:.2f}</strong>
+                </div>
+
             </div>
 
-            <div class="metric-card {speed_class}">
-                <span>Average search response</span>
-                <strong>{avg_time:.2f} ms</strong>
-                <span>{speed_label}</span>
+            <div class="notice">
+                Recommendation evaluation compares recommended products
+                against the customer's historical interest profile.
+
+                The system measures similarity across categories,
+                materials, colors, and sizes.
+
+                Higher similarity means recommendations are more aligned
+                with previous customer behavior.
+
+                Diversity measures how many different categories appear
+                in recommendation results.
             </div>
 
-            <div class="metric-card">
-                <span>Evaluated users</span>
-                <strong>{rec.get("evaluated_users", 0)}</strong>
-            </div>
+            <h2>Search Details</h2>
 
-            <div class="metric-card {status_label(category_hit)}">
-                <span>Recommendation category hit rate</span>
-                <strong>{percentage(category_hit)}</strong>
-            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Query</th>
+                        <th>Status</th>
+                        <th>Response time</th>
+                        <th>Results</th>
+                        <th>Has results</th>
+                    </tr>
+                </thead>
 
-            <div class="metric-card">
-                <span>Recommendation SKU hit rate</span>
-                <strong>{percentage(sku_hit)}</strong>
-            </div>
-
-            <div class="metric-card {diversity_class}">
-                <span>Average category diversity</span>
-                <strong>{diversity:.2f}</strong>
-            </div>
-        </div>
-
-        <div class="notice">
-            Search is healthy when hit rate is high and average response time stays low.
-            Recommendation category hit rate shows whether recommended products stay close
-            to the user's interests. Diversity near 1.00 means recommendations are very focused;
-            this is safe but conservative.
-        </div>
-
-        <h2>Search Details</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Query</th>
-                    <th>Status</th>
-                    <th>Response time</th>
-                    <th>Results</th>
-                    <th>Has results</th>
-                </tr>
-            </thead>
-            <tbody>
-                {build_search_detail_rows(search.get("details", []))}
-            </tbody>
-        </table>
-        """
+                <tbody>
+                    {build_search_detail_rows(search.get("details", []))}
+                </tbody>
+            </table>
+            """
 
     return f"""
     <!doctype html>
