@@ -42,7 +42,7 @@ class SearchIndex:
         self.skus = list(documents.keys())
         self.documents = documents.copy()
         self.document_tokens = {
-            sku: set(document.split())
+            sku: self.tokenize(document)
             for sku, document in self.documents.items()
         }
         self.metadata = metadata or {}
@@ -83,7 +83,7 @@ class SearchIndex:
 
             self.skus.append(sku)
             self.documents[sku] = document
-            self.document_tokens[sku] = set(document.split())
+            self.document_tokens[sku] = self.tokenize(document)
             vectors.append(vector)
 
         self.metadata = metadata or {}
@@ -97,6 +97,13 @@ class SearchIndex:
         self.matrix = vstack(vectors)
         logger.info("[INDEX] loaded %d saved vectors", len(vectors))
         return len(vectors)
+    
+    def tokenize(self, text: str) -> set[str]:
+        return {
+            token.strip().lower()
+            for token in text.split()
+            if token.strip()
+        }
 
     def update_one(self, sku: str, document: str, vector, metadata: dict | None = None):
         sku = sku.strip()
@@ -107,7 +114,7 @@ class SearchIndex:
         if sku in self.skus:
             index = self.skus.index(sku)
             self.documents[sku] = document
-            self.document_tokens[sku] = set(document.split())
+            self.document_tokens[sku] = self.tokenize(document)
 
             if self.matrix is not None:
                 rows = [self.matrix[i] for i in range(self.matrix.shape[0])]
@@ -118,7 +125,7 @@ class SearchIndex:
         else:
             self.skus.append(sku)
             self.documents[sku] = document
-            self.document_tokens[sku] = set(document.split())
+            self.document_tokens[sku] = self.tokenize(document)
 
             if self.matrix is None:
                 self.matrix = vector
@@ -297,7 +304,13 @@ class SearchIndex:
             current_category_count = category_count.get(category, 0)
 
             if current_category_count >= max_per_category:
-                score -= diversity_penalty * current_category_count
+                overflow = (
+                    current_category_count
+                    - max_per_category
+                    + 1
+                )
+
+                score -= diversity_penalty * overflow
 
             if score <= 0:
                 continue

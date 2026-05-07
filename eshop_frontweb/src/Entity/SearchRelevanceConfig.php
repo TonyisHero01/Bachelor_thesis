@@ -83,6 +83,12 @@ class SearchRelevanceConfig
     #[ORM\Column(type: 'float', options: ['default' => 0.35])]
     private float $viewHistoryRecommendationWeight = 0.35;
 
+    #[ORM\Column(type: 'integer', options: ['default' => 4])]
+    private int $maxRecommendationPerCategory = 4;
+
+    #[ORM\Column(type: 'float', options: ['default' => 0.10])]
+    private float $recommendationDiversityPenalty = 0.10;
+
     public function __construct()
     {
         $now = new \DateTimeImmutable();
@@ -227,6 +233,30 @@ class SearchRelevanceConfig
     public function setViewHistoryRecommendationWeight(float $weight): static
     {
         $this->viewHistoryRecommendationWeight = $weight;
+
+        return $this;
+    }
+
+    public function getMaxRecommendationPerCategory(): int
+    {
+        return $this->maxRecommendationPerCategory;
+    }
+
+    public function setMaxRecommendationPerCategory(int $value): static
+    {
+        $this->maxRecommendationPerCategory = $value;
+
+        return $this;
+    }
+
+    public function getRecommendationDiversityPenalty(): float
+    {
+        return $this->recommendationDiversityPenalty;
+    }
+
+    public function setRecommendationDiversityPenalty(float $value): static
+    {
+        $this->recommendationDiversityPenalty = $value;
 
         return $this;
     }

@@ -16,8 +16,10 @@ DEFAULT_RELEVANCE_CONFIG = {
     "same_material_bonus": 0.15,
     "same_color_bonus": 0.10,
     "same_size_bonus": 0.10,
-}
 
+    "max_recommendation_per_category": 4,
+    "recommendation_diversity_penalty": 0.10,
+}
 
 def fetch_active_relevance_config() -> dict:
     with get_connection() as conn:
@@ -35,7 +37,9 @@ def fetch_active_relevance_config() -> dict:
                     same_category_bonus,
                     same_material_bonus,
                     same_color_bonus,
-                    same_size_bonus
+                    same_size_bonus,
+                    max_recommendation_per_category,
+                    recommendation_diversity_penalty
                 FROM search_relevance_config
                 WHERE active = true
                 ORDER BY id DESC
