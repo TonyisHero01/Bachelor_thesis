@@ -22,7 +22,6 @@ use App\Entity\Customer;
 use App\Entity\CustomerSearchLog;
 use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use App\Entity\SearchRelevanceConfig;
 
 class EshopHomeController extends BaseController
 {
@@ -156,13 +155,9 @@ class EshopHomeController extends BaseController
         $user = $this->getUser();
         $customer = $user instanceof Customer ? $user : null;
 
-        $config = $this->entityManager
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
-
-        $wishlistWeight = $config?->getWishlistRecommendationWeight() ?? 0.30;
-        $orderWeight = $config?->getOrderHistoryRecommendationWeight() ?? 0.25;
-        $searchWeight = $config?->getSearchHistoryRecommendationWeight() ?? 0.20;
+        $wishlistWeight = 0.35;
+        $orderWeight = 0.30;
+        $searchWeight = 0.15;
 
         if ($customer instanceof Customer) {
             $this->addWishlistScores($scores, $customer, $httpClient, $wishlistWeight);
@@ -313,21 +308,24 @@ class EshopHomeController extends BaseController
 
             $results = $this->callSearchServiceSearch(
                 $query,
-                10,
+                3,
                 $httpClient
             );
 
             foreach ($results as $item) {
 
                 $sku = trim((string) ($item['product_sku'] ?? ''));
-                $similarity = (float) ($item['similarity'] ?? 0);
 
-                if ($sku === '' || $similarity <= 0) {
+                if ($sku === '') {
                     continue;
                 }
 
-                $scores[$sku] = ($scores[$sku] ?? 0)
-                    + ($similarity * $weight);
+                $this->addRecommendedSkuScores(
+                    $scores,
+                    $sku,
+                    $weight,
+                    $httpClient
+                );
             }
         }
     }
@@ -426,19 +424,24 @@ class EshopHomeController extends BaseController
 
             $results = $this->callSearchServiceSearch(
                 $query,
-                5,
+                3,
                 $httpClient
             );
 
             foreach ($results as $item) {
 
                 $sku = trim((string) ($item['product_sku'] ?? ''));
-                $similarity = (float) ($item['similarity'] ?? 0);
 
-                if ($sku !== '' && $similarity > 0) {
-                    $scores[$sku] = ($scores[$sku] ?? 0)
-                        + ($similarity * $weight);
+                if ($sku === '') {
+                    continue;
                 }
+
+                $this->addRecommendedSkuScores(
+                    $scores,
+                    $sku,
+                    $weight,
+                    $httpClient
+                );
             }
         }
     }

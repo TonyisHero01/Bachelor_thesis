@@ -21,7 +21,6 @@ use App\Entity\CustomerSearchLog;
 use App\Entity\Order;
 use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use App\Entity\SearchRelevanceConfig;
 use App\Entity\CustomerProductViewLog;
 
 class EshopProductController extends BaseController
@@ -218,21 +217,16 @@ class EshopProductController extends BaseController
     ): array {
         $scores = [];
 
-        $config = $this->entityManager
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
-
-        $tfidfWeight = $config?->getTfidfRecommendationWeight() ?? 1.0;
-        $sameCategoryWeight = $config?->getSameCategoryRecommendationWeight() ?? 0.35;
-        $sameColorWeight = $config?->getSameColorRecommendationWeight() ?? 0.10;
-        $sameSizeWeight = $config?->getSameSizeRecommendationWeight() ?? 0.10;
-        $wishlistWeight = $config?->getWishlistRecommendationWeight() ?? 0.30;
-        $orderWeight = $config?->getOrderHistoryRecommendationWeight() ?? 0.25;
-        $searchWeight = $config?->getSearchHistoryRecommendationWeight() ?? 0.20;
+        $wishlistWeight = 0.30;
+        $orderWeight = 0.25;
+        $searchWeight = 0.20;
         $viewWeight = 0.35;
 
-        $this->addTfidfScores($scores, $currentProduct, $httpClient, $tfidfWeight);
-        $this->addAttributeScores($scores, $currentProduct, $sameCategoryWeight, $sameColorWeight, $sameSizeWeight);
+        $this->addTfidfScores(
+            $scores,
+            $currentProduct,
+            $httpClient
+        );
         $this->addWishlistScores($scores, $request, $httpClient, $wishlistWeight);
         $this->addOrderHistoryScores($scores, $request, $httpClient, $orderWeight);
         $this->addSearchHistoryScores($scores, $request, $httpClient, $searchWeight);
@@ -309,8 +303,7 @@ class EshopProductController extends BaseController
     private function addTfidfScores(
         array &$scores,
         Product $product,
-        HttpClientInterface $httpClient,
-        float $weight
+        HttpClientInterface $httpClient
     ): void {
         $sku = trim((string) $product->getSku());
 
@@ -344,57 +337,12 @@ class EshopProductController extends BaseController
                     continue;
                 }
 
-                $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0) + ($similarity * $weight);
+                $scores[$recommendedSku]
+                    = ($scores[$recommendedSku] ?? 0)
+                    + $similarity;
             }
         } catch (\Throwable) {
             return;
-        }
-    }
-
-    private function addAttributeScores(
-        array &$scores,
-        Product $currentProduct,
-        float $sameCategoryWeight,
-        float $sameColorWeight,
-        float $sameSizeWeight
-    ): void {
-        $queryBuilder = $this->entityManager->createQueryBuilder();
-
-        $candidates = $queryBuilder
-            ->select('p')
-            ->from(Product::class, 'p')
-            ->where('p.sku != :currentSku')
-            ->andWhere('p.hidden = false')
-            ->setParameter('currentSku', $currentProduct->getSku())
-            ->setMaxResults(100)
-            ->getQuery()
-            ->getResult();
-
-        foreach ($candidates as $candidate) {
-            if (!$candidate instanceof Product || !$candidate->getSku()) {
-                continue;
-            }
-
-            $score = 0.0;
-
-            if ($currentProduct->getCategory() && $candidate->getCategory()
-                && $currentProduct->getCategory()->getId() === $candidate->getCategory()->getId()) {
-                $score += $sameCategoryWeight;
-            }
-
-            if ($currentProduct->getColor() && $candidate->getColor()
-                && $currentProduct->getColor()->getId() === $candidate->getColor()->getId()) {
-                $score += $sameColorWeight;
-            }
-
-            if ($currentProduct->getSize() && $candidate->getSize()
-                && $currentProduct->getSize()->getId() === $candidate->getSize()->getId()) {
-                $score += $sameSizeWeight;
-            }
-
-            if ($score > 0) {
-                $scores[$candidate->getSku()] = ($scores[$candidate->getSku()] ?? 0) + $score;
-            }
         }
     }
 
@@ -498,13 +446,17 @@ class EshopProductController extends BaseController
             try {
                 $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
-                $response = $httpClient->request('POST', $baseUrl . '/search', [
-                    'json' => [
-                        'query' => $query,
-                        'limit' => 10,
-                    ],
-                    'timeout' => 5,
-                ]);
+                $response = $httpClient->request(
+                    'POST',
+                    $baseUrl . '/search',
+                    [
+                        'json' => [
+                            'query' => $query,
+                            'limit' => 3,
+                        ],
+                        'timeout' => 5,
+                    ]
+                );
 
                 if ($response->getStatusCode() >= 400) {
                     continue;
@@ -512,17 +464,24 @@ class EshopProductController extends BaseController
 
                 $data = $response->toArray(false);
 
-                foreach (($data['results'] ?? []) as $row) {
-                    if (!is_array($row)) {
+                foreach (($data['results'] ?? []) as $searchRow) {
+
+                    if (!is_array($searchRow)) {
                         continue;
                     }
 
-                    $sku = trim((string) ($row['product_sku'] ?? ''));
-                    $similarity = (float) ($row['similarity'] ?? 0);
+                    $sku = trim((string) ($searchRow['product_sku'] ?? ''));
 
-                    if ($sku !== '' && $similarity > 0) {
-                        $scores[$sku] = ($scores[$sku] ?? 0) + ($similarity * $weight);
+                    if ($sku === '') {
+                        continue;
                     }
+
+                    $this->addRecommendedSkuScores(
+                        $scores,
+                        $sku,
+                        $weight,
+                        $httpClient
+                    );
                 }
             } catch (\Throwable) {
                 continue;
@@ -565,7 +524,9 @@ class EshopProductController extends BaseController
                 $similarity = (float) ($row['similarity'] ?? 0);
 
                 if ($recommendedSku !== '' && $similarity > 0) {
-                    $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0) + ($similarity * $weight);
+                    $scores[$recommendedSku]
+                        = ($scores[$recommendedSku] ?? 0)
+                        + $similarity;
                 }
             }
         } catch (\Throwable) {
