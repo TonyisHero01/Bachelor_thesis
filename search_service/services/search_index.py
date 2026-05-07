@@ -167,17 +167,57 @@ class SearchIndex:
             return []
 
         query_vector = self.vectorizer.transform([query])
-        scores = cosine_similarity(query_vector, self.matrix).flatten()
-        idx = np.argsort(scores)[::-1][:limit]
 
-        return [
-            {
-                "product_sku": self.skus[i],
-                "similarity": float(scores[i]),
-            }
-            for i in idx
-            if scores[i] > 0
+        query_terms = [
+            term.strip().lower()
+            for term in query.split()
+            if term.strip()
         ]
+
+        candidate_indices = []
+
+        for i, sku in enumerate(self.skus):
+            document_tokens = self.document_tokens.get(sku, set())
+
+            if any(term in document_tokens for term in query_terms):
+                candidate_indices.append(i)
+
+        if not candidate_indices:
+            candidate_indices = list(range(len(self.skus)))
+
+        candidate_matrix = self.matrix[candidate_indices]
+
+        scores = cosine_similarity(
+            query_vector,
+            candidate_matrix,
+        ).flatten()
+
+        positive_indices = np.where(scores > 0)[0]
+
+        if len(positive_indices) == 0:
+            return []
+
+        top_k = min(limit, len(positive_indices))
+
+        if len(positive_indices) > top_k:
+            top_idx = positive_indices[
+                np.argpartition(scores[positive_indices], -top_k)[-top_k:]
+            ]
+            top_idx = top_idx[np.argsort(scores[top_idx])[::-1]]
+        else:
+            top_idx = positive_indices[np.argsort(scores[positive_indices])[::-1]]
+
+        results = []
+
+        for local_idx in top_idx:
+            original_index = candidate_indices[local_idx]
+
+            results.append({
+                "product_sku": self.skus[original_index],
+                "similarity": float(scores[local_idx]),
+            })
+
+        return results
 
     def recommend_by_sku(self, sku: str, limit: int = 10):
         if self.matrix is None:

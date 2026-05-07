@@ -74,7 +74,6 @@ def rebuild_search_index() -> int:
     for sku, document in documents.items():
         vector = search_index.vectorize_document(document)
         save_product_vector(sku, document, vector)
-        logger.info("[REINDEX][FULL] saved vector sku=%s", sku)
 
     logger.info("[REINDEX][FULL] finished indexed=%d", count)
 
