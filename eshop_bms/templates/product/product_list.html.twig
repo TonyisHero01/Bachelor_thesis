@@ -15,12 +15,17 @@
        data-value="{{ MAX_ARTICLES_COUNT_PER_PAGE }}"></div>
   <div id="NAME_MAX_LENGTH" data-value="{{ NAME_MAX_LENGTH }}"></div>
   <div id="CONTENT_MAX_LENGTH" data-value="{{ CONTENT_MAX_LENGTH }}"></div>
+  <div id="CURRENT_PAGE" data-value="{{ currentPage }}"></div>
+  <div id="TOTAL_PAGES" data-value="{{ totalPages }}"></div>
+  <div id="TOTAL_PRODUCTS" data-value="{{ totalProducts }}"></div>
 
   <h1>Product List</h1>
 
   <form id="search" style="margin: .5rem 0 1rem;">
     <label for="searchInput" class="sr-only">Search</label>
     <input type="hidden" id="current-locale" value="{{ app.request.get('_locale') }}">
+    
+
     <input type="text" id="searchInput" name="searchInput" class="searchInput"
            placeholder="Search Product">
     <button type="button" id="searchButton" onclick="search_()">Search</button>
@@ -40,9 +45,34 @@
   } %}
 
   <div class="buttons" style="margin-top: 1rem;">
-    <button id="previousPageButton" type="button" onclick="previousPage()">Previous</button>
-    <button id="nextPageButton" type="button" onclick="nextPage()">Next</button>
-    <span id="pageCount">Page Count </span>
+    {% if currentPage > 1 %}
+      <a id="previousPageButton"
+        href="{{ path('show_All_products', {
+          page: currentPage - 1,
+          _locale: app.request.get('_locale')
+        }) }}">
+        Previous
+      </a>
+    {% else %}
+      <button id="previousPageButton" type="button" disabled>Previous</button>
+    {% endif %}
+
+    <span id="pageCount">
+      Page {{ currentPage }} / {{ totalPages }}
+      · Total {{ totalProducts }}
+    </span>
+
+    {% if currentPage < totalPages %}
+      <a id="nextPageButton"
+        href="{{ path('show_All_products', {
+          page: currentPage + 1,
+          _locale: app.request.get('_locale')
+        }) }}">
+        Next
+      </a>
+    {% else %}
+      <button id="nextPageButton" type="button" disabled>Next</button>
+    {% endif %}
 
     <button class="popup" onclick="openCreateForm()">Create Product</button>
 
@@ -172,6 +202,6 @@
 
   <script src="{{ asset('assets/search.js') }}"></script>
   <script src="{{ asset('assets/productList.js') }}"></script>
-  <script src="{{ asset('assets/showPage.js') }}"></script>
+  <!-- <script src="{{ asset('assets/showPage.js') }}"></script> -->
   <script src="{{ asset('assets/delete.js') }}"></script>
 {% endblock %}

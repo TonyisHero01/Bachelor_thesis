@@ -55,9 +55,7 @@
   </thead>
 
   <tbody>
-    {% set ids = '' %}
     {% for product in products %}
-      {% set ids = ids ~ product.id ~ ',' %}
       <tr id="{{ product.id }}"
           data-edit-route="{{ localized_path('edit_product', { id: product.id }) }}"
           class="{% if product.hidden %}hidden-product{% endif %}"

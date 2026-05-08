@@ -236,7 +236,22 @@ final class ProductController extends BaseController
     #[Route('/bms/product_list', name: 'show_All_products', methods: ['GET'])]
     public function showAllProducts(EntityManagerInterface $em, Request $request): Response
     {
-        $products = $em->getRepository(Product::class)->findLatestVersionProducts();
+        $page = max(1, (int) $request->query->get('page', 1));
+
+        $limit = (int) $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE');
+        $limit = $limit > 0 ? $limit : 10;
+
+        $offset = ($page - 1) * $limit;
+
+        $productRepository = $em->getRepository(Product::class);
+
+        $products = $productRepository->findLatestVersionProducts(
+            limit: $limit,
+            offset: $offset
+        );
+
+        $totalProducts = $productRepository->countLatestVersionProducts();
+        $totalPages = max(1, (int) ceil($totalProducts / $limit));
         $form = $this->createForm(ProductType::class, new Product());
 
         $colors = $em->getRepository(Color::class)->findAll();
@@ -255,6 +270,9 @@ final class ProductController extends BaseController
             'colors' => $colors,
             'sizes' => $sizes,
             'categories' => $categories,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalProducts' => $totalProducts,
         ]);
     }
 

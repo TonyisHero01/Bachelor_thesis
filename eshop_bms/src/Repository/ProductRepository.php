@@ -26,7 +26,12 @@ class ProductRepository extends ServiceEntityRepository
      *
      * @return Product[]
      */
-    public function findLatestVersionProducts(?string $skuFilter = null, ?string $nameFilter = null): array
+    public function findLatestVersionProducts(
+        int $limit,
+        int $offset = 0,
+        ?string $skuFilter = null,
+        ?string $nameFilter = null
+    ): array
     {
         // subquery: max version for each sku
         $maxVersionDql = $this->createQueryBuilder('p2')
@@ -55,7 +60,11 @@ class ProductRepository extends ServiceEntityRepository
                ->setParameter('name', '%' . mb_strtolower($nameFilter) . '%');
         }
 
-        return $qb->getQuery()->getResult();
+        return $qb
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
     }
     public function findLastFourProducts()
     {
@@ -108,5 +117,23 @@ class ProductRepository extends ServiceEntityRepository
             ->setParameter('ids', $ids)
             ->getQuery()
             ->getResult();
+    }
+
+    public function countLatestVersionProducts(): int
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = "
+            SELECT COUNT(*) AS cnt
+            FROM (
+                SELECT MAX(id) as id
+                FROM product
+                GROUP BY sku
+            ) t
+        ";
+
+        return (int) $conn
+            ->executeQuery($sql)
+            ->fetchOne();
     }
 }
