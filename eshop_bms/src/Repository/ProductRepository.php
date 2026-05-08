@@ -136,4 +136,63 @@ class ProductRepository extends ServiceEntityRepository
             ->executeQuery($sql)
             ->fetchOne();
     }
+
+    public function findLatestVersionProductsPaged(
+        int $limit = 10,
+        int $offset = 0
+    ): array {
+        $conn = $this->getEntityManager()->getConnection();
+
+        $sql = "
+            SELECT latest.max_id
+            FROM (
+                SELECT sku, MAX(id) AS max_id
+                FROM product
+                WHERE sku IS NOT NULL AND sku <> ''
+                GROUP BY sku
+            ) latest
+            ORDER BY latest.sku ASC
+            LIMIT :limit OFFSET :offset
+        ";
+
+        $rows = $conn->executeQuery(
+            $sql,
+            [
+                'limit' => $limit,
+                'offset' => $offset,
+            ],
+            [
+                'limit' => \PDO::PARAM_INT,
+                'offset' => \PDO::PARAM_INT,
+            ]
+        )->fetchFirstColumn();
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $ids = array_map('intval', $rows);
+
+        $products = $this->createQueryBuilder('p')
+            ->where('p.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        $map = [];
+
+        foreach ($products as $product) {
+            $map[$product->getId()] = $product;
+        }
+
+        $ordered = [];
+
+        foreach ($ids as $id) {
+            if (isset($map[$id])) {
+                $ordered[] = $map[$id];
+            }
+        }
+
+        return $ordered;
+    }
 }

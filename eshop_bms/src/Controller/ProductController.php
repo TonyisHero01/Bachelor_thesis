@@ -245,7 +245,7 @@ final class ProductController extends BaseController
 
         $productRepository = $em->getRepository(Product::class);
 
-        $products = $productRepository->findLatestVersionProducts(
+        $products = $productRepository->findLatestVersionProductsPaged(
             limit: $limit,
             offset: $offset
         );
