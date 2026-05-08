@@ -106,12 +106,18 @@ class EshopHomeController extends BaseController
 
         $categoryName = (string) ($category->getTranslatedName($locale) ?? $category->getName() ?? '');
 
-        $products = $productRepository->findLatestByCategory($category);
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = 20;
+        $offset = ($page - 1) * $limit;
 
-        $productsWithImages = array_values(array_filter(
-            $products,
-            static fn (Product $p): bool => !$p->getHidden() && !empty($p->getImageUrls())
-        ));
+        $products = $productRepository->findLatestByCategoryPaged(
+            $category,
+            $limit,
+            $offset
+        );
+
+        $totalProducts = $productRepository->countLatestByCategory($category);
+        $totalPages = max(1, (int) ceil($totalProducts / $limit));
 
         $translations = $this->getTranslations($request);
         $translations['base_template'] = 'eshop_base.html.twig';
@@ -133,7 +139,7 @@ class EshopHomeController extends BaseController
             'eshop/products.html.twig',
             [
                 'category' => $categoryName,
-                'products' => $productsWithImages,
+                'products' => $products,
                 'colors' => $colorRepository->findAll(),
                 'sizes' => $sizeRepository->findAll(),
                 'categories' => $categories,
@@ -141,6 +147,9 @@ class EshopHomeController extends BaseController
                 'locale' => $locale,
                 'show_sidebar' => false,
                 'translations' => $translations,
+                'currentPage' => $page,
+                'totalPages' => $totalPages,
+                'totalProducts' => $totalProducts,
             ],
             $request,
         );
@@ -203,6 +212,12 @@ class EshopHomeController extends BaseController
         if ($scores === []) {
             return [];
         }
+
+        $scores = $this->applyRecommendationDiversity(
+            $scores,
+            $maxRecommendationPerCategory,
+            $recommendationDiversityPenalty
+        );
 
         arsort($scores);
 
@@ -292,7 +307,7 @@ class EshopHomeController extends BaseController
             ->where('o.customer = :customer')
             ->setParameter('customer', $customer)
             ->orderBy('o.orderCreatedAt', 'DESC')
-            ->setMaxResults(30)
+            ->setMaxResults(10)
             ->getQuery()
             ->getArrayResult();
 
@@ -318,7 +333,7 @@ class EshopHomeController extends BaseController
             ->where('l.customer = :customer')
             ->setParameter('customer', $customer)
             ->orderBy('l.createdAt', 'DESC')
-            ->setMaxResults(20)
+            ->setMaxResults(5)
             ->getQuery()
             ->getArrayResult();
 
@@ -360,7 +375,7 @@ class EshopHomeController extends BaseController
         float $weight,
         HttpClientInterface $httpClient
     ): void {
-        $results = $this->callSearchServiceRecommend($sku, 10, $httpClient);
+        $results = $this->callSearchServiceRecommend($sku, 5, $httpClient);
 
         foreach ($results as $item) {
             $recommendedSku = trim((string) ($item['product_sku'] ?? ''));
@@ -434,7 +449,7 @@ class EshopHomeController extends BaseController
             ->select('l.query AS query')
             ->from(CustomerSearchLog::class, 'l')
             ->orderBy('l.createdAt', 'DESC')
-            ->setMaxResults(50)
+            ->setMaxResults(10)
             ->getQuery()
             ->getArrayResult();
 
@@ -481,7 +496,7 @@ class EshopHomeController extends BaseController
             ->from(OrderItem::class, 'oi')
             ->groupBy('oi.sku')
             ->orderBy('cnt', 'DESC')
-            ->setMaxResults(30)
+            ->setMaxResults(5)
             ->getQuery()
             ->getArrayResult();
 
@@ -577,5 +592,69 @@ class EshopHomeController extends BaseController
         shuffle($withImages);
 
         return array_slice($withImages, 0, $limit);
+    }
+
+    private function applyRecommendationDiversity(
+        array $scores,
+        int $maxPerCategory,
+        float $penalty
+    ): array {
+        if ($scores === []) {
+            return [];
+        }
+
+        arsort($scores);
+
+        $skus = array_keys($scores);
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.sku AS sku')
+            ->addSelect('c.name AS category')
+            ->from(Product::class, 'p')
+            ->leftJoin('p.category', 'c')
+            ->where('p.sku IN (:skus)')
+            ->andWhere('p.hidden = false')
+            ->setParameter('skus', $skus)
+            ->orderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $skuToCategory = [];
+
+        foreach ($rows as $row) {
+            $sku = trim((string) ($row['sku'] ?? ''));
+
+            if ($sku === '' || isset($skuToCategory[$sku])) {
+                continue;
+            }
+
+            $skuToCategory[$sku] = (string) ($row['category'] ?? 'unknown');
+        }
+
+        $categoryCount = [];
+        $adjusted = [];
+
+        foreach ($scores as $sku => $score) {
+            $category = $skuToCategory[$sku] ?? 'unknown';
+            $currentCount = $categoryCount[$category] ?? 0;
+
+            if ($currentCount >= $maxPerCategory) {
+                $overflow = $currentCount - $maxPerCategory + 1;
+                $score -= $penalty * $overflow;
+            }
+
+            if ($score <= 0) {
+                continue;
+            }
+
+            if ($currentCount >= $maxPerCategory * 2) {
+                continue;
+            }
+
+            $adjusted[$sku] = $score;
+            $categoryCount[$category] = $currentCount + 1;
+        }
+
+        return $adjusted;
     }
 }

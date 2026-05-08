@@ -138,71 +138,80 @@
                              data-tax-rate="{{ product.taxRate }}"
                              data-size="{{ product.size is not null ? product.size.id : '' }}">
 
-                            {% if product.getImageUrls() is not empty %}
-                                <a href="{{ path('show_eshop_product', {'id': product.id, '_locale': locale}) }}"
-                                   class="product-card {{ product.numberInStock <= 0 ? 'sold-out' : '' }}">
+                            <a href="{{ path('show_eshop_product', {'id': product.id, '_locale': locale}) }}"
+                            class="product-card {{ product.numberInStock <= 0 ? 'sold-out' : '' }}">
+                                <div class="product-card-media">
+                                    <div class="product-image-wrapper">
 
-                                    <div class="product-card-media">
-                                        <div class="product-image-wrapper">
+                                        {% if product.getImageUrls() is not empty %}
                                             <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}"
-                                                 alt="{{ product.name }}">
-                                            {% if product.numberInStock <= 0 %}
-                                                <div class="sold-out-label">Sold Out</div>
-                                            {% endif %}
-                                        </div>
+                                                alt="{{ product.name }}">
+                                        {% else %}
+                                            <img src="{{ asset('images/fallback-product.png') }}"
+                                                alt="No image available"
+                                                class="fallback-image">
+                                        {% endif %}
 
-                                        {% if product.discount < 100 %}
-                                            <div class="product-card-badge">
-                                                -{{ 100 - product.discount }}%
-                                            </div>
+                                        {% if product.numberInStock <= 0 %}
+                                            <div class="sold-out-label">Sold Out</div>
                                         {% endif %}
                                     </div>
 
-                                    <div class="product-card-body">
-                                        <div class="product-name">
-                                            {{ product.getTranslatedName(locale) }}
+                                    {% if product.discount < 100 %}
+                                        <div class="product-card-badge">
+                                            -{{ 100 - product.discount }}%
                                         </div>
+                                    {% endif %}
+                                </div>
 
-                                        <div class="product-meta-row">
-                                            {% if product.sku %}
-                                                <span class="product-sku">SKU: {{ product.sku }}</span>
-                                            {% endif %}
-                                            {% if product.numberInStock is not null %}
-                                                <span class="product-stock {{ product.numberInStock > 0 ? 'in-stock' : 'out-of-stock' }}">
-                                                    {% if product.numberInStock > 0 %}
-                                                        In stock
-                                                    {% else %}
-                                                        Out of stock
-                                                    {% endif %}
-                                                </span>
-                                            {% endif %}
-                                        </div>
+                                <div class="product-card-body">
+                                    <div class="product-name">
+                                        {{ product.getTranslatedName(locale) }}
+                                    </div>
 
-                                        <div class="product-price">
-                                            {% if product.discount < 100 %}
-                                                <div class="price-row">
-                                                    <span class="original-price">
-                                                        <span class="strikethrough">{{ money(product.price) }}</span>
-                                                    </span>
-                                                </div>
+                                    <div class="product-meta-row">
+                                        {% if product.sku %}
+                                            <span class="product-sku">SKU: {{ product.sku }}</span>
+                                        {% endif %}
 
-                                                {% set discountedRaw = (product.price * product.discount / 100) | number_format(2, '.', '') %}
-                                                <div class="price-row">
-                                                    <span class="discounted-price">
-                                                        {{ money(discountedRaw) }}
-                                                    </span>
-                                                </div>
-                                            {% else %}
-                                                <div class="price-row">
-                                                    <span class="regular-price">
+                                        {% if product.numberInStock is not null %}
+                                            <span class="product-stock {{ product.numberInStock > 0 ? 'in-stock' : 'out-of-stock' }}">
+                                                {% if product.numberInStock > 0 %}
+                                                    In stock
+                                                {% else %}
+                                                    Out of stock
+                                                {% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="product-price">
+                                        {% if product.discount < 100 %}
+                                            <div class="price-row">
+                                                <span class="original-price">
+                                                    <span class="strikethrough">
                                                         {{ money(product.price) }}
                                                     </span>
-                                                </div>
-                                            {% endif %}
-                                        </div>
+                                                </span>
+                                            </div>
+
+                                            {% set discountedRaw = (product.price * product.discount / 100) | number_format(2, '.', '') %}
+
+                                            <div class="price-row">
+                                                <span class="discounted-price">
+                                                    {{ money(discountedRaw) }}
+                                                </span>
+                                            </div>
+                                        {% else %}
+                                            <div class="price-row">
+                                                <span class="regular-price">
+                                                    {{ money(product.price) }}
+                                                </span>
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                </a>
-                            {% endif %}
+                                </div>
+                            </a>
                         </div>
                     {% endfor %}
                 </div>
@@ -218,7 +227,7 @@
     {{ parent() }}
     <script>
     window.CURRENCIES_MAP = {{ currencies_map()|json_encode|raw }};
-    window.ACTIVE_CURRENCY = "{{ active_currency() }}"; // 例如 "CZK"
+    window.ACTIVE_CURRENCY = "{{ active_currency() }}";
     </script>
     <script src="{{ asset('assets/eshopProducts.js') }}"></script>
     <script>
