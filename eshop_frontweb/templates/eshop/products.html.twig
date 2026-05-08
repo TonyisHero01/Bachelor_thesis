@@ -144,8 +144,10 @@
                                     <div class="product-image-wrapper">
 
                                         {% if product.getImageUrls() is not empty %}
-                                            <img src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}"
-                                                alt="{{ product.name }}">
+                                            <img
+                                                src="{{ BMS_URL }}/images/{{ product.getImageUrls()[0] }}"
+                                                alt="{{ product.name }}"
+                                                onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';">
                                         {% else %}
                                             <img src="{{ asset('images/fallback-product.png') }}"
                                                 alt="No image available"
