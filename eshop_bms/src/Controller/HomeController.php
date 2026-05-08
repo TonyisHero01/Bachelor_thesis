@@ -306,7 +306,8 @@ class HomeController extends BaseController
                 $searchConfig->setOrderHistoryRecommendationWeight((float) ($config['orderHistoryRecommendationWeight'] ?? 0.25));
                 $searchConfig->setSearchHistoryRecommendationWeight((float) ($config['searchHistoryRecommendationWeight'] ?? 0.20));
                 $searchConfig->setViewHistoryRecommendationWeight((float) ($config['viewHistoryRecommendationWeight'] ?? 0.35));
-
+                $searchConfig->setMaxRecommendationPerCategory((int) ($config['maxRecommendationPerCategory'] ?? 4));
+                $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
                 $searchConfig->touch();
             }
 

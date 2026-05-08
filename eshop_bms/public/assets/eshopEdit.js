@@ -170,6 +170,8 @@ async function save_() {
         const sameColorBonusElement = document.getElementById('same_color_bonus');
         const sameSizeBonusElement = document.getElementById('same_size_bonus');
 
+        
+
         const imagePaths = Array.from(
             document.querySelectorAll('.image_path'),
         )
@@ -247,20 +249,50 @@ async function save_() {
             searchConfig: {
                 name: searchConfigNameElement?.value || 'Default relevance configuration',
 
-                nameWeight: parseInt(nameWeightElement?.value || '20', 10),
-                descriptionWeight: parseInt(descriptionWeightElement?.value || '5', 10),
-                categoryWeight: parseInt(categoryWeightElement?.value || '4', 10),
-                materialWeight: parseInt(materialWeightElement?.value || '2', 10),
-                colorWeight: parseInt(colorWeightElement?.value || '2', 10),
-                sizeWeight: parseInt(sizeWeightElement?.value || '2', 10),
-                attributesWeight: parseInt(attributesWeightElement?.value || '2', 10),
+                nameWeight: parseInt(nameWeightElement?.value || '18', 10),
+                descriptionWeight: parseInt(descriptionWeightElement?.value || '6', 10),
+                categoryWeight: parseInt(categoryWeightElement?.value || '5', 10),
+                materialWeight: parseInt(materialWeightElement?.value || '3', 10),
+                colorWeight: parseInt(colorWeightElement?.value || '1', 10),
+                sizeWeight: parseInt(sizeWeightElement?.value || '5', 10),
+                attributesWeight: parseInt(attributesWeightElement?.value || '3', 10),
 
-                sameCategoryBonus: parseFloat(sameCategoryBonusElement?.value || '0.35'),
-                sameMaterialBonus: parseFloat(sameMaterialBonusElement?.value || '0.15'),
-                sameColorBonus: parseFloat(sameColorBonusElement?.value || '0.10'),
-                sameSizeBonus: parseFloat(sameSizeBonusElement?.value || '0.10'),
+                sameCategoryBonus: parseFloat(sameCategoryBonusElement?.value || '0.20'),
+                sameMaterialBonus: parseFloat(sameMaterialBonusElement?.value || '0.10'),
+                sameColorBonus: parseFloat(sameColorBonusElement?.value || '0.05'),
+                sameSizeBonus: parseFloat(sameSizeBonusElement?.value || '0.20'),
+
+                tfidfRecommendationWeight: parseFloat(
+                    document.getElementById('tfidf_recommendation_weight')?.value || '0.45'
+                ),
+                sameCategoryRecommendationWeight: parseFloat(
+                    document.getElementById('same_category_recommendation_weight')?.value || '0.20'
+                ),
+                sameColorRecommendationWeight: parseFloat(
+                    document.getElementById('same_color_recommendation_weight')?.value || '0.05'
+                ),
+                sameSizeRecommendationWeight: parseFloat(
+                    document.getElementById('same_size_recommendation_weight')?.value || '0.20'
+                ),
+                wishlistRecommendationWeight: parseFloat(
+                    document.getElementById('wishlist_recommendation_weight')?.value || '0.35'
+                ),
+                orderHistoryRecommendationWeight: parseFloat(
+                    document.getElementById('order_history_recommendation_weight')?.value || '0.30'
+                ),
+                searchHistoryRecommendationWeight: parseFloat(
+                    document.getElementById('search_history_recommendation_weight')?.value || '0.25'
+                ),
                 viewHistoryRecommendationWeight: parseFloat(
-                    document.getElementById('view_history_recommendation_weight').value || '0.35'
+                    document.getElementById('view_history_recommendation_weight')?.value || '0.40'
+                ),
+
+                maxRecommendationPerCategory: parseInt(
+                    document.getElementById('max_recommendation_per_category')?.value || '3',
+                    10
+                ),
+                recommendationDiversityPenalty: parseFloat(
+                    document.getElementById('recommendation_diversity_penalty')?.value || '0.15'
                 ),
             },
         };
