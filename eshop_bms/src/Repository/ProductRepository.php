@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\DBAL\ParameterType;
 
 /**
  * @extends ServiceEntityRepository<Product>
@@ -162,8 +163,8 @@ class ProductRepository extends ServiceEntityRepository
                 'offset' => $offset,
             ],
             [
-                'limit' => \PDO::PARAM_INT,
-                'offset' => \PDO::PARAM_INT,
+                'limit' => ParameterType::INTEGER,
+                'offset' => ParameterType::INTEGER,
             ]
         )->fetchFirstColumn();
 
