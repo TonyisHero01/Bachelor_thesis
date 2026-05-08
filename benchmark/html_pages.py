@@ -458,6 +458,16 @@ def render_benchmark_page(rows):
 
 
 def render_evaluation_page(report):
+    recommendation_chart = {
+        "labels": [],
+        "values": [],
+    }
+
+    search_chart = {
+        "labels": [],
+        "times": [],
+    }
+
     if "error" in report:
         body = """
         <div class="empty">
@@ -493,6 +503,34 @@ def render_evaluation_page(report):
         diversity = float(
             rec.get("avg_category_diversity", 0)
         )
+
+        recommendation_chart = {
+            "labels": [
+                "Interest",
+                "Category",
+                "Material",
+                "Color",
+                "Size",
+            ],
+            "values": [
+                round(interest_similarity * 100, 2),
+                round(category_similarity * 100, 2),
+                round(material_similarity * 100, 2),
+                round(color_similarity * 100, 2),
+                round(size_similarity * 100, 2),
+            ],
+        }
+
+        search_chart = {
+            "labels": [
+                item.get("query", "-")
+                for item in search.get("details", [])
+            ],
+            "times": [
+                round(float(item.get("response_time_ms", 0)), 2)
+                for item in search.get("details", [])
+            ],
+        }
 
         diversity_class = "good" if diversity >= 2 else "warn"
 
@@ -571,6 +609,16 @@ def render_evaluation_page(report):
                 in recommendation results.
             </div>
 
+            <div class="chart-card">
+                <h2>Recommendation Similarity</h2>
+                <canvas id="recommendationChart"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h2>Search Response Time by Query</h2>
+                <canvas id="searchTimeChart"></canvas>
+            </div>
+
             <h2>Search Details</h2>
 
             <table>
@@ -614,6 +662,59 @@ def render_evaluation_page(report):
                 {body}
             </div>
         </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            const recommendationChartData = {json.dumps(recommendation_chart if "error" not in report else {"labels": [], "values": []})};
+            const searchChartData = {json.dumps(search_chart if "error" not in report else {"labels": [], "times": []})};
+
+            if (recommendationChartData.labels.length > 0) {{
+                new Chart(document.getElementById('recommendationChart'), {{
+                    type: 'radar',
+                    data: {{
+                        labels: recommendationChartData.labels,
+                        datasets: [{{
+                            label: 'Similarity %',
+                            data: recommendationChartData.values
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        scales: {{
+                            r: {{
+                                beginAtZero: true,
+                                max: 100
+                            }}
+                        }}
+                    }}
+                }});
+            }}
+
+            if (searchChartData.labels.length > 0) {{
+                new Chart(document.getElementById('searchTimeChart'), {{
+                    type: 'bar',
+                    data: {{
+                        labels: searchChartData.labels,
+                        datasets: [{{
+                            label: 'Response time ms',
+                            data: searchChartData.times
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        scales: {{
+                            y: {{
+                                beginAtZero: true,
+                                title: {{
+                                    display: true,
+                                    text: 'Milliseconds'
+                                }}
+                            }}
+                        }}
+                    }}
+                }});
+            }}
+        </script>
     </body>
     </html>
     """
