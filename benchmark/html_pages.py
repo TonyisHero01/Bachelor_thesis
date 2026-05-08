@@ -1,6 +1,6 @@
 import statistics
 from datetime import datetime
-
+import json
 from config import settings
 
 
@@ -17,6 +17,32 @@ def status_label(value, good_threshold=0.65):
 
     return "bad"
 
+def build_benchmark_chart_data(rows):
+    grouped = {}
+
+    for row in rows:
+        if row["type"] == "vector_cold":
+            continue
+
+        query = row["query"]
+
+        if query not in grouped:
+            grouped[query] = {
+                "vector": 0,
+                "sql_like": 0,
+            }
+
+        if row["type"] == "vector":
+            grouped[query]["vector"] = round(row["response_time_ms"], 2)
+
+        if row["type"] == "sql_like":
+            grouped[query]["sql_like"] = round(row["response_time_ms"], 2)
+
+    return {
+        "labels": list(grouped.keys()),
+        "vector": [item["vector"] for item in grouped.values()],
+        "sql_like": [item["sql_like"] for item in grouped.values()],
+    }
 
 def build_comparison_rows(rows):
     grouped = {}
@@ -296,6 +322,18 @@ def page_style():
             padding: 18px;
             border-radius: 14px;
         }
+
+        .chart-card {
+            margin: 28px 0;
+            padding: 20px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+        }
+
+        .chart-card h2 {
+            margin-top: 0;
+        }
     </style>
     """
 
@@ -315,6 +353,11 @@ def render_benchmark_page(rows):
         table_rows = build_comparison_rows(rows)
 
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    chart_data = build_benchmark_chart_data(rows) if rows else {
+        "labels": [],
+        "vector": [],
+        "sql_like": [],
+    }
 
     return f"""
     <!doctype html>
@@ -342,7 +385,13 @@ def render_benchmark_page(rows):
                 </div>
 
                 {summary_html}
+                <div class="chart-card">
 
+                    <h2>Response Time Comparison</h2>
+
+                    <canvas id="benchmarkChart"></canvas>
+
+                </div>
                 <table>
                     <thead>
                         <tr>
@@ -363,6 +412,46 @@ def render_benchmark_page(rows):
                 </table>
             </div>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script>
+            const benchmarkChartData = {json.dumps(chart_data)};
+
+            if (benchmarkChartData.labels.length > 0) {{
+                new Chart(document.getElementById('benchmarkChart'), {{
+                    type: 'bar',
+                    data: {{
+                        labels: benchmarkChartData.labels,
+                        datasets: [
+                            {{
+                                label: 'Vector search',
+                                data: benchmarkChartData.vector
+                            }},
+                            {{
+                                label: 'SQL LIKE',
+                                data: benchmarkChartData.sql_like
+                            }}
+                        ]
+                    }},
+                    options: {{
+                        responsive: true,
+                        plugins: {{
+                            legend: {{
+                                position: 'top'
+                            }}
+                        }},
+                        scales: {{
+                            y: {{
+                                beginAtZero: true,
+                                title: {{
+                                    display: true,
+                                    text: 'Milliseconds'
+                                }}
+                            }}
+                        }}
+                    }}
+                }});
+            }}
+        </script>
     </body>
     </html>
     """
