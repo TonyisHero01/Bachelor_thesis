@@ -164,4 +164,41 @@ class ProductRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findLatestByCategoryPaged(
+        Category $category,
+        int $limit = 20,
+        int $offset = 0
+    ): array {
+        return $this->createQueryBuilder('p')
+            ->where('p.category = :category')
+            ->andWhere('p.hidden = false')
+            ->andWhere('p.id = (
+                SELECT MAX(p2.id)
+                FROM App\Entity\Product p2
+                WHERE p2.sku = p.sku
+            )')
+            ->setParameter('category', $category)
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countLatestByCategory(Category $category): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.category = :category')
+            ->andWhere('p.hidden = false')
+            ->andWhere('p.id = (
+                SELECT MAX(p2.id)
+                FROM App\Entity\Product p2
+                WHERE p2.sku = p.sku
+            )')
+            ->setParameter('category', $category)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }
