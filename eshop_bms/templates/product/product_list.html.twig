@@ -47,14 +47,13 @@
   <div class="buttons" style="margin-top: 1rem;">
     {% if currentPage > 1 %}
       <a id="previousPageButton"
+        class="pagination-button"
         href="{{ path('show_All_products', {
           page: currentPage - 1,
           _locale: app.request.get('_locale')
         }) }}">
         Previous
       </a>
-    {% else %}
-      <button id="previousPageButton" type="button" disabled>Previous</button>
     {% endif %}
 
     <span id="pageCount">
@@ -64,14 +63,13 @@
 
     {% if currentPage < totalPages %}
       <a id="nextPageButton"
+        class="pagination-button"
         href="{{ path('show_All_products', {
           page: currentPage + 1,
           _locale: app.request.get('_locale')
         }) }}">
         Next
       </a>
-    {% else %}
-      <button id="nextPageButton" type="button" disabled>Next</button>
     {% endif %}
 
     <button class="popup" onclick="openCreateForm()">Create Product</button>
