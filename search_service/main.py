@@ -97,8 +97,10 @@ def search_api(req: SearchRequest, request: Request):
         skip_log=skip_log,
     )
 
-    return {"results": results}
-
+    return {"results": results}@app.get("/config")
+def get_config_api():
+    from repositories.product_repository import fetch_active_relevance_config
+    return fetch_active_relevance_config()
 
 @app.post("/reindex", response_model=ReindexResponse)
 def reindex(req: ReindexRequest, request: Request):

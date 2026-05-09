@@ -270,75 +270,12 @@ class HomeController extends BaseController
             $shopInfo->setPayment(isset($input['payment']) ? (string) $input['payment'] : null);
             $shopInfo->setRefund(isset($input['refund']) ? (string) $input['refund'] : null);
 
-            $searchConfig = $entityManager
-                ->getRepository(SearchRelevanceConfig::class)
-                ->findOneBy(['active' => true], ['id' => 'DESC']);
-
-            if ($searchConfig === null) {
-                $searchConfig = new SearchRelevanceConfig();
-                $searchConfig->setActive(true);
-                $entityManager->persist($searchConfig);
-            }
-
-            $fieldWeightsChanged = false;
-            $runtimeConfigChanged = false;
             if (isset($input['searchConfig']) && is_array($input['searchConfig'])) {
-                $config = $input['searchConfig'];
-
-                $fieldWeightsChanged =
-                    (int) ($config['nameWeight'] ?? 20) !== $searchConfig->getNameWeight()
-                    || (int) ($config['descriptionWeight'] ?? 5) !== $searchConfig->getDescriptionWeight()
-                    || (int) ($config['categoryWeight'] ?? 4) !== $searchConfig->getCategoryWeight()
-                    || (int) ($config['materialWeight'] ?? 2) !== $searchConfig->getMaterialWeight()
-                    || (int) ($config['colorWeight'] ?? 2) !== $searchConfig->getColorWeight()
-                    || (int) ($config['sizeWeight'] ?? 2) !== $searchConfig->getSizeWeight()
-                    || (int) ($config['attributesWeight'] ?? 2) !== $searchConfig->getAttributesWeight();
-
-                $runtimeConfigChanged =
-                    (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
-                    || (float) ($config['sameMaterialBonus'] ?? 0.15) !== $searchConfig->getSameMaterialBonus()
-                    || (float) ($config['sameColorBonus'] ?? 0.10) !== $searchConfig->getSameColorBonus()
-                    || (float) ($config['sameSizeBonus'] ?? 0.10) !== $searchConfig->getSameSizeBonus()
-
-                    || (float) ($config['tfidfRecommendationWeight'] ?? 1.0) !== $searchConfig->getTfidfRecommendationWeight()
-                    || (float) ($config['sameCategoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getSameCategoryRecommendationWeight()
-                    || (float) ($config['sameColorRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameColorRecommendationWeight()
-                    || (float) ($config['sameSizeRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameSizeRecommendationWeight()
-
-                    || (float) ($config['wishlistRecommendationWeight'] ?? 0.30) !== $searchConfig->getWishlistRecommendationWeight()
-                    || (float) ($config['orderHistoryRecommendationWeight'] ?? 0.25) !== $searchConfig->getOrderHistoryRecommendationWeight()
-                    || (float) ($config['searchHistoryRecommendationWeight'] ?? 0.20) !== $searchConfig->getSearchHistoryRecommendationWeight()
-                    || (float) ($config['viewHistoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getViewHistoryRecommendationWeight()
-
-                    || (int) ($config['maxRecommendationPerCategory'] ?? 4) !== $searchConfig->getMaxRecommendationPerCategory()
-                    || (float) ($config['recommendationDiversityPenalty'] ?? 0.10) !== $searchConfig->getRecommendationDiversityPenalty();
-
-                $searchConfig->setName((string) ($config['name'] ?? 'Default relevance configuration'));
-
-                $searchConfig->setNameWeight((int) ($config['nameWeight'] ?? 20));
-                $searchConfig->setDescriptionWeight((int) ($config['descriptionWeight'] ?? 5));
-                $searchConfig->setCategoryWeight((int) ($config['categoryWeight'] ?? 4));
-                $searchConfig->setMaterialWeight((int) ($config['materialWeight'] ?? 2));
-                $searchConfig->setColorWeight((int) ($config['colorWeight'] ?? 2));
-                $searchConfig->setSizeWeight((int) ($config['sizeWeight'] ?? 2));
-                $searchConfig->setAttributesWeight((int) ($config['attributesWeight'] ?? 2));
-
-                $searchConfig->setSameCategoryBonus((float) ($config['sameCategoryBonus'] ?? 0.35));
-                $searchConfig->setSameMaterialBonus((float) ($config['sameMaterialBonus'] ?? 0.15));
-                $searchConfig->setSameColorBonus((float) ($config['sameColorBonus'] ?? 0.10));
-                $searchConfig->setSameSizeBonus((float) ($config['sameSizeBonus'] ?? 0.10));
-
-                $searchConfig->setTfidfRecommendationWeight((float) ($config['tfidfRecommendationWeight'] ?? 1.0));
-                $searchConfig->setSameCategoryRecommendationWeight((float) ($config['sameCategoryRecommendationWeight'] ?? 0.35));
-                $searchConfig->setSameColorRecommendationWeight((float) ($config['sameColorRecommendationWeight'] ?? 0.10));
-                $searchConfig->setSameSizeRecommendationWeight((float) ($config['sameSizeRecommendationWeight'] ?? 0.10));
-                $searchConfig->setWishlistRecommendationWeight((float) ($config['wishlistRecommendationWeight'] ?? 0.30));
-                $searchConfig->setOrderHistoryRecommendationWeight((float) ($config['orderHistoryRecommendationWeight'] ?? 0.25));
-                $searchConfig->setSearchHistoryRecommendationWeight((float) ($config['searchHistoryRecommendationWeight'] ?? 0.20));
-                $searchConfig->setViewHistoryRecommendationWeight((float) ($config['viewHistoryRecommendationWeight'] ?? 0.35));
-                $searchConfig->setMaxRecommendationPerCategory((int) ($config['maxRecommendationPerCategory'] ?? 4));
-                $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
-                $searchConfig->touch();
+                $this->saveSearchConfigFromArray(
+                    $input['searchConfig'],
+                    $entityManager,
+                    $logger
+                );
             }
 
             if (isset($input['currencies']) && \is_array($input['currencies'])) {
@@ -399,19 +336,6 @@ class HomeController extends BaseController
 
             $entityManager->persist($shopInfo);
             $entityManager->flush();
-
-            $logger->info('[SearchConfig] change detection', [
-                'fieldWeightsChanged' => $fieldWeightsChanged,
-                'runtimeConfigChanged' => $runtimeConfigChanged,
-            ]);
-            
-            if ($fieldWeightsChanged) {
-                $this->notifySearchFullReindex($logger);
-            }
-
-            if (!$fieldWeightsChanged && $runtimeConfigChanged) {
-                $this->notifySearchConfigReload($logger);
-            }
 
             return new JsonResponse(['status' => 'Success']);
         } catch (\Throwable $e) {
@@ -549,6 +473,53 @@ class HomeController extends BaseController
         return new JsonResponse(['status' => 'Success', 'message' => 'File deleted successfully']);
     }
 
+    #[Route('/api/search-config/update', name: 'api_search_config_update', methods: ['POST'])]
+    public function updateSearchConfigApi(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        AuthorizationCheckerInterface $authorizationChecker,
+        LoggerInterface $logger
+    ): JsonResponse {
+        $isLoggedIn = $authorizationChecker->isGranted('IS_AUTHENTICATED_FULLY');
+
+        $apiKey = (string) $this->getParameter('search_api_key');
+        $requestApiKey = (string) $request->headers->get('X-API-KEY', '');
+
+        $isValidApiKey = $apiKey !== '' && hash_equals($apiKey, $requestApiKey);
+
+        if (!$isLoggedIn && !$isValidApiKey) {
+            return new JsonResponse([
+                'status' => 'Error',
+                'message' => 'Forbidden',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        $input = json_decode((string) $request->getContent(), true);
+
+        if (!is_array($input)) {
+            return new JsonResponse(['status' => 'Error', 'message' => 'Invalid JSON body'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $result = $this->saveSearchConfigFromArray($input, $entityManager, $logger);
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'status' => 'Success',
+                'fieldWeightsChanged' => $result['fieldWeightsChanged'],
+                'runtimeConfigChanged' => $result['runtimeConfigChanged'],
+            ]);
+        } catch (\Throwable $e) {
+            $logger->error('[HomeController] updateSearchConfigApi error: ' . $e->getMessage());
+
+            return new JsonResponse([
+                'status' => 'Error',
+                'message' => 'Internal Server Error',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    
     /**
      * Returns a safe basename for filenames coming from user input.
      */
@@ -603,6 +574,93 @@ class HomeController extends BaseController
                 ],
             ]
         );
+    }
+
+    private function saveSearchConfigFromArray(
+        array $config,
+        EntityManagerInterface $entityManager,
+        LoggerInterface $logger
+    ): array {
+        $searchConfig = $entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        if ($searchConfig === null) {
+            $searchConfig = new SearchRelevanceConfig();
+            $searchConfig->setActive(true);
+            $entityManager->persist($searchConfig);
+        }
+
+        $fieldWeightsChanged =
+            (int) ($config['nameWeight'] ?? 20) !== $searchConfig->getNameWeight()
+            || (int) ($config['descriptionWeight'] ?? 5) !== $searchConfig->getDescriptionWeight()
+            || (int) ($config['categoryWeight'] ?? 4) !== $searchConfig->getCategoryWeight()
+            || (int) ($config['materialWeight'] ?? 2) !== $searchConfig->getMaterialWeight()
+            || (int) ($config['colorWeight'] ?? 2) !== $searchConfig->getColorWeight()
+            || (int) ($config['sizeWeight'] ?? 2) !== $searchConfig->getSizeWeight()
+            || (int) ($config['attributesWeight'] ?? 2) !== $searchConfig->getAttributesWeight();
+
+        $runtimeConfigChanged =
+            (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
+            || (float) ($config['sameMaterialBonus'] ?? 0.15) !== $searchConfig->getSameMaterialBonus()
+            || (float) ($config['sameColorBonus'] ?? 0.10) !== $searchConfig->getSameColorBonus()
+            || (float) ($config['sameSizeBonus'] ?? 0.10) !== $searchConfig->getSameSizeBonus()
+            || (float) ($config['tfidfRecommendationWeight'] ?? 1.0) !== $searchConfig->getTfidfRecommendationWeight()
+            || (float) ($config['sameCategoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getSameCategoryRecommendationWeight()
+            || (float) ($config['sameColorRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameColorRecommendationWeight()
+            || (float) ($config['sameSizeRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameSizeRecommendationWeight()
+            || (float) ($config['wishlistRecommendationWeight'] ?? 0.30) !== $searchConfig->getWishlistRecommendationWeight()
+            || (float) ($config['orderHistoryRecommendationWeight'] ?? 0.25) !== $searchConfig->getOrderHistoryRecommendationWeight()
+            || (float) ($config['searchHistoryRecommendationWeight'] ?? 0.20) !== $searchConfig->getSearchHistoryRecommendationWeight()
+            || (float) ($config['viewHistoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getViewHistoryRecommendationWeight()
+            || (int) ($config['maxRecommendationPerCategory'] ?? 4) !== $searchConfig->getMaxRecommendationPerCategory()
+            || (float) ($config['recommendationDiversityPenalty'] ?? 0.10) !== $searchConfig->getRecommendationDiversityPenalty();
+
+        $searchConfig->setName((string) ($config['name'] ?? 'Default relevance configuration'));
+
+        $searchConfig->setNameWeight((int) ($config['nameWeight'] ?? 20));
+        $searchConfig->setDescriptionWeight((int) ($config['descriptionWeight'] ?? 5));
+        $searchConfig->setCategoryWeight((int) ($config['categoryWeight'] ?? 4));
+        $searchConfig->setMaterialWeight((int) ($config['materialWeight'] ?? 2));
+        $searchConfig->setColorWeight((int) ($config['colorWeight'] ?? 2));
+        $searchConfig->setSizeWeight((int) ($config['sizeWeight'] ?? 2));
+        $searchConfig->setAttributesWeight((int) ($config['attributesWeight'] ?? 2));
+
+        $searchConfig->setSameCategoryBonus((float) ($config['sameCategoryBonus'] ?? 0.35));
+        $searchConfig->setSameMaterialBonus((float) ($config['sameMaterialBonus'] ?? 0.15));
+        $searchConfig->setSameColorBonus((float) ($config['sameColorBonus'] ?? 0.10));
+        $searchConfig->setSameSizeBonus((float) ($config['sameSizeBonus'] ?? 0.10));
+
+        $searchConfig->setTfidfRecommendationWeight((float) ($config['tfidfRecommendationWeight'] ?? 1.0));
+        $searchConfig->setSameCategoryRecommendationWeight((float) ($config['sameCategoryRecommendationWeight'] ?? 0.35));
+        $searchConfig->setSameColorRecommendationWeight((float) ($config['sameColorRecommendationWeight'] ?? 0.10));
+        $searchConfig->setSameSizeRecommendationWeight((float) ($config['sameSizeRecommendationWeight'] ?? 0.10));
+        $searchConfig->setWishlistRecommendationWeight((float) ($config['wishlistRecommendationWeight'] ?? 0.30));
+        $searchConfig->setOrderHistoryRecommendationWeight((float) ($config['orderHistoryRecommendationWeight'] ?? 0.25));
+        $searchConfig->setSearchHistoryRecommendationWeight((float) ($config['searchHistoryRecommendationWeight'] ?? 0.20));
+        $searchConfig->setViewHistoryRecommendationWeight((float) ($config['viewHistoryRecommendationWeight'] ?? 0.35));
+        $searchConfig->setMaxRecommendationPerCategory((int) ($config['maxRecommendationPerCategory'] ?? 4));
+        $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
+
+        $searchConfig->touch();
+
+        $logger->info('[SearchConfig] change detection', [
+            'fieldWeightsChanged' => $fieldWeightsChanged,
+            'runtimeConfigChanged' => $runtimeConfigChanged,
+        ]);
+
+        if ($fieldWeightsChanged) {
+            $this->notifySearchFullReindex($logger);
+        }
+
+        if (!$fieldWeightsChanged && $runtimeConfigChanged) {
+            $this->notifySearchConfigReload($logger);
+        }
+
+        return [
+            'fieldWeightsChanged' => $fieldWeightsChanged,
+            'runtimeConfigChanged' => $runtimeConfigChanged,
+        ];
     }
 
     private function notifySearchService(
