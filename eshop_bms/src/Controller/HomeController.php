@@ -399,6 +399,11 @@ class HomeController extends BaseController
 
             $entityManager->persist($shopInfo);
             $entityManager->flush();
+
+            $logger->info('[SearchConfig] change detection', [
+                'fieldWeightsChanged' => $fieldWeightsChanged,
+                'runtimeConfigChanged' => $runtimeConfigChanged,
+            ]);
             
             if ($fieldWeightsChanged) {
                 $this->notifySearchFullReindex($logger);
@@ -605,6 +610,11 @@ class HomeController extends BaseController
         string $path,
         array $json
     ): void {
+        $logger->info('[SearchService] Calling search service', [
+            'path' => $path,
+            'url' => $baseUrl . $path,
+            'json' => $json,
+        ]);
         try {
             $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
             $apiKey = (string) $this->getParameter('search_api_key');
