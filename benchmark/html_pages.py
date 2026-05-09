@@ -457,7 +457,10 @@ def render_benchmark_page(rows):
     """
 
 
-def render_evaluation_page(report):
+def render_evaluation_page(report, config=None):
+
+    if config is None:
+        config = {}
     recommendation_chart = {
         "labels": [],
         "values": [],
@@ -658,7 +661,123 @@ def render_evaluation_page(report):
                         <button type="submit">Generate evaluation report</button>
                     </form>
                 </div>
+                <div class="notice" style="margin-bottom:20px;">
+                    Changing relevance weights here will also update
+                    the live BMS recommendation configuration.
 
+                    Field weight changes will trigger a full reindex.
+
+                    Runtime recommendation changes will reload
+                    recommendation settings without full reindex.
+                </div>
+
+                <div class="chart-card">
+                    <h2>Current BMS Search Configuration</h2>
+
+                    <form method="post" action="/evaluation/update-config">
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Setting</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                <tr>
+                                    <td>Name weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="nameWeight"
+                                            value="{config.get('name_weight', 20)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Description weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="descriptionWeight"
+                                            value="{config.get('description_weight', 5)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Category weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="categoryWeight"
+                                            value="{config.get('category_weight', 4)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Material weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="materialWeight"
+                                            value="{config.get('material_weight', 2)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Color weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="colorWeight"
+                                            value="{config.get('color_weight', 2)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Size weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="sizeWeight"
+                                            value="{config.get('size_weight', 2)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Same category recommendation</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="sameCategoryRecommendationWeight"
+                                            value="{config.get('same_category_recommendation_weight', 0.35)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Same color recommendation</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="sameColorRecommendationWeight"
+                                            value="{config.get('same_color_recommendation_weight', 0.10)}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Same size recommendation</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="sameSizeRecommendationWeight"
+                                            value="{config.get('same_size_recommendation_weight', 0.10)}">
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+
+                        <div style="margin-top:20px;">
+                            <button type="submit">
+                                Save configuration to BMS
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
                 {body}
             </div>
         </div>

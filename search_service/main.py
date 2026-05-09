@@ -65,15 +65,21 @@ def reload_config_api(request: Request):
 
     from repositories.product_repository import fetch_active_relevance_config
 
-    config = fetch_active_relevance_config()
-    search_index.config = config
+    try:
+        config = fetch_active_relevance_config()
+        search_index.config = config
 
-    return {
-        "ok": True,
-        "config": config,
-        "ip": client_ip(request),
-        "ts": datetime.utcnow().isoformat() + "Z",
-    }
+        logger.info("[CONFIG] search config reloaded")
+
+        return {
+            "ok": True,
+            "config": config,
+            "ip": client_ip(request),
+            "ts": datetime.utcnow().isoformat() + "Z",
+        }
+    except Exception:
+        logger.exception("[CONFIG] reload failed")
+        raise HTTPException(status_code=500, detail="Config reload failed")
 
 @app.post("/search", response_model=SearchResponse)
 def search_api(req: SearchRequest, request: Request):

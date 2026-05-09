@@ -12,10 +12,20 @@ DEFAULT_RELEVANCE_CONFIG = {
     "color_weight": 2,
     "size_weight": 2,
     "attributes_weight": 2,
+
     "same_category_bonus": 0.35,
     "same_material_bonus": 0.15,
     "same_color_bonus": 0.10,
     "same_size_bonus": 0.10,
+
+    "tfidf_recommendation_weight": 1.0,
+    "same_category_recommendation_weight": 0.35,
+    "same_color_recommendation_weight": 0.10,
+    "same_size_recommendation_weight": 0.10,
+    "wishlist_recommendation_weight": 0.30,
+    "order_history_recommendation_weight": 0.25,
+    "search_history_recommendation_weight": 0.20,
+    "view_history_recommendation_weight": 0.35,
 
     "max_recommendation_per_category": 4,
     "recommendation_diversity_penalty": 0.10,
@@ -38,6 +48,14 @@ def fetch_active_relevance_config() -> dict:
                     same_material_bonus,
                     same_color_bonus,
                     same_size_bonus,
+                    tfidf_recommendation_weight,
+                    same_category_recommendation_weight,
+                    same_color_recommendation_weight,
+                    same_size_recommendation_weight,
+                    wishlist_recommendation_weight,
+                    order_history_recommendation_weight,
+                    search_history_recommendation_weight,
+                    view_history_recommendation_weight,
                     max_recommendation_per_category,
                     recommendation_diversity_penalty
                 FROM search_relevance_config
