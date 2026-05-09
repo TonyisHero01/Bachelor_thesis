@@ -610,16 +610,18 @@ class HomeController extends BaseController
         string $path,
         array $json
     ): void {
-        $logger->info('[SearchService] Calling search service', [
-            'path' => $path,
-            'url' => $baseUrl . $path,
-            'json' => $json,
-        ]);
         try {
             $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
             $apiKey = (string) $this->getParameter('search_api_key');
 
+            $logger->info('[SearchService] Preparing request', [
+                'baseUrl' => $baseUrl,
+                'path' => $path,
+                'hasApiKey' => $apiKey !== '',
+            ]);
+
             if ($baseUrl === '' || $apiKey === '') {
+                $logger->warning('[SearchService] Missing base URL or API key');
                 return;
             }
 
@@ -628,8 +630,9 @@ class HomeController extends BaseController
             $options = [
                 'headers' => [
                     'X-API-KEY' => $apiKey,
+                    'Content-Type' => 'application/json',
                 ],
-                'timeout' => 10,
+                'timeout' => 30,
             ];
 
             if ($json !== []) {
@@ -638,13 +641,11 @@ class HomeController extends BaseController
 
             $response = $client->request('POST', $baseUrl . $path, $options);
 
-            if ($response->getStatusCode() >= 400) {
-                $logger->warning('[SearchService] Request failed', [
-                    'path' => $path,
-                    'status' => $response->getStatusCode(),
-                    'body' => $response->getContent(false),
-                ]);
-            }
+            $logger->info('[SearchService] Response', [
+                'path' => $path,
+                'status' => $response->getStatusCode(),
+                'body' => $response->getContent(false),
+            ]);
         } catch (\Throwable $e) {
             $logger->warning('[SearchService] Request failed: ' . $e->getMessage());
         }
