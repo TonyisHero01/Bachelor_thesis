@@ -18,7 +18,7 @@ from services.search_service import (
     recommend_products,
     get_index_status,
 )
-
+from services.search_index import search_index
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,6 +59,21 @@ def health():
         "version": settings.app_version,
     }
 
+@app.post("/config/reload")
+def reload_config_api(request: Request):
+    verify_api_key(request)
+
+    from repositories.product_repository import fetch_active_relevance_config
+
+    config = fetch_active_relevance_config()
+    search_index.config = config
+
+    return {
+        "ok": True,
+        "config": config,
+        "ip": client_ip(request),
+        "ts": datetime.utcnow().isoformat() + "Z",
+    }
 
 @app.post("/search", response_model=SearchResponse)
 def search_api(req: SearchRequest, request: Request):

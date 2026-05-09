@@ -280,8 +280,38 @@ class HomeController extends BaseController
                 $entityManager->persist($searchConfig);
             }
 
+            $fieldWeightsChanged = false;
+            $runtimeConfigChanged = false;
             if (isset($input['searchConfig']) && is_array($input['searchConfig'])) {
                 $config = $input['searchConfig'];
+
+                $fieldWeightsChanged =
+                    (int) ($config['nameWeight'] ?? 20) !== $searchConfig->getNameWeight()
+                    || (int) ($config['descriptionWeight'] ?? 5) !== $searchConfig->getDescriptionWeight()
+                    || (int) ($config['categoryWeight'] ?? 4) !== $searchConfig->getCategoryWeight()
+                    || (int) ($config['materialWeight'] ?? 2) !== $searchConfig->getMaterialWeight()
+                    || (int) ($config['colorWeight'] ?? 2) !== $searchConfig->getColorWeight()
+                    || (int) ($config['sizeWeight'] ?? 2) !== $searchConfig->getSizeWeight()
+                    || (int) ($config['attributesWeight'] ?? 2) !== $searchConfig->getAttributesWeight();
+
+                $runtimeConfigChanged =
+                    (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
+                    || (float) ($config['sameMaterialBonus'] ?? 0.15) !== $searchConfig->getSameMaterialBonus()
+                    || (float) ($config['sameColorBonus'] ?? 0.10) !== $searchConfig->getSameColorBonus()
+                    || (float) ($config['sameSizeBonus'] ?? 0.10) !== $searchConfig->getSameSizeBonus()
+
+                    || (float) ($config['tfidfRecommendationWeight'] ?? 1.0) !== $searchConfig->getTfidfRecommendationWeight()
+                    || (float) ($config['sameCategoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getSameCategoryRecommendationWeight()
+                    || (float) ($config['sameColorRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameColorRecommendationWeight()
+                    || (float) ($config['sameSizeRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameSizeRecommendationWeight()
+
+                    || (float) ($config['wishlistRecommendationWeight'] ?? 0.30) !== $searchConfig->getWishlistRecommendationWeight()
+                    || (float) ($config['orderHistoryRecommendationWeight'] ?? 0.25) !== $searchConfig->getOrderHistoryRecommendationWeight()
+                    || (float) ($config['searchHistoryRecommendationWeight'] ?? 0.20) !== $searchConfig->getSearchHistoryRecommendationWeight()
+                    || (float) ($config['viewHistoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getViewHistoryRecommendationWeight()
+
+                    || (int) ($config['maxRecommendationPerCategory'] ?? 4) !== $searchConfig->getMaxRecommendationPerCategory()
+                    || (float) ($config['recommendationDiversityPenalty'] ?? 0.10) !== $searchConfig->getRecommendationDiversityPenalty();
 
                 $searchConfig->setName((string) ($config['name'] ?? 'Default relevance configuration'));
 
@@ -369,6 +399,14 @@ class HomeController extends BaseController
 
             $entityManager->persist($shopInfo);
             $entityManager->flush();
+            
+            if ($fieldWeightsChanged) {
+                $this->notifySearchFullReindex($logger);
+            }
+
+            if (!$fieldWeightsChanged && $runtimeConfigChanged) {
+                $this->notifySearchConfigReload($logger);
+            }
 
             return new JsonResponse(['status' => 'Success']);
         } catch (\Throwable $e) {
@@ -531,5 +569,74 @@ class HomeController extends BaseController
     private function generateCsrfToken(string $id): string
     {
         return $this->container->get('security.csrf.token_manager')->getToken($id)->getValue();
+    }
+
+    private function notifySearchConfigReload(LoggerInterface $logger): void
+    {
+        $this->notifySearchService(
+            $logger,
+            '/config/reload',
+            [
+                'reason' => 'search runtime config changed',
+                'context' => [
+                    'source' => 'bms_settings',
+                ],
+            ]
+        );
+    }
+
+    private function notifySearchFullReindex(LoggerInterface $logger): void
+    {
+        $this->notifySearchService(
+            $logger,
+            '/reindex',
+            [
+                'mode' => 'full',
+                'reason' => 'search relevance field weights changed',
+                'context' => [
+                    'source' => 'bms_settings',
+                ],
+            ]
+        );
+    }
+
+    private function notifySearchService(
+        LoggerInterface $logger,
+        string $path,
+        array $json
+    ): void {
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+            $apiKey = (string) $this->getParameter('search_api_key');
+
+            if ($baseUrl === '' || $apiKey === '') {
+                return;
+            }
+
+            $client = \Symfony\Component\HttpClient\HttpClient::create();
+
+            $options = [
+                'headers' => [
+                    'X-API-KEY' => $apiKey,
+                ],
+                'timeout' => 10,
+            ];
+
+            if ($json !== []) {
+                $options['json'] = $json;
+            }
+
+            $response = $client->request('POST', $baseUrl . $path, $options);
+
+            if ($response->getStatusCode() >= 400) {
+                $logger->warning('[SearchService] Request failed', [
+                    'path' => $path,
+                    'status' => $response->getStatusCode(),
+                    'body' => $response->getContent(false),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $logger->warning('[SearchService] Request failed: ' . $e->getMessage());
+        }
     }
 }
