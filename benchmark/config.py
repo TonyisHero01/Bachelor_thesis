@@ -16,6 +16,8 @@ class Settings:
     search_url: str
     bms_url: str
 
+    search_api_key: str
+
     database_url: str
 
     benchmark_repeat_count: int
@@ -46,6 +48,11 @@ def load_settings() -> Settings:
             "BMS_URL",
             "http://bms",
         ).rstrip("/"),
+
+        search_api_key=os.getenv(
+            "SEARCH_API_KEY",
+            "",
+        ),
 
         database_url=database_url,
 
