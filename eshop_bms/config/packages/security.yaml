@@ -43,6 +43,7 @@ security:
         path: /
 
   access_control:
+    - { path: ^/api/search-config/update, roles: PUBLIC_ACCESS }
     - { path: ^/login, roles: PUBLIC_ACCESS }
     - { path: ^/logout, roles: PUBLIC_ACCESS }
     - { path: ^/not-logged, roles: PUBLIC_ACCESS }
