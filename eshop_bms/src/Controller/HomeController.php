@@ -501,7 +501,12 @@ class HomeController extends BaseController
         }
 
         try {
-            $result = $this->saveSearchConfigFromArray($input, $entityManager, $logger);
+            $result = $this->saveSearchConfigFromArray(
+                $input,
+                $entityManager,
+                $logger,
+                false
+            );
             $entityManager->flush();
 
             return new JsonResponse([
@@ -579,7 +584,8 @@ class HomeController extends BaseController
     private function saveSearchConfigFromArray(
         array $config,
         EntityManagerInterface $entityManager,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        bool $notifySearchService = true
     ): array {
         $searchConfig = $entityManager
             ->getRepository(SearchRelevanceConfig::class)
@@ -649,12 +655,14 @@ class HomeController extends BaseController
             'runtimeConfigChanged' => $runtimeConfigChanged,
         ]);
 
-        if ($fieldWeightsChanged) {
-            $this->notifySearchFullReindex($logger);
-        }
+        if ($notifySearchService) {
+            if ($fieldWeightsChanged) {
+                $this->notifySearchFullReindex($logger);
+            }
 
-        if (!$fieldWeightsChanged && $runtimeConfigChanged) {
-            $this->notifySearchConfigReload($logger);
+            if (!$fieldWeightsChanged && $runtimeConfigChanged) {
+                $this->notifySearchConfigReload($logger);
+            }
         }
 
         return [

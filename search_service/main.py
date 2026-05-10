@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 
 from config import settings
 from schemas import (
@@ -20,6 +20,14 @@ from services.search_service import (
 )
 from services.search_index import search_index
 
+REINDEX_STATE = {
+    "running": False,
+    "last_started_at": None,
+    "last_finished_at": None,
+    "last_error": None,
+    "last_updated": None,
+}
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -32,6 +40,24 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+def run_full_reindex_background(reason=None, context=None):
+    if REINDEX_STATE["running"]:
+        return
+
+    REINDEX_STATE["running"] = True
+    REINDEX_STATE["last_started_at"] = datetime.utcnow().isoformat() + "Z"
+    REINDEX_STATE["last_error"] = None
+
+    try:
+        updated = rebuild_search_index()
+        REINDEX_STATE["last_updated"] = updated
+        REINDEX_STATE["last_finished_at"] = datetime.utcnow().isoformat() + "Z"
+        logger.info("[REINDEX][BACKGROUND] finished updated=%s", updated)
+    except Exception as e:
+        logger.exception("[REINDEX][BACKGROUND] failed")
+        REINDEX_STATE["last_error"] = str(e)
+    finally:
+        REINDEX_STATE["running"] = False
 
 def client_ip(request: Request) -> str:
     xff = request.headers.get("x-forwarded-for")
@@ -103,7 +129,7 @@ def get_config_api():
     return fetch_active_relevance_config()
 
 @app.post("/reindex", response_model=ReindexResponse)
-def reindex(req: ReindexRequest, request: Request):
+def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundTasks):
     verify_api_key(request)
 
     started = datetime.utcnow()
@@ -126,10 +152,7 @@ def reindex(req: ReindexRequest, request: Request):
 
         if req.mode == "partial":
             if not req.sku:
-                raise HTTPException(
-                    status_code=400,
-                    detail="SKU is required for partial reindex",
-                )
+                raise HTTPException(status_code=400, detail="SKU is required for partial reindex")
 
             updated = partial_reindex_product(req.sku)
 
@@ -143,13 +166,28 @@ def reindex(req: ReindexRequest, request: Request):
                 "ts": started.isoformat() + "Z",
             }
 
-        updated = rebuild_search_index()
+        if REINDEX_STATE["running"]:
+            return {
+                "ok": True,
+                "mode": "full",
+                "updated": 0,
+                "reason": "full reindex already running",
+                "context": req.context,
+                "ip": client_ip(request),
+                "ts": started.isoformat() + "Z",
+            }
+
+        background_tasks.add_task(
+            run_full_reindex_background,
+            req.reason,
+            req.context,
+        )
 
         return {
             "ok": True,
             "mode": "full",
-            "updated": updated,
-            "reason": req.reason,
+            "updated": 0,
+            "reason": "full reindex queued",
             "context": req.context,
             "ip": client_ip(request),
             "ts": started.isoformat() + "Z",
@@ -160,6 +198,11 @@ def reindex(req: ReindexRequest, request: Request):
     except Exception:
         logger.exception("Reindex failed")
         raise HTTPException(status_code=500, detail="Reindex failed")
+    
+@app.get("/reindex/status")
+def reindex_status(request: Request):
+    verify_api_key(request)
+    return REINDEX_STATE
 
 @app.post("/train")
 def train_compat(req: ReindexRequest, request: Request):
