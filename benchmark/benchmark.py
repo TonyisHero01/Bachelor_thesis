@@ -57,6 +57,9 @@ def evaluation_page():
     try:
         config = requests.get(
             f"{settings.search_url}/config",
+            headers={
+                "X-API-KEY": settings.search_api_key,
+            },
             timeout=10,
         ).json()
     except Exception:
