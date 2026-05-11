@@ -244,12 +244,24 @@ class SearchIndex:
         base_scores = cosine_similarity(product_vector, self.matrix).flatten()
         adjusted_scores = base_scores.copy()
 
-        same_category_bonus = float(self.config.get("same_category_bonus", 0.0))
-        same_material_bonus = float(self.config.get("same_material_bonus", 0.0))
-        same_color_bonus = float(self.config.get("same_color_bonus", 0.0))
-        same_size_bonus = float(self.config.get("same_size_bonus", 0.0))
+        same_category_bonus = float(self.config.get("same_category_recommendation_weight", 0.35))
+        same_material_bonus = float(self.config.get("same_material_bonus", 0.15))
+        same_color_bonus = float(self.config.get("same_color_recommendation_weight", 0.10))
+        same_size_bonus = float(self.config.get("same_size_recommendation_weight", 0.10))
         max_per_category = int(self.config.get("max_recommendation_per_category", 3))
         diversity_penalty = float(self.config.get("recommendation_diversity_penalty", 0.15))
+
+        logger.info("[RECOMMEND] config=%s", self.config)
+
+        logger.info(
+            "[RECOMMEND] weights category=%s material=%s color=%s size=%s max_per_category=%s diversity=%s",
+            same_category_bonus,
+            same_material_bonus,
+            same_color_bonus,
+            same_size_bonus,
+            max_per_category,
+            diversity_penalty,
+        )
 
         for i, candidate_sku in enumerate(self.skus):
             if candidate_sku == base_sku:

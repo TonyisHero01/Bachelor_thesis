@@ -767,6 +767,77 @@ def render_evaluation_page(report, config=None):
                                     </td>
                                 </tr>
 
+                                <tr>
+                                    <td>Attributes weight</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="attributesWeight"
+                                            value="{config.get('attributes_weight', config.get('attributesWeight', 2))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>TF-IDF recommendation weight</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="tfidfRecommendationWeight"
+                                            value="{config.get('tfidf_recommendation_weight', config.get('tfidfRecommendationWeight', 1.0))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Wishlist recommendation weight</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="wishlistRecommendationWeight"
+                                            value="{config.get('wishlist_recommendation_weight', config.get('wishlistRecommendationWeight', 0.30))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Order history recommendation weight</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="orderHistoryRecommendationWeight"
+                                            value="{config.get('order_history_recommendation_weight', config.get('orderHistoryRecommendationWeight', 0.25))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Search history recommendation weight</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="searchHistoryRecommendationWeight"
+                                            value="{config.get('search_history_recommendation_weight', config.get('searchHistoryRecommendationWeight', 0.20))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>View history recommendation weight</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="viewHistoryRecommendationWeight"
+                                            value="{config.get('view_history_recommendation_weight', config.get('viewHistoryRecommendationWeight', 0.35))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Max recommendation per category</td>
+                                    <td>
+                                        <input type="number" step="1"
+                                            name="maxRecommendationPerCategory"
+                                            value="{config.get('max_recommendation_per_category', config.get('maxRecommendationPerCategory', 4))}">
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td>Recommendation diversity penalty</td>
+                                    <td>
+                                        <input type="number" step="0.01"
+                                            name="recommendationDiversityPenalty"
+                                            value="{config.get('recommendation_diversity_penalty', config.get('recommendationDiversityPenalty', 0.10))}">
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
 

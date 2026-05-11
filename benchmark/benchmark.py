@@ -75,9 +75,18 @@ def update_config(
     materialWeight: int = Form(...),
     colorWeight: int = Form(...),
     sizeWeight: int = Form(...),
+    attributesWeight: int = Form(...),
+
+    tfidfRecommendationWeight: float = Form(...),
     sameCategoryRecommendationWeight: float = Form(...),
     sameColorRecommendationWeight: float = Form(...),
     sameSizeRecommendationWeight: float = Form(...),
+    wishlistRecommendationWeight: float = Form(...),
+    orderHistoryRecommendationWeight: float = Form(...),
+    searchHistoryRecommendationWeight: float = Form(...),
+    viewHistoryRecommendationWeight: float = Form(...),
+    maxRecommendationPerCategory: int = Form(...),
+    recommendationDiversityPenalty: float = Form(...),
 ):
     payload = {
         "nameWeight": nameWeight,
@@ -86,25 +95,31 @@ def update_config(
         "materialWeight": materialWeight,
         "colorWeight": colorWeight,
         "sizeWeight": sizeWeight,
+        "attributesWeight": attributesWeight,
+
+        "tfidfRecommendationWeight": tfidfRecommendationWeight,
         "sameCategoryRecommendationWeight": sameCategoryRecommendationWeight,
         "sameColorRecommendationWeight": sameColorRecommendationWeight,
         "sameSizeRecommendationWeight": sameSizeRecommendationWeight,
+        "wishlistRecommendationWeight": wishlistRecommendationWeight,
+        "orderHistoryRecommendationWeight": orderHistoryRecommendationWeight,
+        "searchHistoryRecommendationWeight": searchHistoryRecommendationWeight,
+        "viewHistoryRecommendationWeight": viewHistoryRecommendationWeight,
+        "maxRecommendationPerCategory": maxRecommendationPerCategory,
+        "recommendationDiversityPenalty": recommendationDiversityPenalty,
     }
 
     r = requests.post(
         f"{settings.bms_url.rstrip('/')}/api/search-config/update",
         json=payload,
-        headers={
-            "X-API-KEY": settings.search_api_key,
-        },
-        timeout=30,
+        headers={"X-API-KEY": settings.search_api_key},
+        timeout=5,
     )
 
     if r.status_code >= 400:
         return HTMLResponse(r.text, status_code=500)
 
     return RedirectResponse(url="/evaluation", status_code=303)
-
 
 @app.post("/evaluation/generate")
 def generate_evaluation_report():
