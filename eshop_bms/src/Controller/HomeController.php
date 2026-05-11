@@ -505,7 +505,7 @@ class HomeController extends BaseController
                 $input,
                 $entityManager,
                 $logger,
-                false
+                true
             );
             $entityManager->flush();
 
