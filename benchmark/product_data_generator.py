@@ -135,6 +135,8 @@ SEARCH_QUERIES = [
     "smartphone",
 ]
 
+def pick_even(items, index):
+    return items[(index - 1) % len(items)]
 
 def connect():
     return psycopg2.connect(
@@ -258,13 +260,21 @@ def insert_products(cur, category_ids, color_ids, size_ids):
 
     for i in range(1, PRODUCT_COUNT + 1):
         sku = f"SKU{i:05d}"
-        category = random.choice(category_names)
+        
+        category = pick_even(category_names, i)
         name = random_product_name(category)
-        color = random.choice(color_names)
-        material = random.choice(MATERIALS[category])
+        color = pick_even(color_names, i)
+
+        materials = MATERIALS[category]
+        material = pick_even(materials, i)
 
         is_fashion = category in ["T-Shirts", "Jackets", "Shoes"]
-        size_id = size_ids[random.choice(size_names)] if is_fashion else None
+
+        if is_fashion:
+            size_name = pick_even(size_names, i)
+            size_id = size_ids[size_name]
+        else:
+            size_id = None
 
         price = round(random.uniform(199, 45000), 2)
         stock = random.randint(0, 250)
@@ -820,8 +830,8 @@ def insert_persona_behavior(cur, customers: list[int], products: list[dict]):
     products_by_category = build_products_by_category(products)
     persona_names = list(PERSONAS.keys())
 
-    for customer_id in customers:
-        persona_name = random.choice(persona_names)
+    for index, customer_id in enumerate(customers):
+        persona_name = persona_names[index % len(persona_names)]
         persona = PERSONAS[persona_name]
 
         seed_candidates = []
