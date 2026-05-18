@@ -65,6 +65,7 @@ services:
       DEFAULT_SEARCH_LIMIT: ${DEFAULT_SEARCH_LIMIT:-50}
       PYTHONDONTWRITEBYTECODE: ${PYTHONDONTWRITEBYTECODE:-1}
       PYTHONUNBUFFERED: ${PYTHONUNBUFFERED:-1}
+      MODEL_NAME: ${MODEL_NAME}
     depends_on:
       db:
         condition: service_healthy

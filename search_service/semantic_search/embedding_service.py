@@ -1,10 +1,10 @@
 from sentence_transformers import SentenceTransformer
-from config import MODEL_NAME
+from config import settings
 
 
 class EmbeddingService:
     def __init__(self):
-        self.model = SentenceTransformer(MODEL_NAME)
+        self.model = SentenceTransformer(settings.model_name)
 
     def create_embedding(self, text: str):
         vector = self.model.encode(

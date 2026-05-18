@@ -18,6 +18,8 @@ class Settings:
 
     enable_search_log: bool = True
 
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+
 
 def load_settings() -> Settings:
     database_url = os.getenv("DATABASE_URL")
@@ -40,12 +42,18 @@ def load_settings() -> Settings:
         in ("1", "true", "yes")
     )
 
+    model_name = os.getenv(
+        "MODEL_NAME",
+        "sentence-transformers/all-MiniLM-L6-v2"
+    )
+
     return Settings(
         database_url=database_url,
         api_key=os.getenv("SEARCH_API_KEY"),
         max_search_limit=max_search_limit,
         default_search_limit=default_search_limit,
         enable_search_log=enable_search_log,
+        model_name=model_name,
     )
 
 
