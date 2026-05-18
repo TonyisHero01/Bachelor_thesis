@@ -18,7 +18,7 @@ x-app-env: &app-env
 
 services:
   db:
-    image: postgres:14
+    image: pgvector/pgvector:pg14
     container_name: eshop_db
     restart: unless-stopped
     environment:
