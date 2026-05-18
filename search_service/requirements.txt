@@ -6,3 +6,6 @@ pydantic_core==2.46.3
 python-dotenv==1.2.2
 scikit-learn==1.8.0
 uvicorn==0.46.0
+sentence-transformers==5.1.1
+torch==2.8.0
+transformers==4.56.2

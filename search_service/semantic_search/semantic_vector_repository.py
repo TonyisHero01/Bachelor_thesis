@@ -1,0 +1,108 @@
+from database import get_connection
+
+
+class SemanticVectorRepository:
+    def get_products_for_indexing(self):
+        sql = """
+            SELECT
+                p.id,
+                p.name,
+                p.description,
+                p.material,
+                p.width,
+                p.height,
+                p.length,
+                p.weight,
+                p.price,
+                p.sku,
+                c.name AS category_name,
+                co.name AS color_name,
+                s.name AS size_name
+            FROM product p
+            LEFT JOIN category c ON c.id = p.category_id
+            LEFT JOIN color co ON co.id = p.color_id
+            LEFT JOIN size s ON s.id = p.size_id
+            WHERE p.hidden = false
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                return cur.fetchall()
+
+    def save_embedding(self, product_id: int, embedding: str):
+        sql = """
+            INSERT INTO product_semantic_vector
+                (product_id, embedding, updated_at)
+            VALUES
+                (%s, %s::vector, NOW())
+            ON CONFLICT (product_id)
+            DO UPDATE SET
+                embedding = EXCLUDED.embedding,
+                updated_at = NOW()
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (product_id, embedding))
+            conn.commit()
+
+    def search_by_vector(self, query_vector: str, limit: int):
+        sql = """
+            SELECT
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.sku,
+                1 - (v.embedding <=> %s::vector) AS similarity
+            FROM product_semantic_vector v
+            JOIN product p ON p.id = v.product_id
+            WHERE p.hidden = false
+            ORDER BY v.embedding <=> %s::vector
+            LIMIT %s
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (query_vector, query_vector, limit))
+                return cur.fetchall()
+
+    def get_product_vector(self, product_id: int):
+        sql = """
+            SELECT embedding::text AS embedding
+            FROM product_semantic_vector
+            WHERE product_id = %s
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (product_id,))
+                row = cur.fetchone()
+
+        if row is None:
+            return None
+
+        return row["embedding"] if isinstance(row, dict) else row[0]
+
+    def find_similar_products(self, product_id: int, product_vector: str, limit: int):
+        sql = """
+            SELECT
+                p.id,
+                p.name,
+                p.description,
+                p.price,
+                p.sku,
+                1 - (v.embedding <=> %s::vector) AS similarity
+            FROM product_semantic_vector v
+            JOIN product p ON p.id = v.product_id
+            WHERE p.hidden = false
+              AND p.id <> %s
+            ORDER BY v.embedding <=> %s::vector
+            LIMIT %s
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (product_vector, product_id, product_vector, limit))
+                return cur.fetchall()

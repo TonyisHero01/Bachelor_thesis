@@ -1,6 +1,14 @@
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+class SemanticSearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+
+class SemanticSimilarRequest(BaseModel):
+    product_id: int
+    limit: int = 10
 
 class SearchRequest(BaseModel):
     query: str = Field(default="", max_length=200)

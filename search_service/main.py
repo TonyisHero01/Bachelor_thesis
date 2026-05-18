@@ -10,15 +10,21 @@ from schemas import (
     ReindexRequest,
     ReindexResponse,
     RecommendResponse,
+    SemanticSearchRequest,
+    SemanticSimilarRequest,
 )
-from services.search_service import (
+from tfidf.search_service import (
     rebuild_search_index,
     partial_reindex_product,
     search_products,
     recommend_products,
     get_index_status,
 )
-from services.search_index import search_index
+
+from tfidf.search_index import search_index
+from semantic_search.semantic_search_service import SemanticSearchService
+
+semantic_search_service = SemanticSearchService()
 
 REINDEX_STATE = {
     "running": False,
@@ -85,6 +91,31 @@ def health():
         "service": settings.app_name,
         "version": settings.app_version,
     }
+
+@app.post("/semantic/reindex")
+def semantic_reindex():
+    return semantic_search_service.reindex()
+
+
+@app.post("/semantic/search")
+def semantic_search(request: SemanticSearchRequest):
+    query = request.query.strip()
+
+    if query == "":
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+
+    return semantic_search_service.search(
+        query=query,
+        limit=request.limit
+    )
+
+
+@app.post("/semantic/similar")
+def semantic_similar(request: SemanticSimilarRequest):
+    return semantic_search_service.similar_products(
+        product_id=request.product_id,
+        limit=request.limit
+    )
 
 @app.post("/config/reload")
 def reload_config_api(request: Request):

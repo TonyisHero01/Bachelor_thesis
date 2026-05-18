@@ -16,8 +16,8 @@ from repositories.product_repository import (
     count_distinct_skus,
     build_documents,
 )
-from services.search_index import search_index
-from services.text_preprocessor import build_product_document, normalize_text
+from tfidf.search_index import search_index
+from tfidf.text_preprocessor import build_product_document, normalize_text
 
 
 logger = logging.getLogger(__name__)
