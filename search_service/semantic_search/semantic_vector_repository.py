@@ -16,11 +16,11 @@ class SemanticVectorRepository:
                 p.price,
                 p.sku,
                 c.name AS category_name,
-                co.name AS color_name,
+                pc.name AS color_name,
                 s.name AS size_name
             FROM product p
             LEFT JOIN category c ON c.id = p.category_id
-            LEFT JOIN color co ON co.id = p.color_id
+            LEFT JOIN productcolor pc ON pc.id = p.color_id
             LEFT JOIN size s ON s.id = p.size_id
             WHERE p.hidden = false
         """
