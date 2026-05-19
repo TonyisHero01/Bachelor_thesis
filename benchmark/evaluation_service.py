@@ -13,48 +13,197 @@ def get_db_connection():
     )
 
 
+def fetch_latest_product_by_sku(sku: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            p.sku,
+            p.name,
+            p.description,
+            c.name AS category,
+            p.material,
+            pc.name AS color,
+            s.name AS size
+        FROM product p
+        LEFT JOIN category c ON p.category_id = c.id
+        LEFT JOIN ProductColor pc ON p.color_id = pc.id
+        LEFT JOIN size s ON p.size_id = s.id
+        INNER JOIN (
+            SELECT sku, MAX(id) AS max_id
+            FROM product
+            WHERE sku = %s
+            GROUP BY sku
+        ) latest ON latest.max_id = p.id
+        LIMIT 1
+    """, (sku,))
+
+    row = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "sku": str(row[0] or ""),
+        "name": str(row[1] or ""),
+        "description": str(row[2] or ""),
+        "category": str(row[3] or ""),
+        "material": str(row[4] or ""),
+        "color": str(row[5] or ""),
+        "size": str(row[6] or ""),
+    }
+
+
+def normalize_search_result(item: dict, method: str):
+    if method == "tfidf":
+        sku = str(item.get("product_sku", "")).strip()
+        if not sku:
+            return None
+
+        product = fetch_latest_product_by_sku(sku)
+        if product is None:
+            return None
+
+        product["similarity"] = float(item.get("similarity", 0))
+        return product
+
+    return {
+        "sku": str(item.get("sku", "")),
+        "name": str(item.get("name", "")),
+        "description": str(item.get("description", "")),
+        "category": str(item.get("category", "")),
+        "material": str(item.get("material", "")),
+        "color": str(item.get("color", "")),
+        "size": str(item.get("size", "")),
+        "similarity": float(item.get("similarity", 0)),
+    }
+
+
+def calculate_query_precision(query: str, results: list[dict]):
+    if not results:
+        return 0.0
+
+    terms = [
+        term.lower().strip()
+        for term in query.split()
+        if len(term.strip()) > 1
+    ]
+
+    relevant = 0
+
+    for result in results:
+        text = " ".join([
+            str(result.get("name", "")),
+            str(result.get("description", "")),
+            str(result.get("category", "")),
+            str(result.get("material", "")),
+            str(result.get("color", "")),
+            str(result.get("size", "")),
+        ]).lower()
+
+        if any(term in text for term in terms):
+            relevant += 1
+
+    return relevant / len(results)
+
+
+def call_search_method(method: str, query: str, limit: int):
+    endpoint = {
+        "tfidf": "/search",
+        "semantic_vector": "/semantic/search",
+    }[method]
+
+    status, data, elapsed_ms = request_json(
+        "POST",
+        f"{settings.search_url}{endpoint}",
+        json={
+            "query": query,
+            "limit": limit,
+        },
+    )
+
+    raw_results = data.get("results", []) if status == 200 else []
+
+    results = []
+
+    for item in raw_results:
+        if not isinstance(item, dict):
+            continue
+
+        normalized = normalize_search_result(item, method)
+
+        if normalized is not None:
+            results.append(normalized)
+
+    return status, results, elapsed_ms
+
+
 def evaluate_search(limit: int = 10):
+    methods = [
+        "tfidf",
+        "semantic_vector",
+    ]
+
     rows = []
 
     for query in settings.queries:
-        status, data, elapsed_ms = request_json(
-            "POST",
-            f"{settings.search_url}/search",
-            json={
+        for method in methods:
+            status, results, elapsed_ms = call_search_method(
+                method=method,
+                query=query,
+                limit=limit,
+            )
+
+            precision = calculate_query_precision(query, results)
+
+            rows.append({
+                "method": method,
                 "query": query,
-                "limit": limit,
-            },
-        )
+                "status": status,
+                "response_time_ms": elapsed_ms,
+                "result_count": len(results),
+                "has_results": len(results) > 0,
+                "precision_at_k": precision,
+            })
 
-        results = data.get("results", []) if status == 200 else []
+    summary = {}
 
-        rows.append({
-            "query": query,
-            "status": status,
-            "response_time_ms": elapsed_ms,
-            "result_count": len(results),
-            "has_results": len(results) > 0,
-        })
+    for method in methods:
+        method_rows = [
+            row for row in rows
+            if row["method"] == method and row["status"] == 200
+        ]
 
-    successful = [
-        row for row in rows
-        if row["status"] == 200
-    ]
+        with_results = [
+            row for row in method_rows
+            if row["has_results"]
+        ]
 
-    with_results = [
-        row for row in successful
-        if row["has_results"]
-    ]
+        summary[method] = {
+            "queries_evaluated": len(method_rows),
+            "queries_with_results": len(with_results),
+            "result_hit_rate": (
+                len(with_results) / len(method_rows)
+                if method_rows else 0
+            ),
+            "avg_response_time_ms": (
+                statistics.mean(row["response_time_ms"] for row in method_rows)
+                if method_rows else 0
+            ),
+            "avg_precision_at_k": (
+                statistics.mean(row["precision_at_k"] for row in method_rows)
+                if method_rows else 0
+            ),
+        }
 
     return {
-        "queries_evaluated": len(rows),
-        "successful_queries": len(successful),
-        "queries_with_results": len(with_results),
-        "result_hit_rate": len(with_results) / len(rows) if rows else 0,
-        "avg_response_time_ms": (
-            statistics.mean(row["response_time_ms"] for row in successful)
-            if successful else 0
-        ),
+        "methods_compared": methods,
+        "limit": limit,
+        "summary": summary,
         "details": rows,
     }
 

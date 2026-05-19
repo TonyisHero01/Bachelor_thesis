@@ -64,15 +64,12 @@ def load_settings() -> Settings:
 
         queries=[
             "laptop",
-            "smartphone",
-            "keyboard",
-            "mouse",
-            "headphones",
-            "shirt",
-            "jacket",
-            "cotton",
-            "black",
-            "white",
+            "computer for playing games",
+            "screen for gaming",
+            "device for typing",
+            "phone for taking photos",
+            "black jacket",
+            "cotton shirt",
         ],
     )
 

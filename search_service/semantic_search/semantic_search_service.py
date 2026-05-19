@@ -1,11 +1,12 @@
 from semantic_search.embedding_service import EmbeddingService
 from semantic_search.semantic_vector_repository import SemanticVectorRepository
-
+from repositories.product_repository import fetch_active_relevance_config
 
 class SemanticSearchService:
     def __init__(self):
         self.repository = SemanticVectorRepository()
         self.embedding_service = EmbeddingService()
+        self.config = fetch_active_relevance_config()
 
     def build_product_document(self, product):
         def value(key):
@@ -33,6 +34,23 @@ class SemanticSearchService:
             for part in parts
             if part is not None and str(part).strip() != ""
         )
+    
+    def reload_config(self):
+        self.config = fetch_active_relevance_config()
+        return self.config
+    
+    def apply_score_weights(self, results):
+        semantic_weight = float(self.config.get("semantic_vector_weight", 1.0))
+
+        for row in results:
+            row["similarity"] = float(row["similarity"]) * semantic_weight
+
+        results.sort(
+            key=lambda item: item["similarity"],
+            reverse=True
+        )
+
+        return results
 
     def reindex(self):
         products = self.repository.get_products_for_indexing()
@@ -63,6 +81,7 @@ class SemanticSearchService:
         pgvector = self.embedding_service.to_pgvector(embedding)
 
         results = self.repository.search_by_vector(pgvector, limit)
+        results = self.apply_score_weights(results)
 
         return {
             "method": "semantic_vector_search",

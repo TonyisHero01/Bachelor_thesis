@@ -6,75 +6,89 @@ from config import settings
 from http_client import request_json
 
 
+SEARCH_METHODS = {
+    "tfidf": {
+        "method": "POST",
+        "url": lambda query: f"{settings.search_url}/search",
+        "json": lambda query: {"query": query, "limit": 10},
+        "params": lambda query: None,
+    },
+    "semantic_vector": {
+        "method": "POST",
+        "url": lambda query: f"{settings.search_url}/semantic/search",
+        "json": lambda query: {"query": query, "limit": 10},
+        "params": lambda query: None,
+    },
+    "sql_like": {
+        "method": "GET",
+        "url": lambda query: f"{settings.bms_url}/search-like",
+        "json": lambda query: None,
+        "params": lambda query: {"q": query},
+    },
+}
+
+
+def call_method(method_name: str, query: str):
+    method_config = SEARCH_METHODS[method_name]
+
+    status, data, elapsed = request_json(
+        method_config["method"],
+        method_config["url"](query),
+        json=method_config["json"](query),
+        params=method_config["params"](query),
+    )
+
+    return status, data, elapsed
+
+
+def count_results(data, status: int):
+    if status != 200 or not isinstance(data, dict):
+        return 0
+
+    results = data.get("results", [])
+
+    if not isinstance(results, list):
+        return 0
+
+    return len(results)
+
+
 def run_benchmark():
     rows = []
 
-    status, data, elapsed = request_json(
-        "POST",
-        f"{settings.search_url}/search",
-        json={
-            "query": settings.queries[0],
-            "limit": 10,
-        },
-    )
+    first_query = settings.queries[0]
 
-    rows.append({
-        "type": "vector_cold",
-        "query": settings.queries[0],
-        "response_time_ms": elapsed,
-        "result_count": len(data.get("results", [])) if status == 200 else 0,
-        "status": status,
-    })
+    for method_name in ["tfidf", "semantic_vector"]:
+        status, data, elapsed = call_method(method_name, first_query)
+
+        rows.append({
+            "type": f"{method_name}_cold",
+            "query": first_query,
+            "response_time_ms": elapsed,
+            "result_count": count_results(data, status),
+            "status": status,
+        })
 
     for query in settings.queries:
-        vector_times = []
-        vector_count = 0
-        vector_status = 200
+        for method_name in ["tfidf", "semantic_vector", "sql_like"]:
+            times = []
+            result_count = 0
+            final_status = 200
 
-        for _ in range(settings.benchmark_repeat_count):
-            status, data, elapsed = request_json(
-                "POST",
-                f"{settings.search_url}/search",
-                json={
-                    "query": query,
-                    "limit": 10,
-                },
-            )
+            for _ in range(settings.benchmark_repeat_count):
+                status, data, elapsed = call_method(method_name, query)
 
-            vector_times.append(elapsed)
-            vector_status = status
-            vector_count = len(data.get("results", [])) if status == 200 else 0
+                times.append(elapsed)
+                final_status = status
+                result_count = count_results(data, status)
 
-        rows.append({
-            "type": "vector",
-            "query": query,
-            "response_time_ms": statistics.mean(vector_times),
-            "result_count": vector_count,
-            "status": vector_status,
-        })
-
-        sql_times = []
-        sql_count = 0
-        sql_status = 200
-
-        for _ in range(settings.benchmark_repeat_count):
-            status, data, elapsed = request_json(
-                "GET",
-                f"{settings.bms_url}/search-like",
-                params={"q": query},
-            )
-
-            sql_times.append(elapsed)
-            sql_status = status
-            sql_count = len(data.get("results", [])) if status == 200 else 0
-
-        rows.append({
-            "type": "sql_like",
-            "query": query,
-            "response_time_ms": statistics.mean(sql_times),
-            "result_count": sql_count,
-            "status": sql_status,
-        })
+            rows.append({
+                "type": method_name,
+                "query": query,
+                "response_time_ms": statistics.mean(times) if times else 0,
+                "result_count": result_count,
+                "status": final_status,
+            })
 
     return rows
 

@@ -21,26 +21,25 @@ def build_benchmark_chart_data(rows):
     grouped = {}
 
     for row in rows:
-        if row["type"] == "vector_cold":
+        if row["type"] in ["tfidf_cold", "semantic_vector_cold"]:
             continue
 
         query = row["query"]
 
         if query not in grouped:
             grouped[query] = {
-                "vector": 0,
+                "tfidf": 0,
+                "semantic_vector": 0,
                 "sql_like": 0,
             }
 
-        if row["type"] == "vector":
-            grouped[query]["vector"] = round(row["response_time_ms"], 2)
-
-        if row["type"] == "sql_like":
-            grouped[query]["sql_like"] = round(row["response_time_ms"], 2)
+        if row["type"] in grouped[query]:
+            grouped[query][row["type"]] = round(row["response_time_ms"], 2)
 
     return {
         "labels": list(grouped.keys()),
-        "vector": [item["vector"] for item in grouped.values()],
+        "tfidf": [item["tfidf"] for item in grouped.values()],
+        "semantic_vector": [item["semantic_vector"] for item in grouped.values()],
         "sql_like": [item["sql_like"] for item in grouped.values()],
     }
 
@@ -48,25 +47,33 @@ def build_comparison_rows(rows):
     grouped = {}
 
     for row in rows:
-        if row["type"] == "vector_cold":
+        if row["type"] in ["tfidf_cold", "semantic_vector_cold"]:
             continue
 
         query = row["query"]
 
         if query not in grouped:
             grouped[query] = {
-                "vector_ms": None,
+                "tfidf_ms": None,
+                "semantic_ms": None,
                 "sql_ms": None,
-                "vector_count": None,
+                "tfidf_count": None,
+                "semantic_count": None,
                 "sql_count": None,
-                "vector_status": None,
+                "tfidf_status": None,
+                "semantic_status": None,
                 "sql_status": None,
             }
 
-        if row["type"] == "vector":
-            grouped[query]["vector_ms"] = row["response_time_ms"]
-            grouped[query]["vector_count"] = row["result_count"]
-            grouped[query]["vector_status"] = row["status"]
+        if row["type"] == "tfidf":
+            grouped[query]["tfidf_ms"] = row["response_time_ms"]
+            grouped[query]["tfidf_count"] = row["result_count"]
+            grouped[query]["tfidf_status"] = row["status"]
+
+        if row["type"] == "semantic_vector":
+            grouped[query]["semantic_ms"] = row["response_time_ms"]
+            grouped[query]["semantic_count"] = row["result_count"]
+            grouped[query]["semantic_status"] = row["status"]
 
         if row["type"] == "sql_like":
             grouped[query]["sql_ms"] = row["response_time_ms"]
@@ -76,31 +83,36 @@ def build_comparison_rows(rows):
     table_rows = ""
 
     for query, data in grouped.items():
-        vector_ms = data["vector_ms"]
-        sql_ms = data["sql_ms"]
+        times = {
+            "TF-IDF": data["tfidf_ms"],
+            "Semantic Vector": data["semantic_ms"],
+            "SQL LIKE": data["sql_ms"],
+        }
 
-        vector_ms_text = f"{vector_ms:.2f}" if vector_ms is not None else "-"
-        sql_ms_text = f"{sql_ms:.2f}" if sql_ms is not None else "-"
+        valid_times = {
+            name: value
+            for name, value in times.items()
+            if value is not None
+        }
 
-        if vector_ms is not None and sql_ms is not None:
-            faster = "Vector" if vector_ms < sql_ms else "SQL LIKE"
-            difference = abs(vector_ms - sql_ms)
-            difference_text = f"{difference:.2f} ms"
+        if valid_times:
+            fastest = min(valid_times, key=valid_times.get)
         else:
-            faster = "-"
-            difference_text = "-"
+            fastest = "-"
 
         table_rows += f"""
         <tr>
             <td>{query}</td>
-            <td>{vector_ms_text}</td>
-            <td>{sql_ms_text}</td>
-            <td>{data["vector_count"] if data["vector_count"] is not None else "-"}</td>
-            <td>{data["sql_count"] if data["sql_count"] is not None else "-"}</td>
-            <td>{faster}</td>
-            <td>{difference_text}</td>
-            <td>{data["vector_status"] if data["vector_status"] is not None else "-"}</td>
-            <td>{data["sql_status"] if data["sql_status"] is not None else "-"}</td>
+            <td>{f'{data["tfidf_ms"]:.2f} ms' if data["tfidf_ms"] is not None else '-'}</td>
+            <td>{f'{data["semantic_ms"]:.2f} ms' if data["semantic_ms"] is not None else '-'}</td>
+            <td>{f'{data["sql_ms"]:.2f} ms' if data["sql_ms"] is not None else '-'}</td>
+            <td>{data["tfidf_count"]}</td>
+            <td>{data["semantic_count"]}</td>
+            <td>{data["sql_count"]}</td>
+            <td>{fastest}</td>
+            <td>{data["tfidf_status"]}</td>
+            <td>{data["semantic_status"]}</td>
+            <td>{data["sql_status"]}</td>
         </tr>
         """
 
@@ -108,9 +120,14 @@ def build_comparison_rows(rows):
 
 
 def build_summary(rows):
-    vector_rows = [
+    tfidf_rows = [
         row for row in rows
-        if row["type"] == "vector" and row["status"] == 200
+        if row["type"] == "tfidf" and row["status"] == 200
+    ]
+
+    semantic_rows = [
+        row for row in rows
+        if row["type"] == "semantic_vector" and row["status"] == 200
     ]
 
     sql_rows = [
@@ -118,53 +135,70 @@ def build_summary(rows):
         if row["type"] == "sql_like" and row["status"] == 200
     ]
 
-    cold_rows = [
+    tfidf_cold_rows = [
         row for row in rows
-        if row["type"] == "vector_cold" and row["status"] == 200
+        if row["type"] == "tfidf_cold" and row["status"] == 200
     ]
 
-    if not vector_rows or not sql_rows:
+    semantic_cold_rows = [
+        row for row in rows
+        if row["type"] == "semantic_vector_cold" and row["status"] == 200
+    ]
+
+    if not tfidf_rows or not semantic_rows or not sql_rows:
         return """
         <div class="summary">
             <div class="metric-card warning">No complete benchmark data available.</div>
         </div>
         """
 
-    vector_avg = statistics.mean(
-        row["response_time_ms"] for row in vector_rows
+    tfidf_avg = statistics.mean(row["response_time_ms"] for row in tfidf_rows)
+    semantic_avg = statistics.mean(row["response_time_ms"] for row in semantic_rows)
+    sql_avg = statistics.mean(row["response_time_ms"] for row in sql_rows)
+
+    tfidf_cold_avg = (
+        statistics.mean(row["response_time_ms"] for row in tfidf_cold_rows)
+        if tfidf_cold_rows else 0.0
     )
 
-    sql_avg = statistics.mean(
-        row["response_time_ms"] for row in sql_rows
+    semantic_cold_avg = (
+        statistics.mean(row["response_time_ms"] for row in semantic_cold_rows)
+        if semantic_cold_rows else 0.0
     )
 
-    cold_avg = (
-        statistics.mean(row["response_time_ms"] for row in cold_rows)
-        if cold_rows else 0.0
-    )
+    averages = {
+        "TF-IDF": tfidf_avg,
+        "Semantic Vector": semantic_avg,
+        "SQL LIKE": sql_avg,
+    }
 
-    if vector_avg < sql_avg:
-        result_text = f"Vector search is {(sql_avg / vector_avg):.2f}× faster on average."
-    else:
-        result_text = f"SQL LIKE is {(vector_avg / sql_avg):.2f}× faster on average."
+    fastest = min(averages, key=averages.get)
 
     return f"""
     <div class="summary">
         <div class="metric-card">
-            <span>Vector avg</span>
-            <strong>{vector_avg:.2f} ms</strong>
+            <span>TF-IDF avg</span>
+            <strong>{tfidf_avg:.2f} ms</strong>
+        </div>
+        <div class="metric-card">
+            <span>Semantic vector avg</span>
+            <strong>{semantic_avg:.2f} ms</strong>
         </div>
         <div class="metric-card">
             <span>SQL LIKE avg</span>
             <strong>{sql_avg:.2f} ms</strong>
         </div>
         <div class="metric-card">
-            <span>Vector cold start</span>
-            <strong>{cold_avg:.2f} ms</strong>
+            <span>TF-IDF cold start</span>
+            <strong>{tfidf_cold_avg:.2f} ms</strong>
+        </div>
+        <div class="metric-card">
+            <span>Semantic cold start</span>
+            <strong>{semantic_cold_avg:.2f} ms</strong>
         </div>
         <div class="metric-card result">
-            <span>Result</span>
-            <strong>{result_text}</strong>
+            <span>Fastest method</span>
+            <strong>{fastest}</strong>
         </div>
     </div>
     """
@@ -343,7 +377,7 @@ def render_benchmark_page(rows):
         summary_html = ""
         table_rows = """
         <tr>
-            <td colspan="9">
+            <td colspan="11">
                 No benchmark has been run yet. Click "Run benchmark again" to start.
             </td>
         </tr>
@@ -355,7 +389,8 @@ def render_benchmark_page(rows):
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     chart_data = build_benchmark_chart_data(rows) if rows else {
         "labels": [],
-        "vector": [],
+        "tfidf": [],
+        "semantic_vector": [],
         "sql_like": [],
     }
 
@@ -396,13 +431,15 @@ def render_benchmark_page(rows):
                     <thead>
                         <tr>
                             <th>Query</th>
-                            <th>Vector avg time (ms)</th>
-                            <th>SQL LIKE avg time (ms)</th>
-                            <th>Vector result count</th>
-                            <th>SQL LIKE result count</th>
-                            <th>Faster method</th>
-                            <th>Difference</th>
-                            <th>Vector status</th>
+                            <th>TF-IDF avg time</th>
+                            <th>Semantic avg time</th>
+                            <th>SQL LIKE avg time</th>
+                            <th>TF-IDF results</th>
+                            <th>Semantic results</th>
+                            <th>SQL LIKE results</th>
+                            <th>Fastest</th>
+                            <th>TF-IDF status</th>
+                            <th>Semantic status</th>
                             <th>SQL LIKE status</th>
                         </tr>
                     </thead>
@@ -423,8 +460,12 @@ def render_benchmark_page(rows):
                         labels: benchmarkChartData.labels,
                         datasets: [
                             {{
-                                label: 'Vector search',
-                                data: benchmarkChartData.vector
+                                label: 'TF-IDF',
+                                data: benchmarkChartData.tfidf
+                            }},
+                            {{
+                                label: 'Semantic Vector',
+                                data: benchmarkChartData.semantic_vector
                             }},
                             {{
                                 label: 'SQL LIKE',
@@ -456,6 +497,33 @@ def render_benchmark_page(rows):
     </html>
     """
 
+def build_search_method_chart_data(details):
+    grouped = {}
+
+    for item in details:
+        query = item.get("query", "-")
+        method = item.get("method", "-")
+
+        if query not in grouped:
+            grouped[query] = {
+                "tfidf": 0,
+                "semantic_vector": 0,
+            }
+
+        if method in grouped[query]:
+            grouped[query][method] = round(
+                float(item.get("response_time_ms", 0)),
+                2
+            )
+
+    return {
+        "labels": list(grouped.keys()),
+        "tfidf": [item["tfidf"] for item in grouped.values()],
+        "semantic_vector": [
+            item["semantic_vector"]
+            for item in grouped.values()
+        ],
+    }
 
 def render_evaluation_page(report, config=None):
 
@@ -468,7 +536,8 @@ def render_evaluation_page(report, config=None):
 
     search_chart = {
         "labels": [],
-        "times": [],
+        "tfidf": [],
+        "semantic_vector": [],
     }
 
     if "error" in report:
@@ -481,8 +550,20 @@ def render_evaluation_page(report, config=None):
         search = report.get("search_evaluation", {})
         rec = report.get("recommendation_evaluation", {})
 
-        hit_rate = float(search.get("result_hit_rate", 0))
-        avg_time = float(search.get("avg_response_time_ms", 0))
+        search_summary = search.get("summary", {})
+
+        tfidf_summary = search_summary.get("tfidf", {})
+        semantic_summary = search_summary.get("semantic_vector", {})
+
+        tfidf_hit_rate = float(tfidf_summary.get("result_hit_rate", 0))
+        semantic_hit_rate = float(semantic_summary.get("result_hit_rate", 0))
+
+        tfidf_avg_time = float(tfidf_summary.get("avg_response_time_ms", 0))
+        semantic_avg_time = float(semantic_summary.get("avg_response_time_ms", 0))
+
+        tfidf_precision = float(tfidf_summary.get("avg_precision_at_k", 0))
+        semantic_precision = float(semantic_summary.get("avg_precision_at_k", 0))
+
         interest_similarity = float(
             rec.get("avg_interest_similarity", 0)
         )
@@ -524,41 +605,43 @@ def render_evaluation_page(report, config=None):
             ],
         }
 
-        search_chart = {
-            "labels": [
-                item.get("query", "-")
-                for item in search.get("details", [])
-            ],
-            "times": [
-                round(float(item.get("response_time_ms", 0)), 2)
-                for item in search.get("details", [])
-            ],
-        }
+        search_chart = build_search_method_chart_data(
+            search.get("details", [])
+        )
 
         diversity_class = "good" if diversity >= 2 else "warn"
-
-        if avg_time <= 50:
-            speed_label = "Fast"
-            speed_class = "good"
-        elif avg_time <= 200:
-            speed_label = "Acceptable"
-            speed_class = "warn"
-        else:
-            speed_label = "Slow"
-            speed_class = "bad"
 
         body = f"""
             <div class="metrics">
 
-                <div class="metric-card {status_label(hit_rate)}">
-                    <span>Search result hit rate</span>
-                    <strong>{percentage(hit_rate)}</strong>
+                <div class="metric-card {status_label(tfidf_hit_rate)}">
+                    <span>TF-IDF hit rate</span>
+                    <strong>{percentage(tfidf_hit_rate)}</strong>
                 </div>
 
-                <div class="metric-card {speed_class}">
-                    <span>Average search response</span>
-                    <strong>{avg_time:.2f} ms</strong>
-                    <span>{speed_label}</span>
+                <div class="metric-card {status_label(semantic_hit_rate)}">
+                    <span>Semantic vector hit rate</span>
+                    <strong>{percentage(semantic_hit_rate)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(tfidf_precision)}">
+                    <span>TF-IDF precision@10</span>
+                    <strong>{percentage(tfidf_precision)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(semantic_precision)}">
+                    <span>Semantic precision@10</span>
+                    <strong>{percentage(semantic_precision)}</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>TF-IDF avg response</span>
+                    <strong>{tfidf_avg_time:.2f} ms</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Semantic avg response</span>
+                    <strong>{semantic_avg_time:.2f} ms</strong>
                 </div>
 
                 <div class="metric-card">
@@ -627,10 +710,12 @@ def render_evaluation_page(report, config=None):
             <table>
                 <thead>
                     <tr>
+                        <th>Method</th>
                         <th>Query</th>
                         <th>Status</th>
                         <th>Response time</th>
                         <th>Results</th>
+                        <th>Precision@10</th>
                         <th>Has results</th>
                     </tr>
                 </thead>
@@ -856,7 +941,7 @@ def render_evaluation_page(report, config=None):
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
             const recommendationChartData = {json.dumps(recommendation_chart if "error" not in report else {"labels": [], "values": []})};
-            const searchChartData = {json.dumps(search_chart if "error" not in report else {"labels": [], "times": []})};
+            const searchChartData = {json.dumps(search_chart if "error" not in report else {"labels": [], "tfidf": [], "semantic_vector": []})};
 
             if (recommendationChartData.labels.length > 0) {{
                 new Chart(document.getElementById('recommendationChart'), {{
@@ -885,10 +970,16 @@ def render_evaluation_page(report, config=None):
                     type: 'bar',
                     data: {{
                         labels: searchChartData.labels,
-                        datasets: [{{
-                            label: 'Response time ms',
-                            data: searchChartData.times
-                        }}]
+                        datasets: [
+                            {{
+                                label: 'TF-IDF response time ms',
+                                data: searchChartData.tfidf
+                            }},
+                            {{
+                                label: 'Semantic vector response time ms',
+                                data: searchChartData.semantic_vector
+                            }}
+                        ]
                     }},
                     options: {{
                         responsive: true,
@@ -914,19 +1005,30 @@ def build_search_detail_rows(details):
     if not details:
         return """
         <tr>
-            <td colspan="5">No search details available.</td>
+            <td colspan="7">No search details available.</td>
         </tr>
         """
 
     rows = ""
 
     for item in details:
+        method = item.get("method", "-")
+
+        if method == "semantic_vector":
+            method_label = "Semantic Vector"
+        elif method == "tfidf":
+            method_label = "TF-IDF"
+        else:
+            method_label = method
+
         rows += f"""
         <tr>
+            <td>{method_label}</td>
             <td>{item.get("query", "-")}</td>
             <td>{item.get("status", "-")}</td>
             <td>{float(item.get("response_time_ms", 0)):.2f} ms</td>
             <td>{item.get("result_count", 0)}</td>
+            <td>{percentage(float(item.get("precision_at_k", 0)))}</td>
             <td>{"Yes" if item.get("has_results") else "No"}</td>
         </tr>
         """

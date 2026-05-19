@@ -126,6 +126,7 @@ def reload_config_api(request: Request):
     try:
         config = fetch_active_relevance_config()
         search_index.config = config
+        semantic_search_service.config = config
 
         logger.info("[CONFIG] search config reloaded")
 
