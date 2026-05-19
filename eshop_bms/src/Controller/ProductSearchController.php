@@ -18,6 +18,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Twig\Environment;
+use App\Entity\SearchRelevanceConfig;
 
 #[IsGranted('ROLE_WAREHOUSE_MANAGER')]
 final class ProductSearchController extends BaseController
@@ -83,13 +84,24 @@ final class ProductSearchController extends BaseController
 
         $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
+        $searchConfig = $em
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        $searchMethod = $searchConfig?->getSearchMethod() ?? 'tfidf';
+
+        $searchEndpoint = match ($searchMethod) {
+            'semantic_vector' => '/semantic/search',
+            default => '/search',
+        };
+
         if ($baseUrl === '') {
             $logger->error('[ProductSearchController] SEARCH_SERVICE_BASE_URL is empty');
             return new JsonResponse(['error' => 'Search backend not available'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         try {
-            $response = $httpClient->request('POST', $baseUrl . '/search', [
+            $response = $httpClient->request('POST', $baseUrl . $searchEndpoint, [
                 'json' => [
                     'query' => $query,
                     'limit' => 200,
@@ -128,7 +140,17 @@ final class ProductSearchController extends BaseController
                 continue;
             }
 
-            $sku = isset($result['product_sku']) ? trim((string) $result['product_sku']) : '';
+            $sku = '';
+
+            if ($searchMethod === 'semantic_vector') {
+                $sku = isset($result['sku'])
+                    ? trim((string) $result['sku'])
+                    : '';
+            } else {
+                $sku = isset($result['product_sku'])
+                    ? trim((string) $result['product_sku'])
+                    : '';
+            }
             $similarity = isset($result['similarity']) ? (float) $result['similarity'] : 0.0;
 
             if ($sku === '' || $similarity <= 0) {
@@ -230,136 +252,5 @@ final class ProductSearchController extends BaseController
             'sizes' => $sizes,
             'categories' => $categories,
         ], $request);
-    }
-
-    /**
-     * Executes semantic vector search via python-api and stores ranked results in session.
-     */
-    #[Route('/bms/semantic-search', name: 'bms_semantic_search', methods: ['POST'])]
-    public function semanticSearch(
-        EntityManagerInterface $em,
-        SessionInterface $session,
-        LoggerInterface $logger,
-        Request $request,
-        HttpClientInterface $httpClient,
-    ): Response {
-        $payload = json_decode((string) $request->getContent(), true);
-
-        if (!is_array($payload)) {
-            return new JsonResponse(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $query = trim((string) ($payload['query'] ?? ''));
-
-        if ($query === '') {
-            return new JsonResponse(['error' => 'Empty search query'], Response::HTTP_BAD_REQUEST);
-        }
-
-        if (mb_strlen($query) > 200) {
-            return new JsonResponse(['error' => 'Query too long'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
-
-        if ($baseUrl === '') {
-            $logger->error('[ProductSearchController] SEARCH_SERVICE_BASE_URL is empty');
-            return new JsonResponse(['error' => 'Search backend not available'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        try {
-            $response = $httpClient->request('POST', $baseUrl . '/semantic/search', [
-                'json' => [
-                    'query' => $query,
-                    'limit' => 200,
-                ],
-                'timeout' => 10,
-            ]);
-
-            if ($response->getStatusCode() >= 400) {
-                $logger->error('[ProductSearchController] Semantic search service returned error', [
-                    'status_code' => $response->getStatusCode(),
-                    'body' => $response->getContent(false),
-                ]);
-
-                return new JsonResponse(['error' => 'Semantic search system error'], Response::HTTP_INTERNAL_SERVER_ERROR);
-            }
-
-            $data = $response->toArray(false);
-        } catch (\Throwable $e) {
-            $logger->error('[ProductSearchController] Semantic search service request failed: ' . $e->getMessage());
-
-            return new JsonResponse(['error' => 'Semantic search system error'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        if (!isset($data['results']) || !is_array($data['results'])) {
-            $logger->error('[ProductSearchController] Invalid semantic search response', [
-                'response' => $data,
-            ]);
-
-            return new JsonResponse(['error' => 'Semantic search system error'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        $skuToSimilarity = [];
-
-        foreach ($data['results'] as $result) {
-            if (!is_array($result)) {
-                continue;
-            }
-
-            $sku = isset($result['sku']) ? trim((string) $result['sku']) : '';
-            $similarity = isset($result['similarity']) ? (float) $result['similarity'] : 0.0;
-
-            if ($sku === '' || $similarity <= 0) {
-                continue;
-            }
-
-            $skuToSimilarity[$sku] = $similarity;
-        }
-
-        if ($skuToSimilarity === []) {
-            $session->set('search_results', []);
-            return new JsonResponse(['results' => []]);
-        }
-
-        $productSkus = array_keys($skuToSimilarity);
-
-        $rows = $em->createQueryBuilder()
-            ->select('p.id, p.sku')
-            ->from(Product::class, 'p')
-            ->where('p.sku IN (:skus)')
-            ->setParameter('skus', $productSkus)
-            ->orderBy('p.id', 'DESC')
-            ->getQuery()
-            ->getArrayResult();
-
-        $skuToLatestId = [];
-
-        foreach ($rows as $row) {
-            $sku = (string) $row['sku'];
-
-            if (!isset($skuToLatestId[$sku])) {
-                $skuToLatestId[$sku] = (int) $row['id'];
-            }
-        }
-
-        $sortedResults = [];
-
-        foreach ($productSkus as $sku) {
-            if (!isset($skuToLatestId[$sku])) {
-                continue;
-            }
-
-            $sortedResults[] = [
-                'id' => $skuToLatestId[$sku],
-                'similarity' => $skuToSimilarity[$sku],
-            ];
-        }
-
-        $session->set('search_results', $sortedResults);
-
-        return new JsonResponse([
-            'method' => 'semantic_vector_search',
-            'results' => $sortedResults,
-        ]);
     }
 }
