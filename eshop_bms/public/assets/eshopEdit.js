@@ -248,6 +248,7 @@ async function save_() {
             currencies,
             searchConfig: {
                 name: searchConfigNameElement?.value || 'Default relevance configuration',
+                searchMethod: document.getElementById('searchMethod').value,
 
                 nameWeight: parseInt(nameWeightElement?.value || '18', 10),
                 descriptionWeight: parseInt(descriptionWeightElement?.value || '6', 10),

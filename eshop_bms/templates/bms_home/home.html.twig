@@ -79,6 +79,17 @@
             value="{{ searchConfig.name }}"
             maxlength="100"><br>
 
+      <label for="searchMethod">Search method</label>
+      <select id="searchMethod" name="searchMethod">
+          {% for value, label in searchMethods %}
+              <option value="{{ value }}"
+                  {% if searchConfig.searchMethod == value %}selected{% endif %}
+              >
+                  {{ label }}
+              </option>
+          {% endfor %}
+      </select>
+
       <h3>Field Weights</h3>
 
       <label for="name_weight">Name Weight</label>

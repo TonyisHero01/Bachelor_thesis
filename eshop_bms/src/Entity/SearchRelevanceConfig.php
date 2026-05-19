@@ -89,6 +89,9 @@ class SearchRelevanceConfig
     #[ORM\Column(type: 'float', options: ['default' => 0.10])]
     private float $recommendationDiversityPenalty = 0.10;
 
+    #[ORM\Column(type: 'string', length: 30, options: ['default' => 'tfidf'])]
+    private string $searchMethod = 'tfidf';
+
     public function __construct()
     {
         $now = new \DateTimeImmutable();
@@ -257,6 +260,26 @@ class SearchRelevanceConfig
     public function setRecommendationDiversityPenalty(float $value): static
     {
         $this->recommendationDiversityPenalty = $value;
+
+        return $this;
+    }
+
+    public function getSearchMethod(): string
+    {
+        return $this->searchMethod;
+    }
+
+    public function setSearchMethod(string $searchMethod): static
+    {
+        $allowed = ['tfidf', 'semantic_vector'];
+
+        if (!in_array($searchMethod, $allowed, true)) {
+
+            $searchMethod = 'tfidf';
+
+        }
+
+        $this->searchMethod = $searchMethod;
 
         return $this;
     }

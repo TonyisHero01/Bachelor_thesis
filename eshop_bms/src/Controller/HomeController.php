@@ -124,11 +124,17 @@ class HomeController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
+        $searchMethods = [
+            'tfidf' => 'TF-IDF Search',
+            'semantic_vector' => 'Semantic Vector Search',
+        ];
+
         return $this->renderLocalized('bms_home/home.html.twig', [
             'shopInfo' => $shopInfo,
             'roles' => $roles,
             'currencies' => $currencies,
             'searchConfig' => $searchConfig,
+            'searchMethods' => $searchMethods,
             'sales' => $sales,
             'topProducts' => $topProducts,
             'topCustomers' => $topCustomers,
@@ -607,7 +613,8 @@ class HomeController extends BaseController
             || (int) ($config['attributesWeight'] ?? 2) !== $searchConfig->getAttributesWeight();
 
         $runtimeConfigChanged =
-            (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
+            (string) ($config['searchMethod'] ?? 'tfidf') !== $searchConfig->getSearchMethod()
+            || (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
             || (float) ($config['sameMaterialBonus'] ?? 0.15) !== $searchConfig->getSameMaterialBonus()
             || (float) ($config['sameColorBonus'] ?? 0.10) !== $searchConfig->getSameColorBonus()
             || (float) ($config['sameSizeBonus'] ?? 0.10) !== $searchConfig->getSameSizeBonus()
@@ -647,6 +654,8 @@ class HomeController extends BaseController
         $searchConfig->setViewHistoryRecommendationWeight((float) ($config['viewHistoryRecommendationWeight'] ?? 0.35));
         $searchConfig->setMaxRecommendationPerCategory((int) ($config['maxRecommendationPerCategory'] ?? 4));
         $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
+
+        $searchConfig->setSearchMethod((string) ($config['searchMethod'] ?? 'tfidf'));
 
         $searchConfig->touch();
 
