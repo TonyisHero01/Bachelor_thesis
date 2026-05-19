@@ -213,6 +213,7 @@ final class ProductSearchController extends BaseController
     public function results(SessionInterface $session, EntityManagerInterface $em, Request $request): Response
     {
         $searchResults = $session->get('search_results', []);
+
         if (empty($searchResults)) {
             return $this->renderLocalized('product/no_results.html.twig', [], $request);
         }
@@ -223,24 +224,45 @@ final class ProductSearchController extends BaseController
         $products = $em->getRepository(Product::class)->findBy(['id' => $ids]);
 
         $productsById = [];
+
         foreach ($products as $product) {
             $productsById[$product->getId()] = $product;
         }
 
         $sortedProducts = [];
+
         foreach ($ids as $id) {
             if (isset($productsById[$id])) {
                 $sortedProducts[] = $productsById[$id];
             }
         }
 
+        // ---------------- PAGINATION ----------------
+
+        $page = max(1, (int) $request->query->get('page', 1));
+
+        $limit = (int) $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE');
+        $limit = $limit > 0 ? $limit : 10;
+
+        $totalProducts = count($sortedProducts);
+
+        $totalPages = max(1, (int) ceil($totalProducts / $limit));
+
+        $offset = ($page - 1) * $limit;
+
+        $pagedProducts = array_slice($sortedProducts, $offset, $limit);
+
+        // ------------------------------------------------
+
         $form = $this->createForm(ProductType::class, new Product());
+
         $colors = $em->getRepository(Color::class)->findAll();
         $sizes = $em->getRepository(Size::class)->findAll();
         $categories = $em->getRepository(Category::class)->findAll();
 
-        $locale = $request->getLocale();
-        $productsForView = $this->buildProductsForView($sortedProducts, $locale);
+        $locale = strtolower((string) $request->query->get('_locale', $request->getLocale()));
+
+        $productsForView = $this->buildProductsForView($pagedProducts, $locale);
 
         return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $productsForView,
@@ -251,6 +273,12 @@ final class ProductSearchController extends BaseController
             'colors' => $colors,
             'sizes' => $sizes,
             'categories' => $categories,
+
+            // pagination
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalProducts' => $totalProducts,
+
         ], $request);
     }
 }
