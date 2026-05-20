@@ -63,13 +63,16 @@ def load_settings() -> Settings:
         report_dir=report_dir,
 
         queries=[
-            "laptop",
-            "computer for playing games",
-            "screen for gaming",
-            "device for typing",
-            "phone for taking photos",
-            "black jacket",
-            "cotton shirt",
+            "machine for playing modern games",
+            "portable device for remote office work",
+            "tool for writing code and documents",
+            "large display for immersive entertainment",
+            "pocket device for photography and messaging",
+            "small handheld device for daily communication",
+            "comfortable footwear for jogging",
+            "warm outer layer for cold weather",
+            "breathable casual clothing for summer",
+            "carry bag for a portable computer",
         ],
     )
 

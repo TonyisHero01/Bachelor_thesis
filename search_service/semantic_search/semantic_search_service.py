@@ -55,7 +55,7 @@ class SemanticSearchService:
     def reindex(self):
         products = self.repository.get_products_for_indexing()
 
-        indexed_count = 0
+        items = []
 
         for product in products:
             product_id = product["id"] if isinstance(product, dict) else product[0]
@@ -64,16 +64,35 @@ class SemanticSearchService:
             if document == "":
                 continue
 
-            embedding = self.embedding_service.create_embedding(document)
-            pgvector = self.embedding_service.to_pgvector(embedding)
+            items.append({
+                "product_id": product_id,
+                "document": document,
+            })
 
-            self.repository.save_embedding(product_id, pgvector)
+        batch_size = 64
+        indexed_count = 0
 
-            indexed_count += 1
+        for start in range(0, len(items), batch_size):
+            batch = items[start:start + batch_size]
+
+            documents = [
+                item["document"]
+                for item in batch
+            ]
+
+            embeddings = self.embedding_service.create_embeddings(documents)
+
+            for item, embedding in zip(batch, embeddings):
+                pgvector = self.embedding_service.to_pgvector(embedding)
+                self.repository.save_embedding(
+                    item["product_id"],
+                    pgvector,
+                )
+                indexed_count += 1
 
         return {
             "status": "ok",
-            "indexed_products": indexed_count
+            "indexed_products": indexed_count,
         }
 
     def search(self, query: str, limit: int = 10):

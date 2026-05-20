@@ -6,6 +6,18 @@ import psycopg2
 from config import settings
 from http_client import request_json
 
+QUERY_GROUND_TRUTH = {
+    "machine for playing modern games": ["Laptops"],
+    "portable device for remote office work": ["Laptops", "Monitors", "Keyboards"],
+    "tool for writing code and documents": ["Keyboards", "Laptops"],
+    "large display for immersive entertainment": ["Monitors"],
+    "pocket device for photography and messaging": ["Smartphones"],
+    "small handheld device for daily communication": ["Smartphones"],
+    "comfortable footwear for jogging": ["Shoes"],
+    "warm outer layer for cold weather": ["Jackets"],
+    "breathable casual clothing for summer": ["T-Shirts"],
+    "carry bag for a portable computer": ["Accessories"],
+}
 
 def get_db_connection():
     return psycopg2.connect(
@@ -61,54 +73,39 @@ def fetch_latest_product_by_sku(sku: str):
 def normalize_search_result(item: dict, method: str):
     if method == "tfidf":
         sku = str(item.get("product_sku", "")).strip()
-        if not sku:
-            return None
+    else:
+        sku = str(item.get("sku", "")).strip()
 
-        product = fetch_latest_product_by_sku(sku)
-        if product is None:
-            return None
+    if not sku:
+        return None
 
-        product["similarity"] = float(item.get("similarity", 0))
-        return product
+    product = fetch_latest_product_by_sku(sku)
 
-    return {
-        "sku": str(item.get("sku", "")),
-        "name": str(item.get("name", "")),
-        "description": str(item.get("description", "")),
-        "category": str(item.get("category", "")),
-        "material": str(item.get("material", "")),
-        "color": str(item.get("color", "")),
-        "size": str(item.get("size", "")),
-        "similarity": float(item.get("similarity", 0)),
-    }
+    if product is None:
+        return None
+
+    product["similarity"] = float(item.get("similarity", 0))
+    return product
 
 
 def calculate_query_precision(query: str, results: list[dict]):
     if not results:
         return 0.0
 
-    terms = [
-        term.lower().strip()
-        for term in query.split()
-        if len(term.strip()) > 1
-    ]
+    relevant_categories = QUERY_GROUND_TRUTH.get(query)
 
-    relevant = 0
+    if not relevant_categories:
+        return 0.0
+
+    relevant_count = 0
 
     for result in results:
-        text = " ".join([
-            str(result.get("name", "")),
-            str(result.get("description", "")),
-            str(result.get("category", "")),
-            str(result.get("material", "")),
-            str(result.get("color", "")),
-            str(result.get("size", "")),
-        ]).lower()
+        category = str(result.get("category", "")).strip()
 
-        if any(term in text for term in terms):
-            relevant += 1
+        if category in relevant_categories:
+            relevant_count += 1
 
-    return relevant / len(results)
+    return relevant_count / len(results)
 
 
 def call_search_method(method: str, query: str, limit: int):
