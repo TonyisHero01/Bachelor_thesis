@@ -1,35 +1,100 @@
+import math
 import statistics
 from datetime import datetime
 
+import pandas as pd
 import psycopg2
 
 from config import settings
 from http_client import request_json
 
-QUERY_GROUND_TRUTH = {
-    "machine for playing modern games": ["Laptops"],
-    "portable device for remote office work": ["Laptops", "Monitors", "Keyboards"],
-    "tool for writing code and documents": ["Keyboards", "Laptops"],
-    "large display for immersive entertainment": ["Monitors"],
-    "pocket device for photography and messaging": ["Smartphones"],
-    "small handheld device for daily communication": ["Smartphones"],
-    "comfortable footwear for jogging": ["Shoes"],
-    "warm outer layer for cold weather": ["Jackets"],
-    "breathable casual clothing for summer": ["T-Shirts"],
-    "carry bag for a portable computer": ["Accessories"],
+
+RELEVANT_LABELS = {"E", "S"}
+LABEL_GAIN = {
+    "E": 3,
+    "S": 2,
+    "C": 1,
+    "I": 0,
 }
 
+
 def get_db_connection():
-    return psycopg2.connect(
-        settings.database_url
-    )
+    return psycopg2.connect(settings.database_url)
 
 
-def fetch_latest_product_by_sku(sku: str):
+def fetch_imported_skus():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("""
+    cur.execute("SELECT sku FROM product")
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return {str(row[0]) for row in rows if row[0]}
+
+
+def load_esci_ground_truth(limit: int = 100):
+    imported_skus = fetch_imported_skus()
+
+    df = pd.read_parquet(
+        settings.esci_examples_path,
+        columns=[
+            "query",
+            "product_id",
+            "product_locale",
+            "esci_label",
+            "split",
+        ],
+    )
+
+    df = df[
+        (df["product_locale"] == "us")
+        & (df["split"] == "test")
+        & (df["product_id"].isin(imported_skus))
+    ]
+
+    ground_truth = {}
+
+    for _, row in df.iterrows():
+        query = str(row["query"]).strip()
+        product_id = str(row["product_id"]).strip()
+        label = str(row["esci_label"]).strip()
+
+        if not query or not product_id:
+            continue
+
+        ground_truth.setdefault(query, {})
+        ground_truth[query][product_id] = label
+
+    filtered = {}
+
+    for query, labels in ground_truth.items():
+        has_relevant = any(
+            label in RELEVANT_LABELS
+            for label in labels.values()
+        )
+
+        if has_relevant:
+            filtered[query] = labels
+
+        if len(filtered) >= limit:
+            break
+
+    return filtered
+
+
+def fetch_products_by_skus(skus: list[str]):
+    if not skus:
+        return {}
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
         SELECT
             p.sku,
             p.name,
@@ -40,72 +105,39 @@ def fetch_latest_product_by_sku(sku: str):
             s.name AS size
         FROM product p
         LEFT JOIN category c ON p.category_id = c.id
-        LEFT JOIN ProductColor pc ON p.color_id = pc.id
+        LEFT JOIN productcolor pc ON p.color_id = pc.id
         LEFT JOIN size s ON p.size_id = s.id
-        INNER JOIN (
-            SELECT sku, MAX(id) AS max_id
-            FROM product
-            WHERE sku = %s
-            GROUP BY sku
-        ) latest ON latest.max_id = p.id
-        LIMIT 1
-    """, (sku,))
+        WHERE p.sku = ANY(%s)
+        """,
+        (skus,),
+    )
 
-    row = cur.fetchone()
+    rows = cur.fetchall()
 
     cur.close()
     conn.close()
 
-    if not row:
-        return None
+    products = {}
 
-    return {
-        "sku": str(row[0] or ""),
-        "name": str(row[1] or ""),
-        "description": str(row[2] or ""),
-        "category": str(row[3] or ""),
-        "material": str(row[4] or ""),
-        "color": str(row[5] or ""),
-        "size": str(row[6] or ""),
-    }
+    for row in rows:
+        products[str(row[0])] = {
+            "sku": str(row[0] or ""),
+            "name": str(row[1] or ""),
+            "description": str(row[2] or ""),
+            "category": str(row[3] or ""),
+            "material": str(row[4] or ""),
+            "color": str(row[5] or ""),
+            "size": str(row[6] or ""),
+        }
+
+    return products
 
 
-def normalize_search_result(item: dict, method: str):
+def extract_sku(item: dict, method: str):
     if method == "tfidf":
-        sku = str(item.get("product_sku", "")).strip()
-    else:
-        sku = str(item.get("sku", "")).strip()
+        return str(item.get("product_sku", "")).strip()
 
-    if not sku:
-        return None
-
-    product = fetch_latest_product_by_sku(sku)
-
-    if product is None:
-        return None
-
-    product["similarity"] = float(item.get("similarity", 0))
-    return product
-
-
-def calculate_query_precision(query: str, results: list[dict]):
-    if not results:
-        return 0.0
-
-    relevant_categories = QUERY_GROUND_TRUTH.get(query)
-
-    if not relevant_categories:
-        return 0.0
-
-    relevant_count = 0
-
-    for result in results:
-        category = str(result.get("category", "")).strip()
-
-        if category in relevant_categories:
-            relevant_count += 1
-
-    return relevant_count / len(results)
+    return str(item.get("sku", "")).strip()
 
 
 def call_search_method(method: str, query: str, limit: int):
@@ -125,18 +157,123 @@ def call_search_method(method: str, query: str, limit: int):
 
     raw_results = data.get("results", []) if status == 200 else []
 
-    results = []
+    skus = []
 
     for item in raw_results:
         if not isinstance(item, dict):
             continue
 
-        normalized = normalize_search_result(item, method)
+        sku = extract_sku(item, method)
 
-        if normalized is not None:
-            results.append(normalized)
+        if sku:
+            skus.append(sku)
+
+    products_by_sku = fetch_products_by_skus(skus)
+
+    results = []
+
+    for sku in skus:
+        product = products_by_sku.get(sku)
+
+        if product:
+            results.append(product)
 
     return status, results, elapsed_ms
+
+
+def precision_at_k(results, labels):
+    if not results:
+        return 0.0
+
+    relevant_count = 0
+
+    for result in results:
+        label = labels.get(result["sku"], "I")
+
+        if label in RELEVANT_LABELS:
+            relevant_count += 1
+
+    return relevant_count / len(results)
+
+
+def recall_at_k(results, labels):
+    relevant_total = sum(
+        1
+        for label in labels.values()
+        if label in RELEVANT_LABELS
+    )
+
+    if relevant_total == 0:
+        return 0.0
+
+    found = 0
+
+    for result in results:
+        label = labels.get(result["sku"], "I")
+
+        if label in RELEVANT_LABELS:
+            found += 1
+
+    return found / relevant_total
+
+
+def dcg_at_k(results, labels):
+    score = 0.0
+
+    for index, result in enumerate(results, start=1):
+        label = labels.get(result["sku"], "I")
+        gain = LABEL_GAIN.get(label, 0)
+
+        score += gain / math.log2(index + 1)
+
+    return score
+
+
+def ndcg_at_k(results, labels, limit):
+    ideal_gains = sorted(
+        [
+            LABEL_GAIN.get(label, 0)
+            for label in labels.values()
+        ],
+        reverse=True,
+    )[:limit]
+
+    ideal_dcg = 0.0
+
+    for index, gain in enumerate(ideal_gains, start=1):
+        ideal_dcg += gain / math.log2(index + 1)
+
+    if ideal_dcg == 0:
+        return 0.0
+
+    return dcg_at_k(results, labels) / ideal_dcg
+
+
+def mrr(results, labels):
+    for index, result in enumerate(results, start=1):
+        label = labels.get(result["sku"], "I")
+
+        if label in RELEVANT_LABELS:
+            return 1 / index
+
+    return 0.0
+
+
+def build_result_preview(results, labels, limit=5):
+    preview = []
+
+    for index, result in enumerate(results[:limit], start=1):
+        sku = result["sku"]
+
+        preview.append({
+            "rank": index,
+            "sku": sku,
+            "name": result.get("name", ""),
+            "category": result.get("category", ""),
+            "label": labels.get(sku, "not_labeled"),
+        })
+
+    return preview
 
 
 def evaluate_search(limit: int = 10):
@@ -145,9 +282,13 @@ def evaluate_search(limit: int = 10):
         "semantic_vector",
     ]
 
+    ground_truth = load_esci_ground_truth(
+        limit=settings.esci_query_limit
+    )
+
     rows = []
 
-    for query in settings.queries:
+    for query, labels in ground_truth.items():
         for method in methods:
             status, results, elapsed_ms = call_search_method(
                 method=method,
@@ -155,7 +296,10 @@ def evaluate_search(limit: int = 10):
                 limit=limit,
             )
 
-            precision = calculate_query_precision(query, results)
+            precision = precision_at_k(results, labels)
+            recall = recall_at_k(results, labels)
+            ndcg = ndcg_at_k(results, labels, limit)
+            reciprocal_rank = mrr(results, labels)
 
             rows.append({
                 "method": method,
@@ -165,6 +309,10 @@ def evaluate_search(limit: int = 10):
                 "result_count": len(results),
                 "has_results": len(results) > 0,
                 "precision_at_k": precision,
+                "recall_at_k": recall,
+                "ndcg_at_k": ndcg,
+                "mrr": reciprocal_rank,
+                "top_results": build_result_preview(results, labels),
             })
 
     summary = {}
@@ -195,318 +343,31 @@ def evaluate_search(limit: int = 10):
                 statistics.mean(row["precision_at_k"] for row in method_rows)
                 if method_rows else 0
             ),
+            "avg_recall_at_k": (
+                statistics.mean(row["recall_at_k"] for row in method_rows)
+                if method_rows else 0
+            ),
+            "avg_ndcg_at_k": (
+                statistics.mean(row["ndcg_at_k"] for row in method_rows)
+                if method_rows else 0
+            ),
+            "avg_mrr": (
+                statistics.mean(row["mrr"] for row in method_rows)
+                if method_rows else 0
+            ),
         }
 
     return {
         "methods_compared": methods,
         "limit": limit,
+        "query_count": len(ground_truth),
         "summary": summary,
         "details": rows,
     }
 
 
-def fetch_customers_with_behavior():
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT DISTINCT customer_id
-        FROM customer_product_view_log
-        WHERE customer_id IS NOT NULL
-
-        UNION
-
-        SELECT DISTINCT customer_id
-        FROM customer_search_log
-        WHERE customer_id IS NOT NULL
-
-        UNION
-
-        SELECT DISTINCT o.customer_id
-        FROM orders o
-        WHERE o.customer_id IS NOT NULL
-    """)
-
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return [
-        {"id": row[0]}
-        for row in rows
-        if row[0] is not None
-    ]
-
-
-def fetch_user_recent_viewed_skus(customer_id: int, limit: int = 10):
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT sku
-        FROM customer_product_view_log
-        WHERE customer_id = %s
-          AND sku IS NOT NULL
-          AND sku <> ''
-        ORDER BY viewed_at DESC
-        LIMIT %s
-    """, (customer_id, limit))
-
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    skus = []
-
-    for row in rows:
-        sku = str(row[0]).strip()
-
-        if sku and sku not in skus:
-            skus.append(sku)
-
-    return skus
-
-
-def fetch_categories_for_skus(skus: list[str]):
-    if not skus:
-        return []
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT DISTINCT p.sku, c.name
-        FROM product p
-        LEFT JOIN category c ON p.category_id = c.id
-        INNER JOIN (
-            SELECT sku, MAX(id) AS max_id
-            FROM product
-            WHERE sku = ANY(%s)
-            GROUP BY sku
-        ) latest ON latest.max_id = p.id
-        WHERE p.sku = ANY(%s)
-    """, (skus, skus))
-
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    categories = []
-
-    for _, category in rows:
-        category = str(category or "").strip()
-
-        if category and category not in categories:
-            categories.append(category)
-
-    return categories
-
-
-def call_recommend_api(sku: str, limit: int = 10):
-    status, data, _ = request_json(
-        "GET",
-        f"{settings.search_url}/recommend/{sku}",
-        params={"limit": limit},
-    )
-
-    if status != 200:
-        return []
-
-    results = data.get("results", [])
-
-    return results if isinstance(results, list) else []
-
-
-def fetch_product_profiles_for_skus(skus: list[str]):
-    if not skus:
-        return []
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT DISTINCT
-            p.sku,
-            c.name AS category,
-            p.material,
-            pc.name AS color,
-            s.name AS size
-        FROM product p
-        LEFT JOIN category c ON p.category_id = c.id
-        LEFT JOIN ProductColor pc ON p.color_id = pc.id
-        LEFT JOIN size s ON p.size_id = s.id
-        INNER JOIN (
-            SELECT sku, MAX(id) AS max_id
-            FROM product
-            WHERE sku = ANY(%s)
-            GROUP BY sku
-        ) latest ON latest.max_id = p.id
-        WHERE p.sku = ANY(%s)
-    """, (skus, skus))
-
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return [
-        {
-            "sku": str(row[0] or ""),
-            "category": str(row[1] or ""),
-            "material": str(row[2] or ""),
-            "color": str(row[3] or ""),
-            "size": str(row[4] or ""),
-        }
-        for row in rows
-    ]
-
-
-def field_similarity(history_profiles: list[dict], recommended_profiles: list[dict], field: str):
-    history_values = {
-        p[field]
-        for p in history_profiles
-        if p.get(field)
-    }
-
-    recommended_values = {
-        p[field]
-        for p in recommended_profiles
-        if p.get(field)
-    }
-
-    if not history_values or not recommended_values:
-        return 0.0
-
-    intersection = history_values & recommended_values
-    union = history_values | recommended_values
-
-    return len(intersection) / len(union)
-
-
-def evaluate_recommendations(limit: int = 10):
-    users = fetch_customers_with_behavior()
-
-    total = 0
-
-    category_scores = []
-    material_scores = []
-    color_scores = []
-    size_scores = []
-    combined_scores = []
-    diversity_scores = []
-
-    for user in users:
-        history_skus = fetch_user_recent_viewed_skus(user["id"], limit=10)
-
-        if not history_skus:
-            continue
-
-        recommended = []
-
-        for sku in history_skus[:3]:
-            recommended.extend(call_recommend_api(sku, limit))
-
-        recommended_skus = list(dict.fromkeys(
-            item["product_sku"]
-            for item in recommended
-            if item.get("product_sku")
-        ))[:limit]
-
-        if not recommended_skus:
-            continue
-
-        history_profiles = fetch_product_profiles_for_skus(history_skus)
-        recommended_profiles = fetch_product_profiles_for_skus(recommended_skus)
-
-        if not history_profiles or not recommended_profiles:
-            continue
-
-        category_similarity = field_similarity(
-            history_profiles,
-            recommended_profiles,
-            "category",
-        )
-
-        material_similarity = field_similarity(
-            history_profiles,
-            recommended_profiles,
-            "material",
-        )
-
-        color_similarity = field_similarity(
-            history_profiles,
-            recommended_profiles,
-            "color",
-        )
-
-        size_similarity = field_similarity(
-            history_profiles,
-            recommended_profiles,
-            "size",
-        )
-
-        combined_similarity = (
-            category_similarity * 0.50
-            + material_similarity * 0.20
-            + color_similarity * 0.20
-            + size_similarity * 0.10
-        )
-
-        recommended_categories = {
-            p["category"]
-            for p in recommended_profiles
-            if p.get("category")
-        }
-
-        total += 1
-
-        category_scores.append(category_similarity)
-        material_scores.append(material_similarity)
-        color_scores.append(color_similarity)
-        size_scores.append(size_similarity)
-        combined_scores.append(combined_similarity)
-        diversity_scores.append(len(recommended_categories))
-
-    return {
-        "evaluated_users": total,
-
-        "avg_interest_similarity": (
-            sum(combined_scores) / len(combined_scores)
-            if combined_scores else 0
-        ),
-
-        "avg_category_similarity": (
-            sum(category_scores) / len(category_scores)
-            if category_scores else 0
-        ),
-
-        "avg_material_similarity": (
-            sum(material_scores) / len(material_scores)
-            if material_scores else 0
-        ),
-
-        "avg_color_similarity": (
-            sum(color_scores) / len(color_scores)
-            if color_scores else 0
-        ),
-
-        "avg_size_similarity": (
-            sum(size_scores) / len(size_scores)
-            if size_scores else 0
-        ),
-
-        "avg_category_diversity": (
-            sum(diversity_scores) / len(diversity_scores)
-            if diversity_scores else 0
-        ),
-    }
-
 def run_evaluation():
     return {
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "search_evaluation": evaluate_search(),
-        "recommendation_evaluation": evaluate_recommendations(),
     }

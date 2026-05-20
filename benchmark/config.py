@@ -24,7 +24,8 @@ class Settings:
 
     report_dir: Path
 
-    queries: list[str]
+    esci_examples_path: str
+    esci_query_limit: int
 
 
 def load_settings() -> Settings:
@@ -62,18 +63,14 @@ def load_settings() -> Settings:
 
         report_dir=report_dir,
 
-        queries=[
-            "machine for playing modern games",
-            "portable device for remote office work",
-            "tool for writing code and documents",
-            "large display for immersive entertainment",
-            "pocket device for photography and messaging",
-            "small handheld device for daily communication",
-            "comfortable footwear for jogging",
-            "warm outer layer for cold weather",
-            "breathable casual clothing for summer",
-            "carry bag for a portable computer",
-        ],
+        esci_examples_path=os.getenv(
+            "ESCI_EXAMPLES_PATH",
+            "/app/esci-data/shopping_queries_dataset/shopping_queries_dataset_examples.parquet",
+        ),
+
+        esci_query_limit=int(
+            os.getenv("ESCI_QUERY_LIMIT", "100")
+        ),
     )
 
 

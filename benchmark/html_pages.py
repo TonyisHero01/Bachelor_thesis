@@ -529,10 +529,6 @@ def render_evaluation_page(report, config=None):
 
     if config is None:
         config = {}
-    recommendation_chart = {
-        "labels": [],
-        "values": [],
-    }
 
     search_chart = {
         "labels": [],
@@ -548,7 +544,6 @@ def render_evaluation_page(report, config=None):
         """
     else:
         search = report.get("search_evaluation", {})
-        rec = report.get("recommendation_evaluation", {})
 
         search_summary = search.get("summary", {})
 
@@ -564,55 +559,28 @@ def render_evaluation_page(report, config=None):
         tfidf_precision = float(tfidf_summary.get("avg_precision_at_k", 0))
         semantic_precision = float(semantic_summary.get("avg_precision_at_k", 0))
 
-        interest_similarity = float(
-            rec.get("avg_interest_similarity", 0)
-        )
+        tfidf_recall = float(tfidf_summary.get("avg_recall_at_k", 0))
+        semantic_recall = float(semantic_summary.get("avg_recall_at_k", 0))
 
-        category_similarity = float(
-            rec.get("avg_category_similarity", 0)
-        )
+        tfidf_ndcg = float(tfidf_summary.get("avg_ndcg_at_k", 0))
+        semantic_ndcg = float(semantic_summary.get("avg_ndcg_at_k", 0))
 
-        material_similarity = float(
-            rec.get("avg_material_similarity", 0)
-        )
+        tfidf_mrr = float(tfidf_summary.get("avg_mrr", 0))
+        semantic_mrr = float(semantic_summary.get("avg_mrr", 0))
 
-        color_similarity = float(
-            rec.get("avg_color_similarity", 0)
-        )
-
-        size_similarity = float(
-            rec.get("avg_size_similarity", 0)
-        )
-
-        diversity = float(
-            rec.get("avg_category_diversity", 0)
-        )
-
-        recommendation_chart = {
-            "labels": [
-                "Interest",
-                "Category",
-                "Material",
-                "Color",
-                "Size",
-            ],
-            "values": [
-                round(interest_similarity * 100, 2),
-                round(category_similarity * 100, 2),
-                round(material_similarity * 100, 2),
-                round(color_similarity * 100, 2),
-                round(size_similarity * 100, 2),
-            ],
-        }
+        query_count = int(search.get("query_count", 0))
 
         search_chart = build_search_method_chart_data(
             search.get("details", [])
         )
 
-        diversity_class = "good" if diversity >= 2 else "warn"
-
         body = f"""
             <div class="metrics">
+
+                <div class="metric-card">
+                    <span>Evaluated ESCI queries</span>
+                    <strong>{query_count}</strong>
+                </div>
 
                 <div class="metric-card {status_label(tfidf_hit_rate)}">
                     <span>TF-IDF hit rate</span>
@@ -625,13 +593,43 @@ def render_evaluation_page(report, config=None):
                 </div>
 
                 <div class="metric-card {status_label(tfidf_precision)}">
-                    <span>TF-IDF precision@10</span>
+                    <span>TF-IDF Precision@10</span>
                     <strong>{percentage(tfidf_precision)}</strong>
                 </div>
 
                 <div class="metric-card {status_label(semantic_precision)}">
-                    <span>Semantic precision@10</span>
+                    <span>Semantic Precision@10</span>
                     <strong>{percentage(semantic_precision)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(tfidf_recall)}">
+                    <span>TF-IDF Recall@10</span>
+                    <strong>{percentage(tfidf_recall)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(semantic_recall)}">
+                    <span>Semantic Recall@10</span>
+                    <strong>{percentage(semantic_recall)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(tfidf_ndcg)}">
+                    <span>TF-IDF NDCG@10</span>
+                    <strong>{percentage(tfidf_ndcg)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(semantic_ndcg)}">
+                    <span>Semantic NDCG@10</span>
+                    <strong>{percentage(semantic_ndcg)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(tfidf_mrr)}">
+                    <span>TF-IDF MRR</span>
+                    <strong>{percentage(tfidf_mrr)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(semantic_mrr)}">
+                    <span>Semantic MRR</span>
+                    <strong>{percentage(semantic_mrr)}</strong>
                 </div>
 
                 <div class="metric-card">
@@ -644,60 +642,20 @@ def render_evaluation_page(report, config=None):
                     <strong>{semantic_avg_time:.2f} ms</strong>
                 </div>
 
-                <div class="metric-card">
-                    <span>Evaluated users</span>
-                    <strong>{rec.get("evaluated_users", 0)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(interest_similarity)}">
-                    <span>Recommendation interest similarity</span>
-                    <strong>{percentage(interest_similarity)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(category_similarity)}">
-                    <span>Category similarity</span>
-                    <strong>{percentage(category_similarity)}</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span>Material similarity</span>
-                    <strong>{percentage(material_similarity)}</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span>Color similarity</span>
-                    <strong>{percentage(color_similarity)}</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span>Size similarity</span>
-                    <strong>{percentage(size_similarity)}</strong>
-                </div>
-
-                <div class="metric-card {diversity_class}">
-                    <span>Average category diversity</span>
-                    <strong>{diversity:.2f}</strong>
-                </div>
-
             </div>
 
             <div class="notice">
-                Recommendation evaluation compares recommended products
-                against the customer's historical interest profile.
+                This evaluation uses Amazon ESCI ground-truth labels.
 
-                The system measures similarity across categories,
-                materials, colors, and sizes.
+                Exact and Substitute labels are treated as relevant results.
 
-                Higher similarity means recommendations are more aligned
-                with previous customer behavior.
+                Precision@10 measures how many returned top results are relevant.
 
-                Diversity measures how many different categories appear
-                in recommendation results.
-            </div>
+                Recall@10 measures how many known relevant products are retrieved.
 
-            <div class="chart-card">
-                <h2>Recommendation Similarity</h2>
-                <canvas id="recommendationChart"></canvas>
+                NDCG@10 measures whether highly relevant products appear near the top.
+
+                MRR measures how early the first relevant result appears.
             </div>
 
             <div class="chart-card">
@@ -716,6 +674,9 @@ def render_evaluation_page(report, config=None):
                         <th>Response time</th>
                         <th>Results</th>
                         <th>Precision@10</th>
+                        <th>Recall@10</th>
+                        <th>NDCG@10</th>
+                        <th>MRR</th>
                         <th>Has results</th>
                     </tr>
                 </thead>
@@ -724,6 +685,10 @@ def render_evaluation_page(report, config=None):
                     {build_search_detail_rows(search.get("details", []))}
                 </tbody>
             </table>
+
+            <h2>Top Search Results Preview</h2>
+
+            {build_top_results_preview(search.get("details", []))}
             """
 
     return f"""
@@ -737,7 +702,7 @@ def render_evaluation_page(report, config=None):
     <body>
         <div class="page">
             <div class="card">
-                <h1>Search & Recommendation Evaluation</h1>
+                <h1>Search Reliability Evaluation</h1>
 
                 <div class="actions">
                     <a href="/">Back to benchmark</a>
@@ -747,17 +712,12 @@ def render_evaluation_page(report, config=None):
                     </form>
                 </div>
                 <div class="notice" style="margin-bottom:20px;">
-                    Changing relevance weights here will also update
-                    the live BMS recommendation configuration.
-
-                    Field weight changes will trigger a full reindex.
-
-                    Runtime recommendation changes will reload
-                    recommendation settings without full reindex.
+                    Search quality is evaluated using Amazon ESCI ground-truth labels.
+                    Exact and Substitute labels are treated as relevant results.
                 </div>
 
                 <div class="chart-card">
-                    <h2>Current BMS Search Configuration</h2>
+                    <h2>Current Search Configuration</h2>
 
                     <form method="post" action="/evaluation/update-config">
 
@@ -940,30 +900,8 @@ def render_evaluation_page(report, config=None):
 
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
-            const recommendationChartData = {json.dumps(recommendation_chart if "error" not in report else {"labels": [], "values": []})};
+            
             const searchChartData = {json.dumps(search_chart if "error" not in report else {"labels": [], "tfidf": [], "semantic_vector": []})};
-
-            if (recommendationChartData.labels.length > 0) {{
-                new Chart(document.getElementById('recommendationChart'), {{
-                    type: 'radar',
-                    data: {{
-                        labels: recommendationChartData.labels,
-                        datasets: [{{
-                            label: 'Similarity %',
-                            data: recommendationChartData.values
-                        }}]
-                    }},
-                    options: {{
-                        responsive: true,
-                        scales: {{
-                            r: {{
-                                beginAtZero: true,
-                                max: 100
-                            }}
-                        }}
-                    }}
-                }});
-            }}
 
             if (searchChartData.labels.length > 0) {{
                 new Chart(document.getElementById('searchTimeChart'), {{
@@ -1000,12 +938,73 @@ def render_evaluation_page(report, config=None):
     </html>
     """
 
+def build_top_results_preview(details):
+    if not details:
+        return """
+        <div class="empty">No top result preview available.</div>
+        """
+
+    html = ""
+
+    for item in details[:20]:
+        method = item.get("method", "-")
+
+        if method == "semantic_vector":
+            method_label = "Semantic Vector"
+        elif method == "tfidf":
+            method_label = "TF-IDF"
+        else:
+            method_label = method
+
+        html += f"""
+        <div class="chart-card">
+            <h3>{method_label}: {item.get("query", "-")}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>ESCI label</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+
+        top_results = item.get("top_results", [])
+
+        if not top_results:
+            html += """
+                <tr>
+                    <td colspan="5">No results.</td>
+                </tr>
+            """
+        else:
+            for result in top_results:
+                html += f"""
+                    <tr>
+                        <td>{result.get("rank", "-")}</td>
+                        <td>{result.get("sku", "-")}</td>
+                        <td>{result.get("name", "-")}</td>
+                        <td>{result.get("category", "-")}</td>
+                        <td>{result.get("label", "-")}</td>
+                    </tr>
+                """
+
+        html += """
+                </tbody>
+            </table>
+        </div>
+        """
+
+    return html
 
 def build_search_detail_rows(details):
     if not details:
         return """
         <tr>
-            <td colspan="7">No search details available.</td>
+            <td colspan="10">No search details available.</td>
         </tr>
         """
 
@@ -1029,6 +1028,9 @@ def build_search_detail_rows(details):
             <td>{float(item.get("response_time_ms", 0)):.2f} ms</td>
             <td>{item.get("result_count", 0)}</td>
             <td>{percentage(float(item.get("precision_at_k", 0)))}</td>
+            <td>{percentage(float(item.get("recall_at_k", 0)))}</td>
+            <td>{percentage(float(item.get("ndcg_at_k", 0)))}</td>
+            <td>{percentage(float(item.get("mrr", 0)))}</td>
             <td>{"Yes" if item.get("has_results") else "No"}</td>
         </tr>
         """
