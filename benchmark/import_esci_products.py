@@ -159,8 +159,8 @@ def clear_data(cur):
     cur.execute("DELETE FROM color_translation;")
     cur.execute("DELETE FROM category_translation;")
     cur.execute("DELETE FROM category;")
-    cur.execute('DELETE FROM "ProductColor";')
-    cur.execute('DELETE FROM "Size";')
+    cur.execute('DELETE FROM productcolor;')
+    cur.execute('DELETE FROM size;')
     cur.execute("DELETE FROM customer;")
 
 
@@ -214,7 +214,7 @@ def insert_colors(cur):
     for name, hex_value in unique_colors.items():
         cur.execute(
             """
-            INSERT INTO "ProductColor" (name, hex)
+            INSERT INTO productcolor (name, hex)
             VALUES (%s, %s)
             RETURNING id
             """,
@@ -231,7 +231,7 @@ def insert_sizes(cur):
     for name in SIZES:
         cur.execute(
             """
-            INSERT INTO "Size" (name)
+            INSERT INTO size (name)
             VALUES (%s)
             RETURNING id
             """,

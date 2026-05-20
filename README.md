@@ -205,6 +205,19 @@ docker exec -it eshop_benchmark sh
 python product_data_generator.py
 ```
 
+Or
+```bash
+docker exec -it eshop_benchmark sh
+apt update
+apt install -y git git-lfs
+
+git lfs install
+git clone https://github.com/amazon-science/esci-data.git /tmp/esci-data
+
+cp -r /tmp/esci-data/* /app/esci-data/
+cp /tmp/esci-data/.gitattributes /app/esci-data/ 2>/dev/null || true
+```
+
 The generator will:
 
 1. clear old benchmark data
