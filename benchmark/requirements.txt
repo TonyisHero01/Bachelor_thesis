@@ -4,3 +4,8 @@ requests==2.32.3
 psycopg2-binary==2.9.12
 python-dotenv==1.2.2
 python-multipart==0.0.9
+pandas==3.0.3
+pyarrow==24.0.0
+numpy==2.4.6
+python-dateutil==2.9.0.post0
+six==1.17.0
