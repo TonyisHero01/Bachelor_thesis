@@ -46,66 +46,85 @@ SIZES = ["S", "M", "L", "XL"]
 
 PRODUCT_TEMPLATES = {
     "Laptops": [
-        "Gaming Laptop",
-        "Business Laptop",
-        "Ultrabook",
-        "Student Laptop",
-        "Workstation Laptop",
+        "Lenovo ThinkPad X1 Carbon",
+        "MacBook Air M3",
+        "Dell XPS 13",
+        "ASUS ROG Zephyrus G14",
+        "HP Spectre x360",
+        "Acer Swift Go",
+        "MSI Stealth 16",
     ],
     "Smartphones": [
-        "Android Smartphone",
-        "Flagship Phone",
-        "Budget Smartphone",
-        "Camera Phone",
-        "Compact Smartphone",
+        "iPhone 17 Pro",
+        "Samsung Galaxy S26",
+        "Xiaomi Note 17",
+        "Google Pixel 10",
+        "OnePlus 14",
+        "Honor Magic 8",
+        "Motorola Edge 70",
     ],
     "Keyboards": [
-        "Mechanical Keyboard",
-        "Wireless Keyboard",
-        "Gaming Keyboard",
-        "Office Keyboard",
+        "Logitech MX Keys",
+        "Keychron K2",
+        "Razer Huntsman Mini",
+        "Apple Magic Keyboard",
+        "SteelSeries Apex Pro",
+        "Corsair K70",
     ],
     "Mice": [
-        "Wireless Mouse",
-        "Gaming Mouse",
-        "Ergonomic Mouse",
-        "Office Mouse",
+        "Logitech MX Master 4",
+        "Razer DeathAdder V4",
+        "Apple Magic Mouse 3",
+        "Logitech G Pro X",
+        "SteelSeries Rival 5",
+        "Microsoft Surface Mouse",
     ],
     "Headphones": [
-        "Wireless Headphones",
-        "Gaming Headset",
-        "Noise Cancelling Headphones",
-        "Bluetooth Earbuds",
+        "Sony WH-1000XM6",
+        "AirPods Pro 3",
+        "Bose QuietComfort Ultra",
+        "JBL Tune 770NC",
+        "Sennheiser Momentum 5",
+        "HyperX Cloud Alpha",
     ],
     "Monitors": [
-        "Gaming Monitor",
-        "Office Monitor",
-        "4K Monitor",
-        "Ultrawide Monitor",
+        "Dell UltraSharp U2725",
+        "Samsung Odyssey G7",
+        "LG UltraGear 27GP",
+        "ASUS ProArt PA279",
+        "BenQ Mobiuz EX2710",
+        "AOC Q27G",
     ],
     "T-Shirts": [
-        "Cotton T-Shirt",
-        "Oversized T-Shirt",
-        "Basic T-Shirt",
-        "Printed T-Shirt",
+        "Nike Sportswear Tee",
+        "Adidas Essentials Tee",
+        "Uniqlo Airism Tee",
+        "Tommy Hilfiger Crew Tee",
+        "Calvin Klein Cotton Tee",
     ],
     "Jackets": [
-        "Winter Jacket",
-        "Denim Jacket",
-        "Lightweight Jacket",
-        "Outdoor Jacket",
+        "The North Face Nuptse",
+        "Columbia Pike Lake",
+        "Nike Windrunner",
+        "Adidas Terrex Multi",
+        "Levi's Trucker Jacket",
+        "Patagonia Nano Puff",
     ],
     "Shoes": [
-        "Running Shoes",
-        "Casual Sneakers",
-        "Leather Shoes",
-        "Sport Shoes",
+        "Nike Pegasus 42",
+        "Adidas Ultraboost 6",
+        "New Balance 1080",
+        "Asics Gel-Nimbus 27",
+        "Puma Velocity Nitro",
+        "Vans Old Skool",
     ],
     "Accessories": [
-        "Laptop Bag",
-        "Phone Case",
-        "USB-C Cable",
-        "Travel Adapter",
+        "Native Union Belt Cable",
+        "Anker PowerPort Mini",
+        "Belkin BoostCharge",
+        "tomtoc Laptop Sleeve",
+        "Spigen Ultra Hybrid Case",
+        "Ugreen USB-C Hub",
     ],
 }
 
@@ -172,6 +191,59 @@ SEMANTIC_USE_CASES = {
         "useful accessory for laptops, phones, travel, charging, carrying devices, and everyday convenience",
         "supporting product for mobile devices, computers, commuting, organization, and digital lifestyle",
         "practical item for users who need protection, connection, charging, or carrying equipment",
+    ],
+}
+
+SEMANTIC_PRODUCT_TEXTS = {
+    "Laptops": [
+        "A portable computer for students, office workers, developers, remote meetings, study, programming, business travel, and light entertainment.",
+        "A compact workstation for people who need document editing, multitasking, video calls, coding, presentations, and mobility.",
+        "A high performance personal computer for users who play modern games, edit media, run creative software, and need strong graphics performance.",
+    ],
+    "Smartphones": [
+        "A pocket mobile device for daily communication, taking photos, messaging, navigation, social media, video recording, and online services.",
+        "A compact smart device for users who want a good camera, mobile apps, internet access, calls, music, and travel convenience.",
+        "A handheld phone for photography, chatting, video calls, maps, payments, entertainment, and everyday personal organization.",
+    ],
+    "Keyboards": [
+        "An input device for writing documents, programming, working in an office, controlling a computer, gaming, shortcuts, and long typing sessions.",
+        "A typing accessory for users who create text, write code, study, work remotely, and need accurate comfortable input.",
+        "A desk input tool for productivity, fast writing, software development, office work, and computer control.",
+    ],
+    "Mice": [
+        "A hand controlled pointing device for browsing, office work, gaming, design software, cursor movement, and everyday computer navigation.",
+        "A compact controller for laptop and desktop users who need precision, comfort, scrolling, clicking, and fast screen interaction.",
+        "An ergonomic desk accessory for people who spend many hours using a computer and need smooth control.",
+    ],
+    "Headphones": [
+        "A personal audio device for listening to music, online meetings, calls, gaming communication, travel, concentration, and noise reduction.",
+        "A wireless sound accessory for private listening, commuting, video conferences, entertainment, and microphone use.",
+        "A headset for users who need clear voice calls, immersive sound, focus at work, and comfortable long listening.",
+    ],
+    "Monitors": [
+        "A large visual display for gaming, office multitasking, watching videos, programming, creative work, and connecting to a computer.",
+        "An external screen for users who need more workspace, sharper image, visual comfort, and productivity.",
+        "A display panel for entertainment, study, design, coding, spreadsheets, and working with multiple windows.",
+    ],
+    "T-Shirts": [
+        "A light casual top for summer, warm weather, everyday outfits, home use, travel, and breathable comfort.",
+        "Comfortable upper body clothing for people who want simple style, soft material, and relaxed daily wear.",
+        "A casual shirt for sport, city wear, warm days, leisure time, and easy outfit combination.",
+    ],
+    "Jackets": [
+        "Warm outerwear for cold weather, winter commuting, wind protection, walking outside, travel, and daily use.",
+        "A protective clothing layer for low temperatures, city style, seasonal wear, and outdoor activity.",
+        "An outer layer for people who need warmth, comfort, and protection during autumn or winter.",
+    ],
+    "Shoes": [
+        "Comfortable footwear for running, walking, fitness training, travel, daily movement, and active users.",
+        "Shoes for people who need stability, cushioning, mobility, outdoor walking, sport, and everyday comfort.",
+        "Light footwear for city use, casual outfits, commuting, long walks, and regular movement.",
+    ],
+    "Accessories": [
+        "A practical accessory for charging, protecting, connecting, carrying, or organizing mobile devices and computers.",
+        "A useful item for travel, commuting, laptop protection, phone protection, cable connection, and digital lifestyle.",
+        "A support product for users who need better device portability, power, connection, storage, or protection.",
     ],
 }
 
@@ -297,9 +369,15 @@ def insert_sizes(cur):
 
 def random_product_name(category):
     base = random.choice(PRODUCT_TEMPLATES[category])
-    model = random.choice(["Pro", "Air", "Max", "Lite", "Prime", "Nova", "Plus"])
-    number = random.randint(100, 999)
-    return f"{base} {model} {number}"
+    model = random.choice(["", "Plus", "Pro", "Max", "Ultra", "2026", "SE"])
+    number = random.choice(["", "", "", str(random.randint(2, 9))])
+
+    parts = [base, model, number]
+
+    return " ".join(
+        part for part in parts
+        if part.strip()
+    )
 
 
 def insert_products(cur, category_ids, color_ids, size_ids):
@@ -332,12 +410,13 @@ def insert_products(cur, category_ids, color_ids, size_ids):
         price = round(random.uniform(199, 45000), 2)
         stock = random.randint(0, 250)
 
-        semantic_text = random.choice(SEMANTIC_USE_CASES[category])
+        semantic_text = random.choice(SEMANTIC_PRODUCT_TEXTS[category])
 
         description = (
-            f"{name} is a high quality {category.lower()} product. "
-            f"It is designed as a {semantic_text}. "
-            f"The product is useful for customers searching by purpose, lifestyle, or practical need. "
+            f"{name}. "
+            f"{semantic_text} "
+            f"Customers may search for this product by describing what they want to do, "
+            f"not only by writing the exact product category. "
             f"Color: {color}. Material: {material}."
         )
 
