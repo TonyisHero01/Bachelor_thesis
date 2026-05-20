@@ -41,12 +41,12 @@ def load_settings() -> Settings:
     return Settings(
         search_url=os.getenv(
             "SEARCH_URL",
-            "http://search-service:8000",
+            "http://eshop_search_service:8000",
         ).rstrip("/"),
 
         bms_url=os.getenv(
             "BMS_URL",
-            "http://bms",
+            "http://eshop_bms",
         ).rstrip("/"),
 
         search_api_key=os.getenv(
