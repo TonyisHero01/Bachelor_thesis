@@ -1,6 +1,7 @@
 from semantic_search.embedding_service import EmbeddingService
 from semantic_search.semantic_vector_repository import SemanticVectorRepository
 from repositories.product_repository import fetch_active_relevance_config
+import re
 
 class SemanticSearchService:
     def __init__(self):
@@ -8,32 +9,101 @@ class SemanticSearchService:
         self.embedding_service = EmbeddingService()
         self.config = fetch_active_relevance_config()
 
+    def normalize_text(self, text: str):
+        if text is None:
+            return ""
+
+        text = str(text).lower()
+        text = text.replace("-", " ")
+        text = text.replace("_", " ")
+        text = re.sub(r"[^a-z0-9#.+/ ]+", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+
+        return text
+
+
+    def tokenize(self, text: str):
+        text = self.normalize_text(text)
+
+        return {
+            token
+            for token in text.split()
+            if len(token) >= 2
+        }
+
+
+    def lexical_overlap_score(self, query: str, result: dict):
+        query_tokens = self.tokenize(query)
+
+        product_text = " ".join([
+            str(result.get("name", "")),
+            str(result.get("description", "")),
+            str(result.get("category_name", "")),
+            str(result.get("material", "")),
+            str(result.get("color_name", "")),
+            str(result.get("size_name", "")),
+        ])
+
+        product_tokens = self.tokenize(product_text)
+
+        if not query_tokens or not product_tokens:
+            return 0.0
+
+        return len(query_tokens & product_tokens) / len(query_tokens)
+
+
+    def rerank_results(self, query: str, results: list[dict], limit: int):
+        for row in results:
+            semantic_score = float(row.get("similarity", 0))
+            lexical_score = self.lexical_overlap_score(query, row)
+
+            row["lexical_overlap"] = lexical_score
+            row["final_score"] = (
+                semantic_score * 0.75
+                + lexical_score * 0.25
+            )
+
+        results.sort(
+            key=lambda item: item["final_score"],
+            reverse=True,
+        )
+
+        return results[:limit]
+
     def build_product_document(self, product):
         def value(key):
             if isinstance(product, dict):
                 return product.get(key)
             return getattr(product, key, None)
 
-        parts = [
-            value("name"),
-            value("description"),
-            value("material"),
-            value("category_name"),
-            value("color_name"),
-            value("size_name"),
-            value("width"),
-            value("height"),
-            value("length"),
-            value("weight"),
-            value("price"),
-            value("sku"),
-        ]
+        name = self.normalize_text(value("name"))
+        description = self.normalize_text(value("description"))
+        material = self.normalize_text(value("material"))
+        category = self.normalize_text(value("category_name"))
+        color = self.normalize_text(value("color_name"))
+        size = self.normalize_text(value("size_name"))
 
-        return " ".join(
-            str(part).strip()
-            for part in parts
-            if part is not None and str(part).strip() != ""
-        )
+        parts = []
+
+        if name:
+            parts.append(f"product title: {name}")
+
+        if category:
+            parts.append(f"product category: {category}")
+
+        if description:
+            parts.append(f"product description: {description}")
+
+        if material:
+            parts.append(f"material: {material}")
+
+        if color:
+            parts.append(f"color: {color}")
+
+        if size:
+            parts.append(f"size: {size}")
+
+        return ". ".join(parts)
     
     def reload_config(self):
         self.config = fetch_active_relevance_config()
@@ -96,17 +166,32 @@ class SemanticSearchService:
         }
 
     def search(self, query: str, limit: int = 10):
-        embedding = self.embedding_service.create_embedding(query)
+        normalized_query = self.normalize_text(query)
+
+        embedding = self.embedding_service.create_embedding(normalized_query)
         pgvector = self.embedding_service.to_pgvector(embedding)
 
-        results = self.repository.search_by_vector(pgvector, limit)
+        candidate_limit = max(limit * 5, 50)
+
+        results = self.repository.search_by_vector(
+            pgvector,
+            candidate_limit,
+        )
+
         results = self.apply_score_weights(results)
+        results = self.rerank_results(
+            normalized_query,
+            results,
+            limit,
+        )
 
         return {
-            "method": "semantic_vector_search",
+            "method": "semantic_vector_search_optimized",
             "query": query,
+            "normalized_query": normalized_query,
             "limit": limit,
-            "results": results
+            "candidate_limit": candidate_limit,
+            "results": results,
         }
 
     def similar_products(self, product_id: int, limit: int = 10):

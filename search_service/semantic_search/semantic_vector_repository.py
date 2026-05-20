@@ -55,9 +55,16 @@ class SemanticVectorRepository:
                 p.description,
                 p.price,
                 p.sku,
+                p.material,
+                c.name AS category_name,
+                pc.name AS color_name,
+                s.name AS size_name,
                 1 - (v.embedding <=> %s::vector) AS similarity
             FROM product_semantic_vector v
             JOIN product p ON p.id = v.product_id
+            LEFT JOIN category c ON c.id = p.category_id
+            LEFT JOIN productcolor pc ON pc.id = p.color_id
+            LEFT JOIN size s ON s.id = p.size_id
             WHERE p.hidden = false
             ORDER BY v.embedding <=> %s::vector
             LIMIT %s

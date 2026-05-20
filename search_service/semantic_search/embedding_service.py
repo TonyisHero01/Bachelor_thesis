@@ -19,7 +19,7 @@ class EmbeddingService:
             texts,
             normalize_embeddings=True,
             show_progress_bar=False,
-            batch_size=64,
+            batch_size=32,
         )
 
         return [
