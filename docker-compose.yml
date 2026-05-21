@@ -71,7 +71,7 @@ services:
       db:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8081:8000"
     networks:
@@ -126,6 +126,11 @@ services:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
     networks:
       - backend
 
