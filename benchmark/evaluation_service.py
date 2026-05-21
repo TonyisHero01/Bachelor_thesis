@@ -134,7 +134,7 @@ def fetch_products_by_skus(skus: list[str]):
 
 
 def extract_sku(item: dict, method: str):
-    if method == "tfidf":
+    if method in ["tfidf", "elasticsearch_bm25"]:
         return str(item.get("product_sku", "")).strip()
 
     return str(item.get("sku", "")).strip()
@@ -144,6 +144,7 @@ def call_search_method(method: str, query: str, limit: int):
     endpoint = {
         "tfidf": "/search",
         "semantic_vector": "/semantic/search",
+        "elasticsearch_bm25": "/elastic/search",
     }[method]
 
     status, data, elapsed_ms = request_json(
@@ -280,6 +281,7 @@ def evaluate_search(limit: int = 10):
     methods = [
         "tfidf",
         "semantic_vector",
+        "elasticsearch_bm25",
     ]
 
     ground_truth = load_esci_ground_truth(

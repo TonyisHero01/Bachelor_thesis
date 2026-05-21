@@ -508,6 +508,7 @@ def build_search_method_chart_data(details):
             grouped[query] = {
                 "tfidf": 0,
                 "semantic_vector": 0,
+                "elasticsearch_bm25": 0,
             }
 
         if method in grouped[query]:
@@ -519,10 +520,8 @@ def build_search_method_chart_data(details):
     return {
         "labels": list(grouped.keys()),
         "tfidf": [item["tfidf"] for item in grouped.values()],
-        "semantic_vector": [
-            item["semantic_vector"]
-            for item in grouped.values()
-        ],
+        "semantic_vector": [item["semantic_vector"] for item in grouped.values()],
+        "elasticsearch_bm25": [item["elasticsearch_bm25"] for item in grouped.values()],
     }
 
 def render_evaluation_page(report, config=None):
@@ -534,6 +533,7 @@ def render_evaluation_page(report, config=None):
         "labels": [],
         "tfidf": [],
         "semantic_vector": [],
+        "elasticsearch_bm25": [],
     }
 
     if "error" in report:
@@ -549,6 +549,7 @@ def render_evaluation_page(report, config=None):
 
         tfidf_summary = search_summary.get("tfidf", {})
         semantic_summary = search_summary.get("semantic_vector", {})
+        elastic_summary = search_summary.get("elasticsearch_bm25", {})
 
         tfidf_hit_rate = float(tfidf_summary.get("result_hit_rate", 0))
         semantic_hit_rate = float(semantic_summary.get("result_hit_rate", 0))
@@ -567,6 +568,13 @@ def render_evaluation_page(report, config=None):
 
         tfidf_mrr = float(tfidf_summary.get("avg_mrr", 0))
         semantic_mrr = float(semantic_summary.get("avg_mrr", 0))
+
+        elastic_hit_rate = float(elastic_summary.get("result_hit_rate", 0))
+        elastic_avg_time = float(elastic_summary.get("avg_response_time_ms", 0))
+        elastic_precision = float(elastic_summary.get("avg_precision_at_k", 0))
+        elastic_recall = float(elastic_summary.get("avg_recall_at_k", 0))
+        elastic_ndcg = float(elastic_summary.get("avg_ndcg_at_k", 0))
+        elastic_mrr = float(elastic_summary.get("avg_mrr", 0))
 
         query_count = int(search.get("query_count", 0))
 
@@ -592,6 +600,11 @@ def render_evaluation_page(report, config=None):
                     <strong>{percentage(semantic_hit_rate)}</strong>
                 </div>
 
+                <div class="metric-card {status_label(elastic_hit_rate)}">
+                    <span>Elasticsearch BM25 hit rate</span>
+                    <strong>{percentage(elastic_hit_rate)}</strong>
+                </div>
+
                 <div class="metric-card {status_label(tfidf_precision)}">
                     <span>TF-IDF Precision@10</span>
                     <strong>{percentage(tfidf_precision)}</strong>
@@ -600,6 +613,11 @@ def render_evaluation_page(report, config=None):
                 <div class="metric-card {status_label(semantic_precision)}">
                     <span>Semantic Precision@10</span>
                     <strong>{percentage(semantic_precision)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(elastic_precision)}">
+                    <span>Elasticsearch Precision@10</span>
+                    <strong>{percentage(elastic_precision)}</strong>
                 </div>
 
                 <div class="metric-card {status_label(tfidf_recall)}">
@@ -612,6 +630,11 @@ def render_evaluation_page(report, config=None):
                     <strong>{percentage(semantic_recall)}</strong>
                 </div>
 
+                <div class="metric-card {status_label(elastic_recall)}">
+                    <span>Elasticsearch Recall@10</span>
+                    <strong>{percentage(elastic_recall)}</strong>
+                </div>
+
                 <div class="metric-card {status_label(tfidf_ndcg)}">
                     <span>TF-IDF NDCG@10</span>
                     <strong>{percentage(tfidf_ndcg)}</strong>
@@ -620,6 +643,11 @@ def render_evaluation_page(report, config=None):
                 <div class="metric-card {status_label(semantic_ndcg)}">
                     <span>Semantic NDCG@10</span>
                     <strong>{percentage(semantic_ndcg)}</strong>
+                </div>
+
+                <div class="metric-card {status_label(elastic_ndcg)}">
+                    <span>Elasticsearch NDCG@10</span>
+                    <strong>{percentage(elastic_ndcg)}</strong>
                 </div>
 
                 <div class="metric-card {status_label(tfidf_mrr)}">
@@ -632,6 +660,11 @@ def render_evaluation_page(report, config=None):
                     <strong>{percentage(semantic_mrr)}</strong>
                 </div>
 
+                <div class="metric-card {status_label(elastic_mrr)}">
+                    <span>Elasticsearch MRR</span>
+                    <strong>{percentage(elastic_mrr)}</strong>
+                </div>
+
                 <div class="metric-card">
                     <span>TF-IDF avg response</span>
                     <strong>{tfidf_avg_time:.2f} ms</strong>
@@ -640,6 +673,11 @@ def render_evaluation_page(report, config=None):
                 <div class="metric-card">
                     <span>Semantic avg response</span>
                     <strong>{semantic_avg_time:.2f} ms</strong>
+                </div>
+
+                <div class="metric-card">
+                    <span>Elasticsearch avg response</span>
+                    <strong>{elastic_avg_time:.2f} ms</strong>
                 </div>
 
             </div>
@@ -901,7 +939,7 @@ def render_evaluation_page(report, config=None):
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
             
-            const searchChartData = {json.dumps(search_chart if "error" not in report else {"labels": [], "tfidf": [], "semantic_vector": []})};
+            const searchChartData = {json.dumps(search_chart if "error" not in report else {"labels": [], "tfidf": [], "semantic_vector": [], "elasticsearch_bm25": []})};
 
             if (searchChartData.labels.length > 0) {{
                 new Chart(document.getElementById('searchTimeChart'), {{
@@ -916,6 +954,10 @@ def render_evaluation_page(report, config=None):
                             {{
                                 label: 'Semantic vector response time ms',
                                 data: searchChartData.semantic_vector
+                            }},
+                            {{
+                                label: 'Elasticsearch BM25 response time ms',
+                                data: searchChartData.elasticsearch_bm25
                             }}
                         ]
                     }},
@@ -953,6 +995,8 @@ def build_top_results_preview(details):
             method_label = "Semantic Vector"
         elif method == "tfidf":
             method_label = "TF-IDF"
+        elif method == "elasticsearch_bm25":
+            method_label = "Elasticsearch BM25"
         else:
             method_label = method
 
@@ -1017,6 +1061,8 @@ def build_search_detail_rows(details):
             method_label = "Semantic Vector"
         elif method == "tfidf":
             method_label = "TF-IDF"
+        elif method == "elasticsearch_bm25":
+            method_label = "Elasticsearch BM25"
         else:
             method_label = method
 
