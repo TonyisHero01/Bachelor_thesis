@@ -369,37 +369,72 @@ def page_style():
             margin-top: 0;
         }
 
-        .metric-table {
+        .metric-table-wrapper {
+
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 12px;
+
+            overflow-x: auto;
+
             margin: 24px 0;
+
+        }
+
+        .metric-table {
+
+            width: 100%;
+
+            min-width: 980px;
+
+            border-collapse: separate;
+
+            border-spacing: 12px;
+
         }
 
         .metric-table th,
+
         .metric-table td {
+
             border: none;
+
             padding: 0;
+
             background: transparent;
+
             vertical-align: top;
+
         }
 
         .metric-table thead th {
+
             color: #4b5563;
+
             font-size: 14px;
+
             text-align: center;
+
+            white-space: nowrap;
+
         }
 
         .metric-table tbody th {
+
             font-size: 15px;
+
             text-align: left;
+
             white-space: nowrap;
+
             padding-top: 24px;
+
         }
 
         .metric-table .metric-card {
+
             margin: 0;
-            min-width: 145px;
+
+            min-width: 140px;
+
         }
     </style>
     """
@@ -620,17 +655,19 @@ def build_search_metric_matrix(search_summary, query_count):
         <strong>{query_count}</strong>
     </div>
 
-    <table class="metric-table">
-        <thead>
-            <tr>
-                <th>Method</th>
-                {''.join(f'<th>{title}</th>' for title, _, _ in metrics)}
-            </tr>
-        </thead>
-        <tbody>
-            {rows}
-        </tbody>
-    </table>
+    <div class="metric-table-wrapper">
+        <table class="metric-table">
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    {''.join(f'<th>{title}</th>' for title, _, _ in metrics)}
+                </tr>
+            </thead>
+            <tbody>
+                {rows}
+            </tbody>
+        </table>
+    </div>
     """
 
 def render_evaluation_page(report, config=None):
