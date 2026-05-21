@@ -368,6 +368,39 @@ def page_style():
         .chart-card h2 {
             margin-top: 0;
         }
+
+        .metric-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 12px;
+            margin: 24px 0;
+        }
+
+        .metric-table th,
+        .metric-table td {
+            border: none;
+            padding: 0;
+            background: transparent;
+            vertical-align: top;
+        }
+
+        .metric-table thead th {
+            color: #4b5563;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .metric-table tbody th {
+            font-size: 15px;
+            text-align: left;
+            white-space: nowrap;
+            padding-top: 24px;
+        }
+
+        .metric-table .metric-card {
+            margin: 0;
+            min-width: 145px;
+        }
     </style>
     """
 
@@ -524,6 +557,82 @@ def build_search_method_chart_data(details):
         "elasticsearch_bm25": [item["elasticsearch_bm25"] for item in grouped.values()],
     }
 
+def method_label(method):
+    if method == "tfidf":
+        return "TF-IDF"
+    if method == "semantic_vector":
+        return "Semantic Vector"
+    if method == "elasticsearch_bm25":
+        return "Elasticsearch BM25"
+    return method
+
+
+def build_search_metric_matrix(search_summary, query_count):
+    methods = [
+        "tfidf",
+        "semantic_vector",
+        "elasticsearch_bm25",
+    ]
+
+    metrics = [
+        ("Hit rate", "result_hit_rate", "percent"),
+        ("Precision@10", "avg_precision_at_k", "percent"),
+        ("Recall@10", "avg_recall_at_k", "percent"),
+        ("NDCG@10", "avg_ndcg_at_k", "percent"),
+        ("MRR", "avg_mrr", "percent"),
+        ("Avg response", "avg_response_time_ms", "ms"),
+    ]
+
+    rows = ""
+
+    for method in methods:
+        summary = search_summary.get(method, {})
+
+        rows += f"""
+        <tr>
+            <th>{method_label(method)}</th>
+        """
+
+        for title, key, value_type in metrics:
+            value = float(summary.get(key, 0))
+
+            if value_type == "percent":
+                display_value = percentage(value)
+                css_class = status_label(value)
+            else:
+                display_value = f"{value:.2f} ms"
+                css_class = ""
+
+            rows += f"""
+            <td>
+                <div class="metric-card {css_class}">
+                    <span>{title}</span>
+                    <strong>{display_value}</strong>
+                </div>
+            </td>
+            """
+
+        rows += "</tr>"
+
+    return f"""
+    <div class="metric-card" style="margin-bottom:20px;">
+        <span>Evaluated ESCI queries</span>
+        <strong>{query_count}</strong>
+    </div>
+
+    <table class="metric-table">
+        <thead>
+            <tr>
+                <th>Method</th>
+                {''.join(f'<th>{title}</th>' for title, _, _ in metrics)}
+            </tr>
+        </thead>
+        <tbody>
+            {rows}
+        </tbody>
+    </table>
+    """
+
 def render_evaluation_page(report, config=None):
 
     if config is None:
@@ -547,35 +656,6 @@ def render_evaluation_page(report, config=None):
 
         search_summary = search.get("summary", {})
 
-        tfidf_summary = search_summary.get("tfidf", {})
-        semantic_summary = search_summary.get("semantic_vector", {})
-        elastic_summary = search_summary.get("elasticsearch_bm25", {})
-
-        tfidf_hit_rate = float(tfidf_summary.get("result_hit_rate", 0))
-        semantic_hit_rate = float(semantic_summary.get("result_hit_rate", 0))
-
-        tfidf_avg_time = float(tfidf_summary.get("avg_response_time_ms", 0))
-        semantic_avg_time = float(semantic_summary.get("avg_response_time_ms", 0))
-
-        tfidf_precision = float(tfidf_summary.get("avg_precision_at_k", 0))
-        semantic_precision = float(semantic_summary.get("avg_precision_at_k", 0))
-
-        tfidf_recall = float(tfidf_summary.get("avg_recall_at_k", 0))
-        semantic_recall = float(semantic_summary.get("avg_recall_at_k", 0))
-
-        tfidf_ndcg = float(tfidf_summary.get("avg_ndcg_at_k", 0))
-        semantic_ndcg = float(semantic_summary.get("avg_ndcg_at_k", 0))
-
-        tfidf_mrr = float(tfidf_summary.get("avg_mrr", 0))
-        semantic_mrr = float(semantic_summary.get("avg_mrr", 0))
-
-        elastic_hit_rate = float(elastic_summary.get("result_hit_rate", 0))
-        elastic_avg_time = float(elastic_summary.get("avg_response_time_ms", 0))
-        elastic_precision = float(elastic_summary.get("avg_precision_at_k", 0))
-        elastic_recall = float(elastic_summary.get("avg_recall_at_k", 0))
-        elastic_ndcg = float(elastic_summary.get("avg_ndcg_at_k", 0))
-        elastic_mrr = float(elastic_summary.get("avg_mrr", 0))
-
         query_count = int(search.get("query_count", 0))
 
         search_chart = build_search_method_chart_data(
@@ -583,104 +663,7 @@ def render_evaluation_page(report, config=None):
         )
 
         body = f"""
-            <div class="metrics">
-
-                <div class="metric-card">
-                    <span>Evaluated ESCI queries</span>
-                    <strong>{query_count}</strong>
-                </div>
-
-                <div class="metric-card {status_label(tfidf_hit_rate)}">
-                    <span>TF-IDF hit rate</span>
-                    <strong>{percentage(tfidf_hit_rate)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(semantic_hit_rate)}">
-                    <span>Semantic vector hit rate</span>
-                    <strong>{percentage(semantic_hit_rate)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(elastic_hit_rate)}">
-                    <span>Elasticsearch BM25 hit rate</span>
-                    <strong>{percentage(elastic_hit_rate)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(tfidf_precision)}">
-                    <span>TF-IDF Precision@10</span>
-                    <strong>{percentage(tfidf_precision)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(semantic_precision)}">
-                    <span>Semantic Precision@10</span>
-                    <strong>{percentage(semantic_precision)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(elastic_precision)}">
-                    <span>Elasticsearch Precision@10</span>
-                    <strong>{percentage(elastic_precision)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(tfidf_recall)}">
-                    <span>TF-IDF Recall@10</span>
-                    <strong>{percentage(tfidf_recall)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(semantic_recall)}">
-                    <span>Semantic Recall@10</span>
-                    <strong>{percentage(semantic_recall)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(elastic_recall)}">
-                    <span>Elasticsearch Recall@10</span>
-                    <strong>{percentage(elastic_recall)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(tfidf_ndcg)}">
-                    <span>TF-IDF NDCG@10</span>
-                    <strong>{percentage(tfidf_ndcg)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(semantic_ndcg)}">
-                    <span>Semantic NDCG@10</span>
-                    <strong>{percentage(semantic_ndcg)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(elastic_ndcg)}">
-                    <span>Elasticsearch NDCG@10</span>
-                    <strong>{percentage(elastic_ndcg)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(tfidf_mrr)}">
-                    <span>TF-IDF MRR</span>
-                    <strong>{percentage(tfidf_mrr)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(semantic_mrr)}">
-                    <span>Semantic MRR</span>
-                    <strong>{percentage(semantic_mrr)}</strong>
-                </div>
-
-                <div class="metric-card {status_label(elastic_mrr)}">
-                    <span>Elasticsearch MRR</span>
-                    <strong>{percentage(elastic_mrr)}</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span>TF-IDF avg response</span>
-                    <strong>{tfidf_avg_time:.2f} ms</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span>Semantic avg response</span>
-                    <strong>{semantic_avg_time:.2f} ms</strong>
-                </div>
-
-                <div class="metric-card">
-                    <span>Elasticsearch avg response</span>
-                    <strong>{elastic_avg_time:.2f} ms</strong>
-                </div>
-
-            </div>
+            {build_search_metric_matrix(search_summary, query_count)}
 
             <div class="notice">
                 This evaluation uses Amazon ESCI ground-truth labels.
