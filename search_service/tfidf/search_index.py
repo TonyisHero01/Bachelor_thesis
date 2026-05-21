@@ -7,6 +7,8 @@ from scipy.sparse import vstack
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+import ast
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +32,32 @@ class SearchIndex:
 
     def vectorize_document(self, document: str):
         return self.vectorizer.transform([document])
+    
+    def normalize_pickle_blob(value):
+        if value is None:
+            return None
+
+        if isinstance(value, bytes):
+            return value
+
+        if isinstance(value, bytearray):
+            return bytes(value)
+
+        if isinstance(value, memoryview):
+            return value.tobytes()
+
+        if isinstance(value, str):
+            text = value.strip()
+
+            if text.startswith("\\x"):
+                return bytes.fromhex(text[2:])
+
+            if text.startswith("b'") or text.startswith('b"'):
+                return ast.literal_eval(text)
+
+            return text.encode("latin1")
+
+        raise TypeError(f"Unsupported vector blob type: {type(value)}")
 
     def rebuild(
         self,
@@ -79,6 +107,7 @@ class SearchIndex:
             if not sku or vector_blob is None:
                 continue
 
+            vector_blob = normalize_pickle_blob(vector_blob)
             vector = pickle.loads(vector_blob)
 
             self.skus.append(sku)

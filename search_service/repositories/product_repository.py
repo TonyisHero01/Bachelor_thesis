@@ -1,5 +1,6 @@
 import pickle
 from typing import Dict
+import psycopg2
 
 from database import get_connection
 
@@ -127,7 +128,7 @@ def fetch_latest_product_by_sku(sku: str) -> dict | None:
 
 
 def save_product_vector(sku: str, document: str, vector) -> None:
-    vector_blob = pickle.dumps(vector)
+    vector_blob = psycopg2.Binary(pickle.dumps(vector))
 
     with get_connection() as conn:
         with conn.cursor() as cursor:
