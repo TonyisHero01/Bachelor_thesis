@@ -24,6 +24,9 @@ from tfidf.search_service import (
 from tfidf.search_index import search_index
 from semantic_search.semantic_search_service import SemanticSearchService
 
+from elastic_search.elastic_product_search_service import ElasticProductSearchService
+from semantic_search.semantic_vector_repository import SemanticVectorRepository
+
 semantic_search_service = SemanticSearchService()
 
 REINDEX_STATE = {
@@ -295,3 +298,35 @@ def search_log_stats():
             for r in rows
         ]
     }
+
+elastic_service = ElasticProductSearchService()
+
+semantic_repository = SemanticVectorRepository()
+
+@app.post("/elastic/reindex")
+
+def elastic_reindex():
+
+    products = semantic_repository.get_products_for_indexing()
+
+    elastic_service.create_index()
+
+    elastic_service.index_products(products)
+
+    return {
+
+        "status": "ok",
+
+        "indexed_products": len(products),
+
+    }
+
+@app.post("/elastic/search")
+
+def elastic_search(payload: dict):
+
+    query = payload.get("query", "")
+
+    limit = int(payload.get("limit", 10))
+
+    return elastic_service.search(query, limit)

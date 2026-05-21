@@ -66,9 +66,12 @@ services:
       PYTHONDONTWRITEBYTECODE: ${PYTHONDONTWRITEBYTECODE:-1}
       PYTHONUNBUFFERED: ${PYTHONUNBUFFERED:-1}
       MODEL_NAME: ${MODEL_NAME}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
     depends_on:
       db:
         condition: service_healthy
+      elasticsearch:
+        condition: service_started
     ports:
       - "8081:8000"
     networks:
@@ -111,6 +114,20 @@ services:
       - benchmark_reports:/app/reports
     networks:
       - backend
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: eshop_elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - backend
 
 networks:
   backend:
@@ -119,3 +136,4 @@ volumes:
   pgdata:
   esci_data:
   benchmark_reports:
+  esdata:

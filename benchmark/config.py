@@ -71,6 +71,10 @@ def load_settings() -> Settings:
         esci_query_limit=int(
             os.getenv("ESCI_QUERY_LIMIT", "100")
         ),
+        elasticsearch_url=os.getenv(
+            "ELASTICSEARCH_URL",
+            "http://elasticsearch:9200",
+        ),
     )
 
 
