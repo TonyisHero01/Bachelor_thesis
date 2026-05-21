@@ -11,29 +11,7 @@ import ast
 
 logger = logging.getLogger(__name__)
 
-
-class SearchIndex:
-    def __init__(self):
-        self.vectorizer = HashingVectorizer(
-            token_pattern=r"\b\w+\b",
-            lowercase=True,
-            ngram_range=(1, 2),
-            n_features=2**18,
-            alternate_sign=False,
-            norm="l2",
-        )
-
-        self.skus: List[str] = []
-        self.documents: Dict[str, str] = {}
-        self.matrix = None
-        self.metadata: Dict[str, dict] = {}
-        self.config: dict = {}
-        self.document_tokens: Dict[str, set[str]] = {}
-
-    def vectorize_document(self, document: str):
-        return self.vectorizer.transform([document])
-    
-    def normalize_pickle_blob(value):
+def normalize_pickle_blob(value):
         if value is None:
             return None
 
@@ -58,6 +36,27 @@ class SearchIndex:
             return text.encode("latin1")
 
         raise TypeError(f"Unsupported vector blob type: {type(value)}")
+
+class SearchIndex:
+    def __init__(self):
+        self.vectorizer = HashingVectorizer(
+            token_pattern=r"\b\w+\b",
+            lowercase=True,
+            ngram_range=(1, 2),
+            n_features=2**18,
+            alternate_sign=False,
+            norm="l2",
+        )
+
+        self.skus: List[str] = []
+        self.documents: Dict[str, str] = {}
+        self.matrix = None
+        self.metadata: Dict[str, dict] = {}
+        self.config: dict = {}
+        self.document_tokens: Dict[str, set[str]] = {}
+
+    def vectorize_document(self, document: str):
+        return self.vectorizer.transform([document])
 
     def rebuild(
         self,
