@@ -9,6 +9,7 @@ load_dotenv()
 class Settings:
     database_url: str
     api_key: str | None
+    elasticsearch_url: str
 
     app_name: str = "TF-IDF Search API"
     app_version: str = "2.0.0"
@@ -50,6 +51,10 @@ def load_settings() -> Settings:
     return Settings(
         database_url=database_url,
         api_key=os.getenv("SEARCH_API_KEY"),
+        elasticsearch_url=os.getenv(
+            "ELASTICSEARCH_URL",
+            "http://elasticsearch:9200",
+        ),
         max_search_limit=max_search_limit,
         default_search_limit=default_search_limit,
         enable_search_log=enable_search_log,
