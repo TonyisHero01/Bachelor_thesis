@@ -406,34 +406,22 @@ def page_style():
         }
 
         .metric-table thead th {
-
             color: #4b5563;
-
             font-size: 14px;
-
             text-align: center;
-
             white-space: nowrap;
-
         }
 
         .metric-table tbody th {
-
             font-size: 15px;
-
             text-align: left;
-
             white-space: nowrap;
-
             padding-top: 24px;
-
         }
 
         .metric-table .metric-card {
-
             margin: 0;
-
-            min-width: 140px;
+            min-width: 60px;
 
         }
     </style>
