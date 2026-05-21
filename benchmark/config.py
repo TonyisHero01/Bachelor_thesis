@@ -26,7 +26,7 @@ class Settings:
 
     esci_examples_path: str
     esci_query_limit: int
-
+    elasticsearch_url: str
 
 def load_settings() -> Settings:
     database_url = os.getenv("DATABASE_URL")
