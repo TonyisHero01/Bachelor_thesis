@@ -9,3 +9,4 @@ uvicorn==0.46.0
 sentence-transformers==5.1.1
 torch==2.8.0
 transformers==4.56.2
+elasticsearch==8.15.1
