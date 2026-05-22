@@ -28,12 +28,22 @@ class ProductRepository extends ServiceEntityRepository
      * @return Product[]
      */
     public function findLatestVersionProducts(
-        int $limit,
-        int $offset = 0,
+        ?int $limit = 20,
+        ?int $offset = 0,
         ?string $skuFilter = null,
         ?string $nameFilter = null
     ): array
     {
+        $limit = $limit ?? 20;
+        $offset = $offset ?? 0;
+
+        if ($limit <= 0) {
+            $limit = 20;
+        }
+
+        if ($offset < 0) {
+            $offset = 0;
+        }
         // subquery: max version for each sku
         $maxVersionDql = $this->createQueryBuilder('p2')
             ->select('MAX(p2.version)')
