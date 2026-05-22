@@ -127,6 +127,7 @@ class HomeController extends BaseController
         $searchMethods = [
             'tfidf' => 'TF-IDF Search',
             'semantic_vector' => 'Semantic Vector Search',
+            'elasticsearch_bm25' => 'Elasticsearch BM25 Search',
         ];
 
         return $this->renderLocalized('bms_home/home.html.twig', [

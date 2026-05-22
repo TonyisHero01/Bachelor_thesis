@@ -28,6 +28,8 @@ from elastic_search.elastic_product_search_service import ElasticProductSearchSe
 from semantic_search.semantic_vector_repository import SemanticVectorRepository
 
 semantic_search_service = SemanticSearchService()
+elastic_service = ElasticProductSearchService()
+semantic_repository = SemanticVectorRepository()
 
 REINDEX_STATE = {
     "running": False,
@@ -130,6 +132,7 @@ def reload_config_api(request: Request):
         config = fetch_active_relevance_config()
         search_index.config = config
         semantic_search_service.config = config
+        elastic_service.config = config
 
         logger.info("[CONFIG] search config reloaded")
 
@@ -298,10 +301,6 @@ def search_log_stats():
             for r in rows
         ]
     }
-
-elastic_service = ElasticProductSearchService()
-
-semantic_repository = SemanticVectorRepository()
 
 @app.post("/elastic/reindex")
 
