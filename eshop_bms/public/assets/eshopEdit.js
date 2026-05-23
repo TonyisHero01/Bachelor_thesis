@@ -1,6 +1,9 @@
-document
-    .querySelector('.image_upload_input')
-    .addEventListener('change', previewImages);
+const imageUploadInput = document.querySelector('.image_upload_input');
+
+if (imageUploadInput) {
+    imageUploadInput.addEventListener('change', previewImages);
+    imageUploadInput.addEventListener('change', handleImageUpload);
+}
 
 /**
  * Previews selected image files inside the image container.

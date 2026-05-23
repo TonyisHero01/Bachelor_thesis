@@ -271,12 +271,14 @@ class SearchRelevanceConfig
 
     public function setSearchMethod(string $searchMethod): static
     {
-        $allowed = ['tfidf', 'semantic_vector'];
+        $allowed = [
+            'tfidf',
+            'semantic_vector',
+            'elasticsearch_bm25',
+        ];
 
         if (!in_array($searchMethod, $allowed, true)) {
-
             $searchMethod = 'tfidf';
-
         }
 
         $this->searchMethod = $searchMethod;
