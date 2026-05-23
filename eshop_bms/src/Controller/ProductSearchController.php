@@ -66,6 +66,7 @@ final class ProductSearchController extends BaseController
         Request $request,
         HttpClientInterface $httpClient,
     ): Response {
+        file_put_contents('/tmp/bms_search_debug.log', date('c') . " /bms/search called\n", FILE_APPEND);
         $payload = json_decode((string) $request->getContent(), true);
 
         if (!is_array($payload)) {
