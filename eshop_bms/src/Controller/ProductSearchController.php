@@ -91,17 +91,19 @@ final class ProductSearchController extends BaseController
             ->findOneBy(['active' => true], ['id' => 'DESC']);
 
         $searchMethod = $searchConfig?->getSearchMethod() ?? 'tfidf';
-        file_put_contents(
-            '/tmp/bms_search_debug.log',
-            date('c') . " method={$searchMethod}, endpoint={$searchEndpoint}\n",
-            FILE_APPEND
-        );
+        
 
         $searchEndpoint = match ($searchMethod) {
             'semantic_vector' => '/semantic/search',
             'elasticsearch_bm25' => '/elastic/search',
             default => '/search',
         };
+
+        file_put_contents(
+            '/tmp/bms_search_debug.log',
+            date('c') . " method={$searchMethod}, endpoint={$searchEndpoint}\n",
+            FILE_APPEND
+        );
 
         $logger->error('[ProductSearchController] Selected search method', [
             'config_id' => $searchConfig?->getId(),
