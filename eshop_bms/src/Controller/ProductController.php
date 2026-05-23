@@ -22,6 +22,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 use Twig\Environment;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Entity\SearchRelevanceConfig;
 
 #[IsGranted('ROLE_WAREHOUSE_MANAGER')]
 final class ProductController extends BaseController
