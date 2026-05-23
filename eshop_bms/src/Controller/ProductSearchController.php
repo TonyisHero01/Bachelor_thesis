@@ -55,6 +55,34 @@ final class ProductSearchController extends BaseController
         );
     }
 
+    private function getSearchMethodInfo(EntityManagerInterface $em): array
+    {
+        $searchConfig = $em
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        $method = $searchConfig?->getSearchMethod() ?? 'tfidf';
+
+        $label = match ($method) {
+            'semantic_vector' => 'Semantic Vector',
+            'elasticsearch_bm25' => 'Elasticsearch BM25',
+            default => 'TF-IDF',
+        };
+
+        $endpoint = match ($method) {
+            'semantic_vector' => '/semantic/search',
+            'elasticsearch_bm25' => '/elastic/search',
+            default => '/search',
+        };
+
+        return [
+            'config' => $searchConfig,
+            'method' => $method,
+            'label' => $label,
+            'endpoint' => $endpoint,
+        ];
+    }
+
     /**
      * Executes TF-IDF search via python-api and stores ranked results in session.
      */
@@ -86,18 +114,11 @@ final class ProductSearchController extends BaseController
 
         $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
-        $searchConfig = $em
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
+        $searchInfo = $this->getSearchMethodInfo($em);
 
-        $searchMethod = $searchConfig?->getSearchMethod() ?? 'tfidf';
-        
-
-        $searchEndpoint = match ($searchMethod) {
-            'semantic_vector' => '/semantic/search',
-            'elasticsearch_bm25' => '/elastic/search',
-            default => '/search',
-        };
+        $searchConfig = $searchInfo['config'];
+        $searchMethod = $searchInfo['method'];
+        $searchEndpoint = $searchInfo['endpoint'];
 
         file_put_contents(
             '/tmp/bms_search_debug.log',
@@ -283,6 +304,8 @@ final class ProductSearchController extends BaseController
 
         $productsForView = $this->buildProductsForView($pagedProducts, $locale);
 
+        $searchInfo = $this->getSearchMethodInfo($em);
+
         return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $productsForView,
             'MAX_ARTICLES_COUNT_PER_PAGE' => $this->getParameter('MAX_ARTICLES_COUNT_PER_PAGE'),
@@ -297,6 +320,8 @@ final class ProductSearchController extends BaseController
             'currentPage' => $page,
             'totalPages' => $totalPages,
             'totalProducts' => $totalProducts,
+            'searchMethodLabel' => $searchInfo['label'],
+            'searchMethod' => $searchInfo['method'],
 
         ], $request);
     }
