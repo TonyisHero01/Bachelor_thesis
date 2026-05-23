@@ -21,6 +21,7 @@ use App\Entity\Customer;
 use App\Entity\CustomerSearchLog;
 use App\Entity\OrderItem;
 use App\Entity\Order;
+use App\Entity\SearchRelevanceConfig;
 
 class SearchController extends BaseController
 {
@@ -45,6 +46,36 @@ class SearchController extends BaseController
         $this->shopInfo = $this->entityManager
             ->getRepository(ShopInfo::class)
             ->findOneBy([], ['id' => 'DESC']);
+    }
+
+    private function getActiveSearchMethod(): string
+    {
+        $config = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        return $config?->getSearchMethod() ?? 'tfidf';
+    }
+
+    private function getSearchEndpoint(string $searchMethod): string
+    {
+        return match ($searchMethod) {
+            'semantic_vector' => '/semantic/search',
+            'elasticsearch_bm25' => '/elastic/search',
+            default => '/search',
+        };
+    }
+
+    private function getSkuFromSearchRow(array $row, string $searchMethod): string
+    {
+        if (
+            $searchMethod === 'semantic_vector'
+            || $searchMethod === 'elasticsearch_bm25'
+        ) {
+            return isset($row['sku']) ? trim((string) $row['sku']) : '';
+        }
+
+        return isset($row['product_sku']) ? trim((string) $row['product_sku']) : '';
     }
 
     /**
@@ -72,12 +103,15 @@ class SearchController extends BaseController
             return new JsonResponse(['error' => 'Search system error'], 500);
         }
 
+        $searchMethod = $this->getActiveSearchMethod();
         $skuToSimilarity = [];
+
         foreach (($raw['results'] ?? []) as $row) {
             if (!is_array($row)) {
                 continue;
             }
-            $sku = isset($row['product_sku']) ? trim((string) $row['product_sku']) : '';
+            $sku = $this->getSkuFromSearchRow($row, $searchMethod);
+
             $sim = $row['similarity'] ?? null;
 
             if ($sku === '' || !is_numeric($sim)) {
@@ -258,12 +292,16 @@ class SearchController extends BaseController
             return [];
         }
 
+        $searchMethod = $this->getActiveSearchMethod();
         $skuToSimilarity = [];
+
         foreach (($raw['results'] ?? []) as $row) {
             if (!is_array($row)) {
                 continue;
             }
-            $sku = isset($row['product_sku']) ? trim((string) $row['product_sku']) : '';
+
+            $sku = $this->getSkuFromSearchRow($row, $searchMethod);
+
             $sim = $row['similarity'] ?? null;
             if ($sku === '' || !is_numeric($sim)) {
                 continue;
@@ -321,7 +359,15 @@ class SearchController extends BaseController
         }
 
         $limit = max(1, min($limit, 200));
-        $url = $this->searchServiceBaseUrl . '/search';
+        $searchMethod = $this->getActiveSearchMethod();
+        $endpoint = $this->getSearchEndpoint($searchMethod);
+        $url = $this->searchServiceBaseUrl . $endpoint;
+
+        $this->logger->info('[SearchController] Frontweb selected search method', [
+            'searchMethod' => $searchMethod,
+            'endpoint' => $endpoint,
+            'query' => $query,
+        ]);
 
         try {
             $response = $this->httpClient->request('POST', $url, [
@@ -687,6 +733,8 @@ class SearchController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
+        $searchMethod = $this->getActiveSearchMethod();
+
         foreach ($logs as $log) {
             $query = trim((string) ($log['query'] ?? ''));
 
@@ -705,7 +753,7 @@ class SearchController extends BaseController
                     continue;
                 }
 
-                $sku = trim((string) ($row['product_sku'] ?? ''));
+                $sku = $this->getSkuFromSearchRow($row, $searchMethod);
                 $similarity = (float) ($row['similarity'] ?? 0);
 
                 if ($sku === '' || $similarity <= 0) {
