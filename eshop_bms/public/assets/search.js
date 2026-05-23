@@ -19,6 +19,7 @@ async function search_() {
     if (spinner) spinner.style.display = 'block';
 
     const url = `/bms/search?_locale=${encodeURIComponent(locale)}`;
+    console.log('Calling BMS search:', url, query);
 
     const response = await fetch(url, {
       method: 'POST',
