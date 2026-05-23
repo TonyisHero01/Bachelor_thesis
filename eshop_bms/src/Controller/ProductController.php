@@ -260,6 +260,7 @@ final class ProductController extends BaseController
 
         $locale = strtolower((string) $request->query->get('_locale', $request->getLocale()));
         $productsForView = $this->buildProductsForView($products, $locale);
+        $searchInfo = $this->getSearchMethodInfo($em);
 
         return $this->renderLocalized('product/product_list.html.twig', [
             'products' => $productsForView,
@@ -273,6 +274,8 @@ final class ProductController extends BaseController
             'currentPage' => $page,
             'totalPages' => $totalPages,
             'totalProducts' => $totalProducts,
+            'searchMethodLabel' => $searchInfo['label'],
+            'searchMethod' => $searchInfo['method'],
         ]);
     }
 

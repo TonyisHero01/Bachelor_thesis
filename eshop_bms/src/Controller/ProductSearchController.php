@@ -94,7 +94,6 @@ final class ProductSearchController extends BaseController
         Request $request,
         HttpClientInterface $httpClient,
     ): Response {
-        file_put_contents('/tmp/bms_search_debug.log', date('c') . " /bms/search called\n", FILE_APPEND);
         
         $payload = json_decode((string) $request->getContent(), true);
 
@@ -119,12 +118,6 @@ final class ProductSearchController extends BaseController
         $searchConfig = $searchInfo['config'];
         $searchMethod = $searchInfo['method'];
         $searchEndpoint = $searchInfo['endpoint'];
-
-        file_put_contents(
-            '/tmp/bms_search_debug.log',
-            date('c') . " method={$searchMethod}, endpoint={$searchEndpoint}\n",
-            FILE_APPEND
-        );
 
         $logger->error('[ProductSearchController] Selected search method', [
             'config_id' => $searchConfig?->getId(),
