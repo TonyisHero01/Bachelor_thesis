@@ -230,6 +230,34 @@ final class ProductController extends BaseController
         ]);
     }
 
+    private function getSearchMethodInfo(EntityManagerInterface $em): array
+    {
+        $searchConfig = $em
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        $method = $searchConfig?->getSearchMethod() ?? 'tfidf';
+
+        $label = match ($method) {
+            'semantic_vector' => 'Semantic Vector',
+            'elasticsearch_bm25' => 'Elasticsearch BM25',
+            default => 'TF-IDF',
+        };
+
+        $endpoint = match ($method) {
+            'semantic_vector' => '/semantic/search',
+            'elasticsearch_bm25' => '/elastic/search',
+            default => '/search',
+        };
+
+        return [
+            'config' => $searchConfig,
+            'method' => $method,
+            'label' => $label,
+            'endpoint' => $endpoint,
+        ];
+    }
+
     /**
      * Lists all latest-version products.
      */
