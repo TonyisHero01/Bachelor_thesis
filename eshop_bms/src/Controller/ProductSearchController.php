@@ -96,7 +96,7 @@ final class ProductSearchController extends BaseController
             default => '/search',
         };
 
-        $logger->info('[ProductSearchController] Selected search method', [
+        $logger->error('[ProductSearchController] Selected search method', [
             'config_id' => $searchConfig?->getId(),
             'searchMethod' => $searchMethod,
             'endpoint' => $searchEndpoint,
