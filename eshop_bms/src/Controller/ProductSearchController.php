@@ -92,8 +92,15 @@ final class ProductSearchController extends BaseController
 
         $searchEndpoint = match ($searchMethod) {
             'semantic_vector' => '/semantic/search',
+            'elasticsearch_bm25' => '/elastic/search',
             default => '/search',
         };
+
+        $logger->info('[ProductSearchController] Selected search method', [
+            'config_id' => $searchConfig?->getId(),
+            'searchMethod' => $searchMethod,
+            'endpoint' => $searchEndpoint,
+        ]);
 
         if ($baseUrl === '') {
             $logger->error('[ProductSearchController] SEARCH_SERVICE_BASE_URL is empty');
@@ -142,7 +149,10 @@ final class ProductSearchController extends BaseController
 
             $sku = '';
 
-            if ($searchMethod === 'semantic_vector') {
+            if (
+                $searchMethod === 'semantic_vector'
+                || $searchMethod === 'elasticsearch_bm25'
+            ) {
                 $sku = isset($result['sku'])
                     ? trim((string) $result['sku'])
                     : '';
