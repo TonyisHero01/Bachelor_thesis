@@ -215,7 +215,6 @@ def page_style():
         }
 
         .page {
-            max-width: 1250px;
             margin: 40px auto;
             padding: 0 20px;
         }
