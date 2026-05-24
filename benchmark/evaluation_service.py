@@ -134,7 +134,7 @@ def fetch_products_by_skus(skus: list[str]):
 
 
 def extract_sku(item: dict, method: str):
-    if method in ["tfidf", "elasticsearch_bm25"]:
+    if method == "tfidf":
         return str(item.get("product_sku", "")).strip()
 
     return str(item.get("sku", "")).strip()
@@ -259,6 +259,51 @@ def mrr(results, labels):
 
     return 0.0
 
+def f1_at_k(precision, recall):
+    if precision + recall == 0:
+        return 0.0
+
+    return 2 * precision * recall / (precision + recall)
+
+def average_precision(results, labels):
+    relevant_found = 0
+    precision_sum = 0
+
+    for index, result in enumerate(results, start=1):
+
+        label = labels.get(
+            result["sku"],
+            "I"
+        )
+
+        if label in RELEVANT_LABELS:
+            relevant_found += 1
+
+            precision = (
+                relevant_found / index
+            )
+
+            precision_sum += precision
+
+    if relevant_found == 0:
+        return 0.0
+
+    return precision_sum / relevant_found
+
+def hit_rate_at_k(results, labels):
+
+    for result in results:
+
+        label = labels.get(
+            result["sku"],
+            "I"
+        )
+
+        if label in RELEVANT_LABELS:
+            return 1
+
+    return 0
+
 
 def build_result_preview(results, labels, limit=5):
     preview = []
@@ -302,6 +347,9 @@ def evaluate_search(limit: int = 10):
             recall = recall_at_k(results, labels)
             ndcg = ndcg_at_k(results, labels, limit)
             reciprocal_rank = mrr(results, labels)
+            f1 = f1_at_k(precision, recall)
+            ap = average_precision(results, labels)
+            hit_rate = hit_rate_at_k(results, labels)
 
             rows.append({
                 "method": method,
@@ -312,6 +360,9 @@ def evaluate_search(limit: int = 10):
                 "has_results": len(results) > 0,
                 "precision_at_k": precision,
                 "recall_at_k": recall,
+                "f1_at_k": f1,
+                "ap": ap,
+                "hit_rate_at_k": hit_rate,
                 "ndcg_at_k": ndcg,
                 "mrr": reciprocal_rank,
                 "top_results": build_result_preview(results, labels),
@@ -333,7 +384,7 @@ def evaluate_search(limit: int = 10):
         summary[method] = {
             "queries_evaluated": len(method_rows),
             "queries_with_results": len(with_results),
-            "result_hit_rate": (
+            "result_return_rate": (
                 len(with_results) / len(method_rows)
                 if method_rows else 0
             ),
@@ -347,6 +398,24 @@ def evaluate_search(limit: int = 10):
             ),
             "avg_recall_at_k": (
                 statistics.mean(row["recall_at_k"] for row in method_rows)
+                if method_rows else 0
+            ),
+            "avg_f1_at_k": (
+                statistics.mean(row["f1_at_k"] for row in method_rows)
+                if method_rows else 0
+            ),
+            "avg_map": (
+                statistics.mean(
+                    row["ap"]
+                    for row in method_rows
+                )
+                if method_rows else 0
+            ),
+            "avg_hit_rate_at_k": (
+                statistics.mean(
+                    row["hit_rate_at_k"]
+                    for row in method_rows
+                )
                 if method_rows else 0
             ),
             "avg_ndcg_at_k": (
