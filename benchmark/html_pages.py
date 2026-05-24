@@ -598,9 +598,12 @@ def build_search_metric_matrix(search_summary, query_count):
     ]
 
     metrics = [
-        ("Hit rate", "result_hit_rate", "percent"),
+        ("Return rate", "result_return_rate", "percent"),
+        ("HitRate@10", "avg_hit_rate_at_k", "percent"),
         ("Precision@10", "avg_precision_at_k", "percent"),
         ("Recall@10", "avg_recall_at_k", "percent"),
+        ("F1@10", "avg_f1_at_k", "percent"),
+        ("MAP", "avg_map", "percent"),
         ("NDCG@10", "avg_ndcg_at_k", "percent"),
         ("MRR", "avg_mrr", "percent"),
         ("Avg response", "avg_response_time_ms", "ms"),
@@ -699,6 +702,12 @@ def render_evaluation_page(report, config=None):
 
                 Recall@10 measures how many known relevant products are retrieved.
 
+                F1@10 balances precision and recall.
+
+                MAP measures the average ranking quality across evaluated queries.
+
+                HitRate@10 measures whether at least one relevant product appears in the top results.
+
                 NDCG@10 measures whether highly relevant products appear near the top.
 
                 MRR measures how early the first relevant result appears.
@@ -721,6 +730,9 @@ def render_evaluation_page(report, config=None):
                         <th>Results</th>
                         <th>Precision@10</th>
                         <th>Recall@10</th>
+                        <th>F1@10</th>
+                        <th>MAP</th>
+                        <th>HitRate@10</th>
                         <th>NDCG@10</th>
                         <th>MRR</th>
                         <th>Has results</th>
@@ -1056,7 +1068,7 @@ def build_search_detail_rows(details):
     if not details:
         return """
         <tr>
-            <td colspan="10">No search details available.</td>
+            <td colspan="13">No search details available.</td>
         </tr>
         """
 
@@ -1083,6 +1095,9 @@ def build_search_detail_rows(details):
             <td>{item.get("result_count", 0)}</td>
             <td>{percentage(float(item.get("precision_at_k", 0)))}</td>
             <td>{percentage(float(item.get("recall_at_k", 0)))}</td>
+            <td>{percentage(float(item.get("f1_at_k", 0)))}</td>
+            <td>{percentage(float(item.get("ap", 0)))}</td>
+            <td>{percentage(float(item.get("hit_rate_at_k", 0)))}</td>
             <td>{percentage(float(item.get("ndcg_at_k", 0)))}</td>
             <td>{percentage(float(item.get("mrr", 0)))}</td>
             <td>{"Yes" if item.get("has_results") else "No"}</td>
