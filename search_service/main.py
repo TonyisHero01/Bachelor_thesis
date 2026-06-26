@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
@@ -39,13 +40,14 @@ REINDEX_STATE = {
     "last_updated": None,
 }
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    force=True,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("search_service")
+logger.setLevel(logging.INFO)
 
 app = FastAPI(
     title=settings.app_name,
@@ -101,19 +103,39 @@ def health():
 def semantic_reindex():
     return semantic_search_service.reindex()
 
-
 @app.post("/semantic/search")
-def semantic_search(request: SemanticSearchRequest):
+def semantic_search(request: SemanticSearchRequest, http_request: Request):
+    started = time.perf_counter()
+
     query = request.query.strip()
 
     if query == "":
+        logger.info("[SEARCH_API] method=semantic_vector endpoint=/semantic/search empty_query=true")
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    return semantic_search_service.search(
-        query=query,
-        limit=request.limit
+    logger.info(
+        "[SEARCH_API] method=semantic_vector endpoint=/semantic/search started query=%r limit=%s ip=%s",
+        query,
+        request.limit,
+        client_ip(http_request),
     )
 
+    result = semantic_search_service.search(
+        query=query,
+        limit=request.limit,
+    )
+
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    result_count = len(result.get("results", [])) if isinstance(result, dict) else 0
+
+    logger.info(
+        "[SEARCH_API] method=semantic_vector endpoint=/semantic/search finished query=%r results=%s elapsed_ms=%.2f",
+        query,
+        result_count,
+        elapsed_ms,
+    )
+
+    return result
 
 @app.post("/semantic/similar")
 def semantic_similar(request: SemanticSimilarRequest):
@@ -149,18 +171,38 @@ def reload_config_api(request: Request):
 
 @app.post("/search", response_model=SearchResponse)
 def search_api(req: SearchRequest, request: Request):
+    started = time.perf_counter()
+
     query = req.query.strip()
 
     if not query:
+        logger.info("[SEARCH_API] method=tfidf endpoint=/search empty_query=true")
         return {"results": []}
 
     limit = min(req.limit, settings.max_search_limit)
     skip_log = request.headers.get("X-BENCHMARK") == "1"
 
+    logger.info(
+        "[SEARCH_API] method=tfidf endpoint=/search started query=%r limit=%s skip_log=%s ip=%s",
+        query,
+        limit,
+        skip_log,
+        client_ip(request),
+    )
+
     results = search_products(
         query,
         limit,
         skip_log=skip_log,
+    )
+
+    elapsed_ms = (time.perf_counter() - started) * 1000
+
+    logger.info(
+        "[SEARCH_API] method=tfidf endpoint=/search finished query=%r results=%s elapsed_ms=%.2f",
+        query,
+        len(results),
+        elapsed_ms,
     )
 
     return {"results": results}
@@ -303,7 +345,6 @@ def search_log_stats():
     }
 
 @app.post("/elastic/reindex")
-
 def elastic_reindex():
 
     products = semantic_repository.get_products_for_indexing()
@@ -321,11 +362,33 @@ def elastic_reindex():
     }
 
 @app.post("/elastic/search")
+def elastic_search(payload: dict, request: Request):
+    started = time.perf_counter()
 
-def elastic_search(payload: dict):
-
-    query = payload.get("query", "")
-
+    query = str(payload.get("query", "")).strip()
     limit = int(payload.get("limit", 10))
 
-    return elastic_service.search(query, limit)
+    if query == "":
+        logger.info("[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search empty_query=true")
+        return {"results": []}
+
+    logger.info(
+        "[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search started query=%r limit=%s ip=%s",
+        query,
+        limit,
+        client_ip(request),
+    )
+
+    result = elastic_service.search(query, limit)
+
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    result_count = len(result.get("results", [])) if isinstance(result, dict) else 0
+
+    logger.info(
+        "[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search finished query=%r results=%s elapsed_ms=%.2f",
+        query,
+        result_count,
+        elapsed_ms,
+    )
+
+    return result

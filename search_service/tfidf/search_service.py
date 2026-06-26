@@ -41,6 +41,102 @@ def build_metadata(rows: list[dict]) -> Dict[str, dict]:
 
     return metadata
 
+def recommend_session_products(
+    viewed_skus: list[str],
+    cart_skus: list[str],
+    current_sku: str | None = None,
+    limit: int = 10,
+):
+    try:
+        if search_index.matrix is None:
+            rebuild_search_index_from_saved_vectors()
+
+        index_broken = (
+            search_index.matrix is None
+            or len(search_index.skus) == 0
+            or len(search_index.documents) == 0
+        )
+
+        if (
+            not index_broken
+            and len(search_index.skus) != search_index.matrix.shape[0]
+        ):
+            index_broken = True
+
+        if index_broken:
+            rebuild_search_index()
+
+    except Exception:
+        logger.exception("[RECOMMEND][SESSION] failed to prepare index")
+        return []
+
+    viewed_skus = [
+        str(sku).strip()
+        for sku in (viewed_skus or [])
+        if str(sku).strip()
+    ]
+
+    cart_skus = [
+        str(sku).strip()
+        for sku in (cart_skus or [])
+        if str(sku).strip()
+    ]
+
+    current_sku = str(current_sku or "").strip()
+
+    source_skus = []
+
+    if current_sku:
+        source_skus.append((current_sku, 1.5))
+
+    for sku in cart_skus:
+        source_skus.append((sku, 1.3))
+
+    for sku in viewed_skus[-10:]:
+        source_skus.append((sku, 1.0))
+
+    if not source_skus:
+        return []
+
+    excluded_skus = set(viewed_skus) | set(cart_skus)
+
+    if current_sku:
+        excluded_skus.add(current_sku)
+
+    merged = {}
+
+    for source_sku, weight in source_skus:
+        candidates = search_index.recommend_by_sku(
+            source_sku,
+            limit=limit * 3,
+        )
+
+        for item in candidates:
+            candidate_sku = item.get("product_sku")
+
+            if not candidate_sku:
+                continue
+
+            if candidate_sku in excluded_skus:
+                continue
+
+            score = float(item.get("similarity", 0)) * weight
+
+            if candidate_sku not in merged:
+                merged[candidate_sku] = {
+                    "product_sku": candidate_sku,
+                    "similarity": score,
+                }
+            else:
+                merged[candidate_sku]["similarity"] += score
+
+    results = sorted(
+        merged.values(),
+        key=lambda item: item["similarity"],
+        reverse=True,
+    )
+
+    return results[:limit]
 
 def build_one_metadata(row: dict) -> dict:
     return {
