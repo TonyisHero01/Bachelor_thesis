@@ -13,6 +13,8 @@ from schemas import (
     RecommendResponse,
     SemanticSearchRequest,
     SemanticSimilarRequest,
+    SessionRecommendRequest,
+    SessionRecommendResponse,
 )
 from tfidf.search_service import (
     rebuild_search_index,
@@ -299,6 +301,21 @@ def train_compat(
 ):
     return reindex(req, request, background_tasks)
 
+@app.post("/recommend/session", response_model=RecommendResponse)
+def recommend_session_api(req: SessionRecommendRequest):
+    from tfidf.search_service import recommend_session_products
+
+    limit = min(req.limit, settings.max_search_limit)
+
+    results = recommend_session_products(
+        viewed_skus=req.viewed_skus,
+        cart_skus=req.cart_skus,
+        current_sku=req.current_sku,
+        limit=limit,
+    )
+
+    return {"results": results}
+
 @app.get("/recommend/{sku}", response_model=RecommendResponse)
 def recommend_api(sku: str, limit: int = 10):
     sku = sku.strip()
@@ -392,3 +409,20 @@ def elastic_search(payload: dict, request: Request):
     )
 
     return result
+
+@app.post("/recommend/session", response_model=RecommendResponse)
+def recommend_session_api(req: SessionRecommendRequest):
+    from tfidf.search_service import recommend_session_products
+
+    limit = min(req.limit, settings.max_search_limit)
+
+    results = recommend_session_products(
+        viewed_skus=req.viewed_skus,
+        cart_skus=req.cart_skus,
+        current_sku=req.current_sku,
+        limit=limit,
+    )
+
+    return {"results": results}
+
+
