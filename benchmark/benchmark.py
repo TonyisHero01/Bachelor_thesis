@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi import Form
 from benchmark_service import run_benchmark, rows_to_csv
-from evaluation_service import run_evaluation, fetch_recommendation_event_log_report
+from evaluation_service import run_evaluation
+from recommendation_log_service import fetch_recommendation_event_log_report
 from html_pages import render_benchmark_page, render_evaluation_page
 from report_storage import save_evaluation_report, load_latest_evaluation_report
 import requests
