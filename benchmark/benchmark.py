@@ -2,11 +2,12 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi import Form
 from benchmark_service import run_benchmark, rows_to_csv
-from evaluation_service import run_evaluation
+from evaluation_service import run_evaluation, fetch_recommendation_event_log_report
 from html_pages import render_benchmark_page, render_evaluation_page
 from report_storage import save_evaluation_report, load_latest_evaluation_report
 import requests
 from config import settings
+
 
 app = FastAPI(title="E-shop Search Benchmark")
 
@@ -51,7 +52,18 @@ def csv_report():
 
 
 @app.get("/evaluation", response_class=HTMLResponse)
-def evaluation_page():
+def evaluation_page(
+    eventType: str = "",
+    pageType: str = "",
+    algorithm: str = "",
+    sessionId: str = "",
+    customerId: str = "",
+    sourceSku: str = "",
+    recommendedSku: str = "",
+    dateFrom: str = "",
+    dateTo: str = "",
+    limit: int = 200,
+):
     report = load_latest_evaluation_report()
 
     try:
@@ -65,7 +77,24 @@ def evaluation_page():
     except Exception:
         config = {}
 
-    return render_evaluation_page(report, config=config)
+    recommendation_log = fetch_recommendation_event_log_report({
+        "event_type": eventType,
+        "page_type": pageType,
+        "algorithm": algorithm,
+        "session_id": sessionId,
+        "customer_id": customerId,
+        "source_sku": sourceSku,
+        "recommended_sku": recommendedSku,
+        "date_from": dateFrom,
+        "date_to": dateTo,
+        "limit": limit,
+    })
+
+    return render_evaluation_page(
+        report,
+        config=config,
+        recommendation_log=recommendation_log,
+    )
 
 @app.post("/evaluation/update-config")
 def update_config(
