@@ -293,6 +293,7 @@ class CustomerController extends BaseController
     /**
      * Displays the authenticated customer's cart.
      */
+    #[Route('/cart', name: 'customer_cart', methods: ['GET'])]
     public function showCart(
         Request $request,
         HttpClientInterface $httpClient,
