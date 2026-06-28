@@ -28,6 +28,9 @@ use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Twig\Environment;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Entity\CustomerProductViewLog;
+use App\Entity\CustomerSearchLog;
 
 class CustomerController extends BaseController
 {
@@ -290,7 +293,10 @@ class CustomerController extends BaseController
      * Displays the authenticated customer's cart.
      */
     #[Route('/cart', name: 'customer_cart', methods: ['GET'])]
-    public function showCart(Request $request): Response
+    public function showCart(
+        Request $request,
+        HttpClientInterface $httpClient
+    ): Response
     {
         $user = $this->getUser();
 
@@ -310,6 +316,13 @@ class CustomerController extends BaseController
             ? $categoriesRepo->findAllCategories()
             : $categoriesRepo->findAll();
 
+        $recommendedProducts = $this->buildCartRecommendations(
+            $request,
+            $cartItems,
+            $httpClient,
+            5
+        );
+
         return $this->renderLocalized(
             'eshop_cart/cart.html.twig',
             [
@@ -317,6 +330,7 @@ class CustomerController extends BaseController
                 'show_sidebar' => false,
                 'cartItems' => $cartItems,
                 'categories' => $categories,
+                'recommendedProducts' => $recommendedProducts,
             ],
             $request,
         );
@@ -548,5 +562,480 @@ class CustomerController extends BaseController
             ],
             $request,
         );
+    }
+
+    private function buildCartRecommendations(
+        Request $request,
+        array $cartItems,
+        HttpClientInterface $httpClient,
+        int $limit = 5
+    ): array {
+        $cartSkus = [];
+
+        foreach ($cartItems as $cartItem) {
+            if (!$cartItem instanceof Cart) {
+                continue;
+            }
+
+            $product = $cartItem->getProduct();
+
+            if (!$product instanceof Product) {
+                continue;
+            }
+
+            $sku = trim((string) $product->getSku());
+
+            if ($sku !== '' && !in_array($sku, $cartSkus, true)) {
+                $cartSkus[] = $sku;
+            }
+        }
+
+        if ($cartSkus !== []) {
+            $recommendedSkus = $this->fetchSessionRecommendationSkus(
+                currentSku: null,
+                viewedSkus: [],
+                cartSkus: $cartSkus,
+                httpClient: $httpClient,
+                limit: $limit * 3
+            );
+
+            return $this->findLatestVisibleProductsBySkus(
+                $recommendedSkus,
+                $limit,
+                $cartSkus
+            );
+        }
+
+        $fallbackSkus = $this->buildFallbackRecommendationSkus(
+            $request,
+            $httpClient,
+            $limit * 3
+        );
+
+        return $this->findLatestVisibleProductsBySkus(
+            $fallbackSkus,
+            $limit,
+            []
+        );
+    }
+
+    private function fetchSessionRecommendationSkus(
+        ?string $currentSku,
+        array $viewedSkus,
+        array $cartSkus,
+        HttpClientInterface $httpClient,
+        int $limit = 15
+    ): array {
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+            $response = $httpClient->request(
+                'POST',
+                $baseUrl . '/recommend/session',
+                [
+                    'json' => [
+                        'current_sku' => $currentSku,
+                        'viewed_skus' => array_values($viewedSkus),
+                        'cart_skus' => array_values($cartSkus),
+                        'limit' => $limit,
+                    ],
+                    'timeout' => 5,
+                ]
+            );
+
+            if ($response->getStatusCode() >= 400) {
+                return [];
+            }
+
+            $data = $response->toArray(false);
+            $skus = [];
+
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $sku = trim((string) ($row['product_sku'] ?? ''));
+
+                if ($sku !== '' && !in_array($sku, $skus, true)) {
+                    $skus[] = $sku;
+                }
+            }
+
+            return $skus;
+
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                '[CartRecommendation] Failed to fetch session recommendations',
+                [
+                    'message' => $e->getMessage(),
+                    'cartSkus' => $cartSkus,
+                    'viewedSkus' => $viewedSkus,
+                ]
+            );
+
+            return [];
+        }
+    }
+
+    private function buildFallbackRecommendationSkus(
+        Request $request,
+        HttpClientInterface $httpClient,
+        int $limit = 15
+    ): array {
+        $sourceSkus = [];
+
+        foreach ($this->getRecentViewedSkus($request, 10) as $sku) {
+            $sourceSkus[] = $sku;
+        }
+
+        foreach ($this->getWishlistSkus() as $sku) {
+            $sourceSkus[] = $sku;
+        }
+
+        foreach ($this->getRecentOrderSkus(20) as $sku) {
+            $sourceSkus[] = $sku;
+        }
+
+        foreach ($this->getRecentSearchBasedSkus($request, $httpClient, 10) as $sku) {
+            $sourceSkus[] = $sku;
+        }
+
+        $sourceSkus = array_values(array_unique(array_filter($sourceSkus)));
+
+        if ($sourceSkus === []) {
+            return [];
+        }
+
+        $scores = [];
+
+        foreach (array_slice($sourceSkus, 0, 15) as $sourceSku) {
+            $this->addRecommendedSkuScoresFromSearchService(
+                $scores,
+                $sourceSku,
+                1.0,
+                $httpClient
+            );
+        }
+
+        foreach ($sourceSkus as $sourceSku) {
+            unset($scores[$sourceSku]);
+        }
+
+        arsort($scores);
+
+        return array_slice(array_keys($scores), 0, $limit);
+    }
+
+    private function getRecentViewedSkus(
+        Request $request,
+        int $limit = 10
+    ): array {
+        $user = $this->getUser();
+
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('v.sku')
+            ->from(CustomerProductViewLog::class, 'v')
+            ->orderBy('v.viewedAt', 'DESC')
+            ->setMaxResults($limit);
+
+        if ($user instanceof Customer) {
+            $qb->where('v.customer = :customer')
+                ->setParameter('customer', $user);
+        } else {
+            $qb->where('v.sessionId = :sessionId')
+                ->setParameter('sessionId', $request->getSession()->getId());
+        }
+
+        $rows = $qb->getQuery()->getArrayResult();
+        $skus = [];
+
+        foreach ($rows as $row) {
+            $sku = trim((string) ($row['sku'] ?? ''));
+
+            if ($sku !== '' && !in_array($sku, $skus, true)) {
+                $skus[] = $sku;
+            }
+        }
+
+        return $skus;
+    }
+
+    private function getWishlistSkus(): array
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return [];
+        }
+
+        $wishlistIds = $user->getWishlist();
+
+        if ($wishlistIds === []) {
+            return [];
+        }
+
+        $products = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $wishlistIds]);
+
+        $skus = [];
+
+        foreach ($products as $product) {
+            if (!$product instanceof Product) {
+                continue;
+            }
+
+            $sku = trim((string) $product->getSku());
+
+            if ($sku !== '' && !in_array($sku, $skus, true)) {
+                $skus[] = $sku;
+            }
+        }
+
+        return $skus;
+    }
+
+    private function getRecentOrderSkus(int $limit = 20): array
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof Customer) {
+            return [];
+        }
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('oi.sku AS sku')
+            ->from(OrderItem::class, 'oi')
+            ->join('oi.order', 'o')
+            ->where('o.customer = :customer')
+            ->setParameter('customer', $user)
+            ->orderBy('o.orderCreatedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        $skus = [];
+
+        foreach ($rows as $row) {
+            $sku = trim((string) ($row['sku'] ?? ''));
+
+            if ($sku !== '' && !in_array($sku, $skus, true)) {
+                $skus[] = $sku;
+            }
+        }
+
+        return $skus;
+    }
+
+    private function getRecentSearchBasedSkus(
+        Request $request,
+        HttpClientInterface $httpClient,
+        int $limit = 10
+    ): array {
+        $user = $this->getUser();
+
+        $qb = $this->entityManager->createQueryBuilder()
+            ->select('l.query')
+            ->from(CustomerSearchLog::class, 'l')
+            ->orderBy('l.createdAt', 'DESC')
+            ->setMaxResults(5);
+
+        if ($user instanceof Customer) {
+            $qb->where('l.customer = :customer')
+                ->setParameter('customer', $user);
+        } else {
+            $qb->where('l.sessionId = :sessionId')
+                ->setParameter('sessionId', $request->getSession()->getId());
+        }
+
+        $logs = $qb->getQuery()->getArrayResult();
+
+        $skus = [];
+
+        foreach ($logs as $log) {
+            $query = trim((string) ($log['query'] ?? ''));
+
+            if ($query === '') {
+                continue;
+            }
+
+            try {
+                $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+                $response = $httpClient->request(
+                    'POST',
+                    $baseUrl . '/search',
+                    [
+                        'json' => [
+                            'query' => $query,
+                            'limit' => 5,
+                        ],
+                        'timeout' => 5,
+                    ]
+                );
+
+                if ($response->getStatusCode() >= 400) {
+                    continue;
+                }
+
+                $data = $response->toArray(false);
+
+                foreach (($data['results'] ?? []) as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+
+                    $sku = trim((string) ($row['product_sku'] ?? ''));
+
+                    if ($sku !== '' && !in_array($sku, $skus, true)) {
+                        $skus[] = $sku;
+                    }
+
+                    if (count($skus) >= $limit) {
+                        return $skus;
+                    }
+                }
+
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return $skus;
+    }
+
+    private function addRecommendedSkuScoresFromSearchService(
+        array &$scores,
+        string $sku,
+        float $weight,
+        HttpClientInterface $httpClient
+    ): void {
+        $sku = trim($sku);
+
+        if ($sku === '') {
+            return;
+        }
+
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+            $response = $httpClient->request(
+                'GET',
+                $baseUrl . '/recommend/' . rawurlencode($sku),
+                [
+                    'query' => ['limit' => 10],
+                    'timeout' => 5,
+                ]
+            );
+
+            if ($response->getStatusCode() >= 400) {
+                return;
+            }
+
+            $data = $response->toArray(false);
+
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $recommendedSku = trim((string) ($row['product_sku'] ?? ''));
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($recommendedSku !== '' && $similarity > 0) {
+                    $scores[$recommendedSku]
+                        = ($scores[$recommendedSku] ?? 0)
+                        + ($similarity * $weight);
+                }
+            }
+
+        } catch (\Throwable) {
+            return;
+        }
+    }
+
+    private function findLatestVisibleProductsBySkus(
+        array $skus,
+        int $limit = 5,
+        array $excludedSkus = []
+    ): array {
+        $skus = array_values(array_unique(array_filter(array_map(
+            static fn ($sku): string => trim((string) $sku),
+            $skus
+        ))));
+
+        $excludedSkus = array_values(array_unique(array_filter(array_map(
+            static fn ($sku): string => trim((string) $sku),
+            $excludedSkus
+        ))));
+
+        if ($excludedSkus !== []) {
+            $skus = array_values(array_filter(
+                $skus,
+                static fn (string $sku): bool => !in_array($sku, $excludedSkus, true)
+            ));
+        }
+
+        if ($skus === []) {
+            return [];
+        }
+
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.id, p.sku')
+            ->from(Product::class, 'p')
+            ->where('p.sku IN (:skus)')
+            ->andWhere('p.hidden = false')
+            ->setParameter('skus', $skus)
+            ->orderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $skuToLatestId = [];
+
+        foreach ($rows as $row) {
+            $sku = (string) ($row['sku'] ?? '');
+            $id = (int) ($row['id'] ?? 0);
+
+            if ($sku !== '' && $id > 0 && !isset($skuToLatestId[$sku])) {
+                $skuToLatestId[$sku] = $id;
+            }
+        }
+
+        $ids = [];
+
+        foreach ($skus as $sku) {
+            if (isset($skuToLatestId[$sku])) {
+                $ids[] = $skuToLatestId[$sku];
+            }
+        }
+
+        $ids = array_slice($ids, 0, $limit);
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $productsRaw = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $ids]);
+
+        $productMap = [];
+
+        foreach ($productsRaw as $product) {
+            if ($product instanceof Product) {
+                $productMap[$product->getId()] = $product;
+            }
+        }
+
+        $products = [];
+
+        foreach ($ids as $id) {
+            if (isset($productMap[$id])) {
+                $products[] = $productMap[$id];
+            }
+        }
+
+        return $products;
     }
 }
