@@ -49,3 +49,13 @@ class RecommendResult(BaseModel):
 
 class RecommendResponse(BaseModel):
     results: List[RecommendResult]
+
+class SessionRecommendRequest(BaseModel):
+    viewed_skus: List[str] = Field(default_factory=list)
+    cart_skus: List[str] = Field(default_factory=list)
+    current_sku: str | None = None
+    limit: int = Field(default=10, ge=1, le=100)
+
+
+class SessionRecommendResponse(BaseModel):
+    results: List[RecommendResult]
