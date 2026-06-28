@@ -78,6 +78,115 @@
     margin-right: 100px;
 }
 
+.cart-recommendations {
+    margin: 40px auto 60px;
+    padding: 0 1cm;
+    max-width: 1100px;
+}
+
+.cart-recommendations h2 {
+    text-align: left;
+    margin: 20px 0;
+    font-size: 28px;
+}
+
+.cart-recommendations .recommended_products_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.cart-recommendations .product-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out, box-shadow 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.cart-recommendations .product-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+}
+
+.cart-recommendations .product-card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.cart-recommendations .product-name {
+    margin-top: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    line-height: 1.3;
+}
+
+.cart-recommendations .product-price {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.cart-recommendations .original-price .strikethrough {
+    text-decoration: line-through;
+    color: #888;
+    font-size: 13px;
+}
+
+.cart-recommendations .discounted-price {
+    color: #e60000;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.cart-recommendations .discount-tag {
+    display: inline-block;
+    background-color: #ffcc00;
+    color: #000;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+}
+
+@media screen and (max-width: 768px) {
+    .cart-recommendations {
+        padding: 0 15px;
+        margin-top: 30px;
+    }
+
+    .cart-recommendations h2 {
+        text-align: center;
+        font-size: 24px;
+    }
+
+    .cart-recommendations .recommended_products_grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 10px 0;
+    }
+
+    .cart-recommendations .product-card {
+        min-height: 240px;
+    }
+
+    .cart-recommendations .product-card img {
+        height: 130px;
+    }
+}
+
 @media screen and (max-width: 768px) {
     .cart-table {
         width: 100%;

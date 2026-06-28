@@ -324,6 +324,7 @@ class CustomerController extends BaseController
         );
 
         return $this->renderLocalized(
+
             'eshop_cart/cart.html.twig',
             [
                 'shopInfo' => $shopInfo,
@@ -331,8 +332,11 @@ class CustomerController extends BaseController
                 'cartItems' => $cartItems,
                 'categories' => $categories,
                 'recommendedProducts' => $recommendedProducts,
+                'BMS_URL' => $this->getParameter('BMS_URL'),
+                'locale' => (string) $request->getLocale(),
             ],
             $request,
+
         );
     }
 
@@ -612,11 +616,23 @@ class CustomerController extends BaseController
             $limit * 3
         );
 
-        return $this->findLatestVisibleProductsBySkus(
+        $fallbackSkus = $this->buildFallbackRecommendationSkus(
+            $request,
+            $httpClient,
+            $limit * 3
+        );
+
+        $products = $this->findLatestVisibleProductsBySkus(
             $fallbackSkus,
             $limit,
             []
         );
+
+        if ($products !== []) {
+            return $products;
+        }
+
+        return $this->findFallbackProductsBySalesAndUpdate($limit);
     }
 
     private function fetchSessionRecommendationSkus(
@@ -1011,6 +1027,61 @@ class CustomerController extends BaseController
         }
 
         $ids = array_slice($ids, 0, $limit);
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $productsRaw = $this->entityManager
+            ->getRepository(Product::class)
+            ->findBy(['id' => $ids]);
+
+        $productMap = [];
+
+        foreach ($productsRaw as $product) {
+            if ($product instanceof Product) {
+                $productMap[$product->getId()] = $product;
+            }
+        }
+
+        $products = [];
+
+        foreach ($ids as $id) {
+            if (isset($productMap[$id])) {
+                $products[] = $productMap[$id];
+            }
+        }
+
+        return $products;
+    }
+
+    private function findFallbackProductsBySalesAndUpdate(int $limit = 5): array
+    {
+        $rows = $this->entityManager->createQueryBuilder()
+            ->select('p.id AS id')
+            ->addSelect('COALESCE(SUM(oi.quantity), 0) AS HIDDEN salesCount')
+            ->from(Product::class, 'p')
+            ->leftJoin(OrderItem::class, 'oi', 'WITH', 'oi.sku = p.sku')
+            ->where('p.hidden = false')
+            ->andWhere('p.sku IS NOT NULL')
+            ->andWhere('p.sku <> :emptySku')
+            ->setParameter('emptySku', '')
+            ->groupBy('p.id')
+            ->orderBy('salesCount', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        $ids = [];
+
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
 
         if ($ids === []) {
             return [];

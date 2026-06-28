@@ -101,49 +101,57 @@
 {% endif %}
 
 {% if recommendedProducts is defined and recommendedProducts is not empty %}
-  <section class="recommended-products cart-recommendations">
+  <section class="cart-recommendations">
     {% if cartItems is empty %}
       <h2>Recommended for you</h2>
     {% else %}
       <h2>You may also like</h2>
     {% endif %}
 
-    <div class="product-grid">
-      {% for recommendedProduct in recommendedProducts %}
-        <div class="product-card">
-          <a href="{{ path('show_eshop_product', {
-            id: recommendedProduct.getId(),
-            _locale: app.request.get('_locale')
-          }) }}">
-            {% if recommendedProduct.getImageUrls() is not empty %}
-              <img class="product-img"
-                   src="{{ BMS_URL }}/images/{{ recommendedProduct.getImageUrls()|first }}"
-                   alt="{{ recommendedProduct.getName() }}">
+    <div class="recommended_products_grid">
+      {% for product in recommendedProducts %}
+        {% set imageUrls = product.getImageUrls() ?? [] %}
+        {% set hasDiscount = product.discount is not null and product.discount < 100 %}
+        {% set discountedRaw = (product.price * product.discount / 100) %}
+
+        <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+          {% if imageUrls is not empty %}
+            <img
+              src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
+              alt="{{ product.name }}"
+              onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';"
+            >
+          {% else %}
+            <img
+              src="{{ asset('images/fallback-product.png') }}"
+              alt="{{ product.name }}"
+            >
+          {% endif %}
+
+          <div class="product-name">
+            {{ product.getTranslatedName(locale|default('en')) }}
+          </div>
+
+          <div class="product-price">
+            {% if hasDiscount %}
+              <div class="original-price">
+                <span class="strikethrough">{{ money(product.price) }}</span>
+              </div>
+              <div class="discounted-price">
+                {{ money(discountedRaw) }}
+              </div>
+              <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
+            {% else %}
+              <div class="regular-price">{{ money(product.price) }}</div>
             {% endif %}
-
-            <h3>{{ recommendedProduct.getName() }}</h3>
-
-            {% if not shopInfo.hidePrices %}
-              {% set price = recommendedProduct.getPrice() %}
-              {% set discount = recommendedProduct.getDiscount() %}
-              {% set unitFinal = discount < 100 ? (price * discount / 100) : price %}
-
-              <p>
-                {% if discount < 100 %}
-                  <span class="original-price strikethrough">{{ money(price) }}</span><br>
-                  <span class="discounted-price">{{ money(unitFinal) }}</span>
-                  <span class="discount-tag">{{ 100 - discount }}% OFF</span>
-                {% else %}
-                  {{ money(price) }}
-                {% endif %}
-              </p>
-            {% endif %}
-          </a>
-        </div>
+          </div>
+        </a>
       {% endfor %}
     </div>
   </section>
 {% endif %}
+
+
 
 <script src="{{ asset('assets/eshopCart.js') }}"></script>
 {% endblock %}
