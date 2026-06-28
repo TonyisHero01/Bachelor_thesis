@@ -238,8 +238,15 @@
                     {% set recommendedImages = recommendedProduct.getImageUrls() %}
                     {% set recommendedFirstImage = recommendedImages is not empty ? recommendedImages|first : null %}
 
-                    <a class="recommended-product-card"
-                    href="{{ path('show_eshop_product', { id: recommendedProduct.id, _locale: locale }) }}">
+                    <a
+                        class="recommended-product-card recommendation-link"
+                        href="{{ path('show_eshop_product', { id: recommendedProduct.id, _locale: locale }) }}"
+                        data-page-type="product_detail"
+                        data-source-sku="{{ product.sku }}"
+                        data-recommended-sku="{{ recommendedProduct.sku }}"
+                        data-algorithm="hybrid"
+                        data-rank-position="{{ loop.index }}"
+                    >
 
                         <div class="recommended-product-image"
                             style="background-image: url('{{ recommendedFirstImage ? BMS_URL ~ '/images/' ~ recommendedFirstImage : fallbackImage }}');"
@@ -271,6 +278,35 @@
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 <script src="{{ asset('assets/eshopHome.js') }}"></script>
 <script src="{{ asset('assets/eshopProduct.js') }}"></script>
+
+<script>
+document.addEventListener('click', function (event) {
+    const link = event.target.closest('.recommendation-link');
+
+    if (!link) {
+        return;
+    }
+
+    const payload = {
+        pageType: link.dataset.pageType || 'product_detail',
+        sourceSku: link.dataset.sourceSku || null,
+        recommendedSku: link.dataset.recommendedSku || '',
+        algorithm: link.dataset.algorithm || 'hybrid',
+        rankPosition: parseInt(link.dataset.rankPosition || '0', 10),
+        score: link.dataset.score ? parseFloat(link.dataset.score) : null,
+        eventType: 'click'
+    };
+
+    if (!payload.recommendedSku) {
+        return;
+    }
+
+    navigator.sendBeacon(
+        '{{ path("recommendation_event_log") }}',
+        new Blob([JSON.stringify(payload)], { type: 'application/json' })
+    );
+});
+</script>
 
 <script type="application/ld+json">
 {

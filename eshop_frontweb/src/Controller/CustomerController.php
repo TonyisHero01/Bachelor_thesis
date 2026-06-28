@@ -31,6 +31,7 @@ use Twig\Environment;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Entity\CustomerProductViewLog;
 use App\Entity\CustomerSearchLog;
+use App\Service\RecommendationEventLogger;
 
 class CustomerController extends BaseController
 {
@@ -292,10 +293,10 @@ class CustomerController extends BaseController
     /**
      * Displays the authenticated customer's cart.
      */
-    #[Route('/cart', name: 'customer_cart', methods: ['GET'])]
     public function showCart(
         Request $request,
-        HttpClientInterface $httpClient
+        HttpClientInterface $httpClient,
+        RecommendationEventLogger $recommendationEventLogger
     ): Response
     {
         $user = $this->getUser();
@@ -321,6 +322,13 @@ class CustomerController extends BaseController
             $cartItems,
             $httpClient,
             5
+        );
+
+        $recommendationEventLogger->logManyImpressions(
+            pageType: 'cart',
+            sourceSku: null,
+            recommendations: $recommendedProducts,
+            algorithm: $cartItems !== [] ? 'session_based' : 'history_based'
         );
 
         return $this->renderLocalized(
@@ -609,12 +617,6 @@ class CustomerController extends BaseController
                 $cartSkus
             );
         }
-
-        $fallbackSkus = $this->buildFallbackRecommendationSkus(
-            $request,
-            $httpClient,
-            $limit * 3
-        );
 
         $fallbackSkus = $this->buildFallbackRecommendationSkus(
             $request,
@@ -1108,5 +1110,45 @@ class CustomerController extends BaseController
         }
 
         return $products;
+    }
+
+    #[Route('/recommendation/event', name: 'recommendation_event_log', methods: ['POST'])]
+    public function logRecommendationEvent(
+        Request $request,
+        RecommendationEventLogger $recommendationEventLogger
+    ): JsonResponse {
+        $data = json_decode((string) $request->getContent(), true);
+
+        if (!is_array($data)) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Invalid JSON body',
+            ], 400);
+        }
+
+        $recommendedSku = trim((string) ($data['recommendedSku'] ?? ''));
+
+        if ($recommendedSku === '') {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Recommended SKU is required',
+            ], 400);
+        }
+
+        $recommendationEventLogger->log(
+            pageType: (string) ($data['pageType'] ?? 'unknown'),
+            sourceSku: isset($data['sourceSku']) && $data['sourceSku'] !== ''
+                ? (string) $data['sourceSku']
+                : null,
+            recommendedSku: $recommendedSku,
+            algorithm: (string) ($data['algorithm'] ?? 'unknown'),
+            rankPosition: (int) ($data['rankPosition'] ?? 0),
+            score: isset($data['score']) && $data['score'] !== ''
+                ? (float) $data['score']
+                : null,
+            eventType: (string) ($data['eventType'] ?? 'click')
+        );
+
+        return new JsonResponse(['success' => true]);
     }
 }

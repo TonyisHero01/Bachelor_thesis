@@ -114,7 +114,15 @@
         {% set hasDiscount = product.discount is not null and product.discount < 100 %}
         {% set discountedRaw = (product.price * product.discount / 100) %}
 
-        <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
+        <a
+          href="{{ path('show_eshop_product', {'id': product.id}) }}"
+          class="product-card recommendation-link"
+          data-page-type="cart"
+          data-source-sku=""
+          data-recommended-sku="{{ product.sku }}"
+          data-algorithm="{{ cartItems is empty ? 'history_based' : 'session_based' }}"
+          data-rank-position="{{ loop.index }}"
+        >
           {% if imageUrls is not empty %}
             <img
               src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
@@ -154,4 +162,33 @@
 
 
 <script src="{{ asset('assets/eshopCart.js') }}"></script>
+
+<script>
+document.addEventListener('click', function (event) {
+    const link = event.target.closest('.recommendation-link');
+
+    if (!link) {
+        return;
+    }
+
+    const payload = {
+        pageType: link.dataset.pageType || 'cart',
+        sourceSku: link.dataset.sourceSku || null,
+        recommendedSku: link.dataset.recommendedSku || '',
+        algorithm: link.dataset.algorithm || 'unknown',
+        rankPosition: parseInt(link.dataset.rankPosition || '0', 10),
+        score: link.dataset.score ? parseFloat(link.dataset.score) : null,
+        eventType: 'click'
+    };
+
+    if (!payload.recommendedSku) {
+        return;
+    }
+
+    navigator.sendBeacon(
+        '{{ path("recommendation_event_log") }}',
+        new Blob([JSON.stringify(payload)], { type: 'application/json' })
+    );
+});
+</script>
 {% endblock %}

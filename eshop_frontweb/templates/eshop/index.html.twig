@@ -105,42 +105,52 @@
     {% endfor %}
   </div>
 
-  {% if recommended_for_you|default([]) is not empty %}
-    <h2>Recommended For You</h2>
-    <div class="recommended_products_grid">
-      {% for product in recommended_for_you %}
-        {% set imageUrls = product.getImageUrls() ?? [] %}
-        {% set hasDiscount = product.discount is not null and product.discount < 100 %}
-        {% set discountedRaw = (product.price * product.discount / 100) %}
+    {% if recommended_for_you|default([]) is not empty %}
+      <h2>Recommended For You</h2>
+      <div class="recommended_products_grid">
+        {% for recommendedProduct in recommended_for_you %}
+          {% set imageUrls = recommendedProduct.getImageUrls() ?? [] %}
+          {% set hasDiscount = recommendedProduct.discount is not null and recommendedProduct.discount < 100 %}
+          {% set discountedRaw = (recommendedProduct.price * recommendedProduct.discount / 100) %}
 
-        <a href="{{ path('show_eshop_product', {'id': product.id}) }}" class="product-card">
-          {% if imageUrls is not empty %}
-            <img
-              src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
-              alt="{{ product.name }}"
-              onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';"
-            >
-          {% endif %}
-
-          <div class="product-name">{{ product.getTranslatedName(locale|default('en')) }}</div>
-
-          <div class="product-price">
-            {% if hasDiscount %}
-              <div class="original-price">
-                <span class="strikethrough">{{ money(product.price) }}</span>
-              </div>
-              <div class="discounted-price">
-                {{ money(discountedRaw) }}
-              </div>
-              <div class="discount-tag">{{ 100 - product.discount }}% OFF</div>
-            {% else %}
-              <div class="regular-price">{{ money(product.price) }}</div>
+          <a
+            href="{{ path('show_eshop_product', {'id': recommendedProduct.id}) }}"
+            class="product-card recommendation-link"
+            data-page-type="homepage"
+            data-source-sku=""
+            data-recommended-sku="{{ recommendedProduct.sku }}"
+            data-algorithm="{{ app.user ? 'personalized_homepage' : 'global_homepage' }}"
+            data-rank-position="{{ loop.index }}"
+          >
+            {% if imageUrls is not empty %}
+              <img
+                src="{{ imageUrls is not empty ? BMS_URL|default('') ~ '/images/' ~ imageUrls[0] : asset('images/fallback-product.png') }}"
+                alt="{{ recommendedProduct.name }}"
+                onerror="this.onerror=null;this.src='{{ asset('images/fallback-product.png') }}';"
+              >
             {% endif %}
-          </div>
-        </a>
-      {% endfor %}
-    </div>
-  {% endif %}
+
+            <div class="product-name">
+              {{ recommendedProduct.getTranslatedName(locale|default('en')) }}
+            </div>
+
+            <div class="product-price">
+              {% if hasDiscount %}
+                <div class="original-price">
+                  <span class="strikethrough">{{ money(recommendedProduct.price) }}</span>
+                </div>
+                <div class="discounted-price">
+                  {{ money(discountedRaw) }}
+                </div>
+                <div class="discount-tag">{{ 100 - recommendedProduct.discount }}% OFF</div>
+              {% else %}
+                <div class="regular-price">{{ money(recommendedProduct.price) }}</div>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
 </div>
 
 <script>
@@ -148,4 +158,33 @@
 </script>
 
 <script src="{{ asset('assets/eshopHome.js') }}"></script>
+
+<script>
+document.addEventListener('click', function (event) {
+    const link = event.target.closest('.recommendation-link');
+
+    if (!link) {
+        return;
+    }
+
+    const payload = {
+        pageType: link.dataset.pageType || 'homepage',
+        sourceSku: link.dataset.sourceSku || null,
+        recommendedSku: link.dataset.recommendedSku || '',
+        algorithm: link.dataset.algorithm || 'homepage',
+        rankPosition: parseInt(link.dataset.rankPosition || '0', 10),
+        score: link.dataset.score ? parseFloat(link.dataset.score) : null,
+        eventType: 'click'
+    };
+
+    if (!payload.recommendedSku) {
+        return;
+    }
+
+    navigator.sendBeacon(
+        '{{ path("recommendation_event_log") }}',
+        new Blob([JSON.stringify(payload)], { type: 'application/json' })
+    );
+});
+</script>
 {% endblock %}

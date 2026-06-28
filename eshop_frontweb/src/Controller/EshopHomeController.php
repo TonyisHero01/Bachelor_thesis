@@ -23,6 +23,7 @@ use App\Entity\CustomerSearchLog;
 use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Entity\SearchRelevanceConfig;
+use App\Service\RecommendationEventLogger;
 
 class EshopHomeController extends BaseController
 {
@@ -48,7 +49,8 @@ class EshopHomeController extends BaseController
     public function index(
         Request $request,
         ShopInfoRepository $shopInfoRepository,
-        HttpClientInterface $httpClient
+        HttpClientInterface $httpClient,
+        RecommendationEventLogger $recommendationEventLogger
     ): Response
     {
         $categoriesRepo = $this->entityManager->getRepository(Category::class);
@@ -72,6 +74,13 @@ class EshopHomeController extends BaseController
 
         $shopInfoWithI18n = $shopInfoRepository->findWithTranslations();
         $recommendedForYou = $this->buildRecommendedForYou($request, $httpClient, 10);
+
+        $recommendationEventLogger->logManyImpressions(
+            pageType: 'homepage',
+            sourceSku: null,
+            recommendations: $recommendedForYou,
+            algorithm: $this->getUser() instanceof Customer ? 'personalized_homepage' : 'global_homepage'
+        );
 
         $locale = (string) ($request->get('_locale') ?? $request->getLocale());
 

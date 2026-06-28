@@ -23,6 +23,7 @@ use App\Entity\OrderItem;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Entity\CustomerProductViewLog;
 use App\Entity\SearchRelevanceConfig;
+use App\Service\RecommendationEventLogger;
 
 class EshopProductController extends BaseController
 {
@@ -69,7 +70,12 @@ class EshopProductController extends BaseController
      * Displays product detail page for the given product id.
      */
     #[Route('/product/{id}', name: 'show_eshop_product', methods: ['GET'])]
-    public function show(Request $request, int $id, HttpClientInterface $httpClient): Response
+    public function show(
+        Request $request,
+        int $id,
+        HttpClientInterface $httpClient,
+        RecommendationEventLogger $recommendationEventLogger
+    ): Response
     {
         $productRepo = $this->entityManager->getRepository(Product::class);
 
@@ -95,6 +101,13 @@ class EshopProductController extends BaseController
             $product,
             $httpClient,
             5
+        );
+
+        $recommendationEventLogger->logManyImpressions(
+            pageType: 'product_detail',
+            sourceSku: $product->getSku(),
+            recommendations: $recommendedProducts,
+            algorithm: 'hybrid'
         );
 
         return $this->renderLocalized(
