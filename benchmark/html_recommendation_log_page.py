@@ -119,6 +119,14 @@ def build_recommendation_log_filter_form(recommendation_log):
 
             <div style="margin-top:18px;">
                 <button type="submit">Apply filters</button>
+
+                <button
+                    type="submit"
+                    formaction="/evaluation/recommendation-log/csv"
+                    formmethod="get">
+                    Download CSV
+                </button>
+
                 <a href="/evaluation" class="secondary">Clear filters</a>
             </div>
         </form>

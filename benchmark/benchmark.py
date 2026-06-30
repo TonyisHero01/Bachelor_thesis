@@ -3,22 +3,47 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi import Form
 from benchmark_service import run_benchmark, rows_to_csv
 from evaluation_service import run_evaluation
-from recommendation_log_service import fetch_recommendation_event_log_report
+from recommendation_log_service import (
+    fetch_recommendation_event_log_report,
+    fetch_recommendation_event_log_csv,
+)
 from html_pages import render_benchmark_page, render_evaluation_page
 from report_storage import save_evaluation_report, load_latest_evaluation_report
 import requests
 from config import settings
 
-
 app = FastAPI(title="E-shop Search Benchmark")
 
 LAST_RESULTS = []
 
+def build_recommendation_log_filters(
+    eventType: str = "",
+    pageType: str = "",
+    algorithm: str = "",
+    sessionId: str = "",
+    customerId: str = "",
+    sourceSku: str = "",
+    recommendedSku: str = "",
+    dateFrom: str = "",
+    dateTo: str = "",
+    limit: int = 200,
+):
+    return {
+        "event_type": eventType,
+        "page_type": pageType,
+        "algorithm": algorithm,
+        "session_id": sessionId,
+        "customer_id": customerId,
+        "source_sku": sourceSku,
+        "recommended_sku": recommendedSku,
+        "date_from": dateFrom,
+        "date_to": dateTo,
+        "limit": limit,
+    }
 
 @app.get("/", response_class=HTMLResponse)
 def index():
     return render_benchmark_page(LAST_RESULTS)
-
 
 @app.get("/run", response_class=HTMLResponse)
 def run():
@@ -34,6 +59,41 @@ def run():
     </html>
     """
 
+@app.get("/evaluation/recommendation-log/csv")
+def recommendation_log_csv(
+    eventType: str = "",
+    pageType: str = "",
+    algorithm: str = "",
+    sessionId: str = "",
+    customerId: str = "",
+    sourceSku: str = "",
+    recommendedSku: str = "",
+    dateFrom: str = "",
+    dateTo: str = "",
+    limit: int = 5000,
+):
+    csv_text = fetch_recommendation_event_log_csv(
+        build_recommendation_log_filters(
+            eventType=eventType,
+            pageType=pageType,
+            algorithm=algorithm,
+            sessionId=sessionId,
+            customerId=customerId,
+            sourceSku=sourceSku,
+            recommendedSku=recommendedSku,
+            dateFrom=dateFrom,
+            dateTo=dateTo,
+            limit=limit,
+        )
+    )
+
+    return PlainTextResponse(
+        csv_text,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=recommendation_event_log.csv"
+        },
+    )
 
 @app.get("/csv")
 def csv_report():
@@ -50,7 +110,6 @@ def csv_report():
             "Content-Disposition": "attachment; filename=benchmark_results.csv"
         },
     )
-
 
 @app.get("/evaluation", response_class=HTMLResponse)
 def evaluation_page(
@@ -78,18 +137,20 @@ def evaluation_page(
     except Exception:
         config = {}
 
-    recommendation_log = fetch_recommendation_event_log_report({
-        "event_type": eventType,
-        "page_type": pageType,
-        "algorithm": algorithm,
-        "session_id": sessionId,
-        "customer_id": customerId,
-        "source_sku": sourceSku,
-        "recommended_sku": recommendedSku,
-        "date_from": dateFrom,
-        "date_to": dateTo,
-        "limit": limit,
-    })
+    recommendation_log = fetch_recommendation_event_log_report(
+        build_recommendation_log_filters(
+            eventType=eventType,
+            pageType=pageType,
+            algorithm=algorithm,
+            sessionId=sessionId,
+            customerId=customerId,
+            sourceSku=sourceSku,
+            recommendedSku=recommendedSku,
+            dateFrom=dateFrom,
+            dateTo=dateTo,
+            limit=limit,
+        )
+    )
 
     return render_evaluation_page(
         report,
@@ -157,7 +218,6 @@ def generate_evaluation_report():
     save_evaluation_report(report)
 
     return RedirectResponse(url="/evaluation", status_code=303)
-
 
 @app.get("/evaluation/latest")
 def latest_evaluation_report():
