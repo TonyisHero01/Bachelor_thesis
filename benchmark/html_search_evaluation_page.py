@@ -492,6 +492,7 @@ def render_evaluation_page(report, config=None, recommendation_log=None):
         <meta charset="utf-8">
         <title>Search Evaluation Report</title>
         {page_style()}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
         <div class="page">
@@ -519,7 +520,6 @@ def render_evaluation_page(report, config=None, recommendation_log=None):
             </div>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
             const searchChartData = {json.dumps(search_chart)};
 

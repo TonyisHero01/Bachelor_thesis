@@ -193,6 +193,10 @@ def page_style():
             margin-top: 0;
         }
 
+        .chart-card canvas {
+            max-height: 320px;
+        }
+
         .metric-table-wrapper {
             width: 100%;
             overflow-x: auto;
