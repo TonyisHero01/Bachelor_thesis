@@ -1,7 +1,8 @@
 import psycopg2
 
 from config import settings
-
+import csv
+import io
 
 def get_db_connection():
     return psycopg2.connect(settings.database_url)
@@ -283,3 +284,106 @@ def fetch_recommendation_event_log_report(filters: dict | None = None):
         "by_page_type": by_page_type,
         "events": events,
     }
+
+def normalize_csv_log_filters(filters: dict | None):
+    filters = normalize_log_filters(filters)
+
+    limit = filters.get("limit", 5000)
+
+    try:
+        limit = int(limit)
+    except Exception:
+        limit = 5000
+
+    filters["limit"] = max(20, min(limit, 10000))
+
+    return filters
+
+
+def fetch_recommendation_event_log_csv(filters: dict | None = None):
+    filters = normalize_csv_log_filters(filters)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    where_sql, params = build_recommendation_log_where(filters)
+
+    cur.execute(
+        f"""
+        SELECT
+            rel.id,
+            rel.session_id,
+            rel.customer_id,
+            rel.page_type,
+            rel.source_sku,
+            source_product.name AS source_name,
+            rel.recommended_sku,
+            recommended_product.name AS recommended_name,
+            rel.algorithm,
+            rel.rank_position,
+            rel.score,
+            rel.event_type,
+            rel.created_at
+        FROM recommendation_event_log rel
+        LEFT JOIN (
+            SELECT DISTINCT ON (sku)
+                sku,
+                name
+            FROM product
+            ORDER BY sku, id DESC
+        ) source_product ON source_product.sku = rel.source_sku
+        LEFT JOIN (
+            SELECT DISTINCT ON (sku)
+                sku,
+                name
+            FROM product
+            ORDER BY sku, id DESC
+        ) recommended_product ON recommended_product.sku = rel.recommended_sku
+        {where_sql}
+        ORDER BY rel.created_at DESC, rel.id DESC
+        LIMIT %s
+        """,
+        params + [filters["limit"]],
+    )
+
+    output = io.StringIO()
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "created_at",
+        "event_type",
+        "page_type",
+        "algorithm",
+        "rank_position",
+        "score",
+        "source_sku",
+        "source_name",
+        "recommended_sku",
+        "recommended_name",
+        "session_id",
+        "customer_id",
+    ])
+
+    for row in cur.fetchall():
+        writer.writerow([
+            row[0],
+            row[12].isoformat() if row[12] else "",
+            row[11] or "",
+            row[3] or "",
+            row[8] or "",
+            row[9] if row[9] is not None else "",
+            row[10] if row[10] is not None else "",
+            row[4] or "",
+            row[5] or "",
+            row[6] or "",
+            row[7] or "",
+            row[1] or "",
+            row[2] if row[2] is not None else "",
+        ])
+
+    cur.close()
+    conn.close()
+
+    return output.getvalue()
