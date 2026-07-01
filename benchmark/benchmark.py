@@ -13,7 +13,18 @@ from recommendation_metrics_service import fetch_recommendation_event_metrics
 import requests
 from config import settings
 
+from fastapi.staticfiles import StaticFiles
+from user_studies.app import router as user_studies_router
+
 app = FastAPI(title="E-shop Search Benchmark")
+
+app.include_router(user_studies_router)
+
+app.mount(
+    "/user-studies/static",
+    StaticFiles(directory="user_studies/static"),
+    name="user_studies_static",
+)
 
 LAST_RESULTS = []
 

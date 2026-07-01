@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Study Form</title>
+    <link rel="stylesheet" href="/user-studies/static/user_study.css">
+</head>
+<body>
+<div class="page">
+    <div class="card">
+        <h1>User Study</h1>
+
+        <p class="intro">
+            Please evaluate the search and recommendation functions of the e-shop system.
+            Your feedback will be used only for academic evaluation.
+        </p>
+
+        {% if success %}
+            <div class="success-message">
+                Thank you. Your response has been saved.
+                <br>
+                Response ID: {{ study_id }}
+            </div>
+        {% endif %}
+
+        <form method="post" action="/user-studies/submit">
+            <div class="question">
+                <label>1. Were the recommended products useful?</label>
+                <select name="recommendation_useful" required>
+                    <option value="">Select</option>
+                    <option value="1">1 - Very poor</option>
+                    <option value="2">2 - Poor</option>
+                    <option value="3">3 - Neutral</option>
+                    <option value="4">4 - Good</option>
+                    <option value="5">5 - Excellent</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>2. How would you rate the quality of search results?</label>
+                <select name="search_quality" required>
+                    <option value="">Select</option>
+                    <option value="1">1 - Very poor</option>
+                    <option value="2">2 - Poor</option>
+                    <option value="3">3 - Neutral</option>
+                    <option value="4">4 - Good</option>
+                    <option value="5">5 - Excellent</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>3. How would you rate the response speed?</label>
+                <select name="response_speed" required>
+                    <option value="">Select</option>
+                    <option value="1">1 - Very slow</option>
+                    <option value="2">2 - Slow</option>
+                    <option value="3">3 - Acceptable</option>
+                    <option value="4">4 - Fast</option>
+                    <option value="5">5 - Very fast</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>4. Were the shown products relevant to your intent?</label>
+                <select name="product_relevance" required>
+                    <option value="">Select</option>
+                    <option value="1">1 - Not relevant</option>
+                    <option value="2">2 - Slightly relevant</option>
+                    <option value="3">3 - Neutral</option>
+                    <option value="4">4 - Relevant</option>
+                    <option value="5">5 - Highly relevant</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>5. Was the interface clear and easy to use?</label>
+                <select name="interface_clarity" required>
+                    <option value="">Select</option>
+                    <option value="1">1 - Very unclear</option>
+                    <option value="2">2 - Unclear</option>
+                    <option value="3">3 - Neutral</option>
+                    <option value="4">4 - Clear</option>
+                    <option value="5">5 - Very clear</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>Additional comment</label>
+                <textarea name="comment" rows="4" placeholder="Optional comment"></textarea>
+            </div>
+
+            <button type="submit">Submit feedback</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>
