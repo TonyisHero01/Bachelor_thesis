@@ -228,7 +228,7 @@
             </div>
         </section>
     </div>
-    {% if recommendedProducts is defined and recommendedProducts is not empty %}
+    {% if recommendations_enabled|default(true) and recommendedProducts is defined and recommendedProducts is not empty %}
         <section class="recommended-products-section">
             <h2 class="section-title">Similar products</h2>
 
@@ -279,6 +279,7 @@
 <script src="{{ asset('assets/eshopHome.js') }}"></script>
 <script src="{{ asset('assets/eshopProduct.js') }}"></script>
 
+{% if recommendation_logging_enabled|default(true) %}
 <script>
 document.addEventListener('click', function (event) {
     const link = event.target.closest('.recommendation-link');
@@ -307,6 +308,7 @@ document.addEventListener('click', function (event) {
     );
 });
 </script>
+{% endif %}
 
 <script type="application/ld+json">
 {

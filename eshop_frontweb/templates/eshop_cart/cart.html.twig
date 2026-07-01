@@ -100,7 +100,7 @@
   </div>
 {% endif %}
 
-{% if recommendedProducts is defined and recommendedProducts is not empty %}
+{% if recommendations_enabled|default(true) and recommendedProducts is defined and recommendedProducts is not empty %}
   <section class="cart-recommendations">
     {% if cartItems is empty %}
       <h2>Recommended for you</h2>
@@ -163,6 +163,7 @@
 
 <script src="{{ asset('assets/eshopCart.js') }}"></script>
 
+{% if recommendation_logging_enabled|default(true) %}
 <script>
 document.addEventListener('click', function (event) {
     const link = event.target.closest('.recommendation-link');
@@ -191,4 +192,5 @@ document.addEventListener('click', function (event) {
     );
 });
 </script>
+{% endif %}
 {% endblock %}

@@ -73,14 +73,28 @@ class EshopHomeController extends BaseController
         }
 
         $shopInfoWithI18n = $shopInfoRepository->findWithTranslations();
-        $recommendedForYou = $this->buildRecommendedForYou($request, $httpClient, 10);
 
-        $recommendationEventLogger->logManyImpressions(
-            pageType: 'homepage',
-            sourceSku: null,
-            recommendations: $recommendedForYou,
-            algorithm: $this->getUser() instanceof Customer ? 'personalized_homepage' : 'global_homepage'
-        );
+        $searchConfig = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        $recommendationsEnabled = $searchConfig?->isRecommendationEnabled() ?? true;
+        $recommendationLoggingEnabled = $searchConfig?->isRecommendationLoggingEnabled() ?? true;
+
+        $recommendedForYou = [];
+
+        if ($recommendationsEnabled) {
+            $recommendedForYou = $this->buildRecommendedForYou($request, $httpClient, 10);
+
+            if ($recommendationLoggingEnabled) {
+                $recommendationEventLogger->logManyImpressions(
+                    pageType: 'homepage',
+                    sourceSku: null,
+                    recommendations: $recommendedForYou,
+                    algorithm: $this->getUser() instanceof Customer ? 'personalized_homepage' : 'global_homepage'
+                );
+            }
+        }
 
         $locale = (string) ($request->get('_locale') ?? $request->getLocale());
 
@@ -94,6 +108,8 @@ class EshopHomeController extends BaseController
                 'popular_products' => $popularProducts,
                 'categories' => $categories,
                 'recommended_for_you' => $recommendedForYou,
+                'recommendations_enabled' => $recommendationsEnabled,
+                'recommendation_logging_enabled' => $recommendationLoggingEnabled,
             ],
             $request,
         );

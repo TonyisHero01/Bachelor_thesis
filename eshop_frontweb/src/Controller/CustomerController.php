@@ -32,6 +32,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Entity\CustomerProductViewLog;
 use App\Entity\CustomerSearchLog;
 use App\Service\RecommendationEventLogger;
+use App\Entity\SearchRelevanceConfig;
 
 class CustomerController extends BaseController
 {
@@ -318,19 +319,32 @@ class CustomerController extends BaseController
             ? $categoriesRepo->findAllCategories()
             : $categoriesRepo->findAll();
 
-        $recommendedProducts = $this->buildCartRecommendations(
-            $request,
-            $cartItems,
-            $httpClient,
-            5
-        );
+        $searchConfig = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
 
-        $recommendationEventLogger->logManyImpressions(
-            pageType: 'cart',
-            sourceSku: null,
-            recommendations: $recommendedProducts,
-            algorithm: $cartItems !== [] ? 'session_based' : 'history_based'
-        );
+        $recommendationsEnabled = $searchConfig?->isRecommendationEnabled() ?? true;
+        $recommendationLoggingEnabled = $searchConfig?->isRecommendationLoggingEnabled() ?? true;
+
+        $recommendedProducts = [];
+
+        if ($recommendationsEnabled) {
+            $recommendedProducts = $this->buildCartRecommendations(
+                $request,
+                $cartItems,
+                $httpClient,
+                5
+            );
+
+            if ($recommendationLoggingEnabled) {
+                $recommendationEventLogger->logManyImpressions(
+                    pageType: 'cart',
+                    sourceSku: null,
+                    recommendations: $recommendedProducts,
+                    algorithm: $cartItems !== [] ? 'session_based' : 'history_based'
+                );
+            }
+        }
 
         return $this->renderLocalized(
 
@@ -341,6 +355,8 @@ class CustomerController extends BaseController
                 'cartItems' => $cartItems,
                 'categories' => $categories,
                 'recommendedProducts' => $recommendedProducts,
+                'recommendations_enabled' => $recommendationsEnabled,
+                'recommendation_logging_enabled' => $recommendationLoggingEnabled,
                 'BMS_URL' => $this->getParameter('BMS_URL'),
                 'locale' => (string) $request->getLocale(),
             ],
@@ -1125,6 +1141,14 @@ class CustomerController extends BaseController
                 'success' => false,
                 'message' => 'Invalid JSON body',
             ], 400);
+        }
+
+        $searchConfig = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        if (!($searchConfig?->isRecommendationLoggingEnabled() ?? true)) {
+            return new JsonResponse(['success' => true, 'loggingDisabled' => true]);
         }
 
         $recommendedSku = trim((string) ($data['recommendedSku'] ?? ''));

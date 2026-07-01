@@ -159,6 +159,7 @@
 
 <script src="{{ asset('assets/eshopHome.js') }}"></script>
 
+{% if recommendation_logging_enabled|default(true) %}
 <script>
 document.addEventListener('click', function (event) {
     const link = event.target.closest('.recommendation-link');
@@ -187,4 +188,5 @@ document.addEventListener('click', function (event) {
     );
 });
 </script>
+{% endif %}
 {% endblock %}

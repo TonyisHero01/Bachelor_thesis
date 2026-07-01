@@ -96,19 +96,32 @@ class EshopProductController extends BaseController
 
         $shopInfo = $this->entityManager->getRepository(ShopInfo::class)->findOneBy([]);
 
-        $recommendedProducts = $this->buildHybridRecommendations(
-            $request,
-            $product,
-            $httpClient,
-            5
-        );
+        $searchConfig = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
 
-        $recommendationEventLogger->logManyImpressions(
-            pageType: 'product_detail',
-            sourceSku: $product->getSku(),
-            recommendations: $recommendedProducts,
-            algorithm: 'hybrid'
-        );
+        $recommendationsEnabled = $searchConfig?->isRecommendationEnabled() ?? true;
+        $recommendationLoggingEnabled = $searchConfig?->isRecommendationLoggingEnabled() ?? true;
+
+        $recommendedProducts = [];
+
+        if ($recommendationsEnabled) {
+            $recommendedProducts = $this->buildHybridRecommendations(
+                $request,
+                $product,
+                $httpClient,
+                5
+            );
+
+            if ($recommendationLoggingEnabled) {
+                $recommendationEventLogger->logManyImpressions(
+                    pageType: 'product_detail',
+                    sourceSku: $product->getSku(),
+                    recommendations: $recommendedProducts,
+                    algorithm: 'hybrid'
+                );
+            }
+        }
 
         return $this->renderLocalized(
             'eshop_product/index.html.twig',
@@ -121,6 +134,8 @@ class EshopProductController extends BaseController
                 'BMS_URL' => $this->getParameter('BMS_URL'),
                 'categories' => $categories,
                 'recommendedProducts' => $recommendedProducts,
+                'recommendations_enabled' => $recommendationsEnabled,
+                'recommendation_logging_enabled' => $recommendationLoggingEnabled,
             ],
             $request,
         );
