@@ -127,6 +127,22 @@
       <label for="same_size_bonus">Same Size Bonus</label>
       <input type="number" id="same_size_bonus" value="{{ searchConfig.sameSizeBonus }}" min="0" step="0.01"><br>
 
+      <h3>Recommendation Runtime Settings</h3>
+
+      <label for="recommendation_enabled">Enable Recommendations</label>
+      <input
+        type="checkbox"
+        id="recommendation_enabled"
+        {% if searchConfig.recommendationEnabled %}checked{% endif %}
+      ><br>
+
+      <label for="recommendation_logging_enabled">Enable Recommendation Logging</label>
+      <input
+        type="checkbox"
+        id="recommendation_logging_enabled"
+        {% if searchConfig.recommendationLoggingEnabled %}checked{% endif %}
+      ><br>
+
       <h3>Hybrid Recommendation Weights</h3>
 
         <label for="tfidf_recommendation_weight">TF-IDF Recommendation Weight</label>

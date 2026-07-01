@@ -628,7 +628,9 @@ class HomeController extends BaseController
             || (float) ($config['searchHistoryRecommendationWeight'] ?? 0.20) !== $searchConfig->getSearchHistoryRecommendationWeight()
             || (float) ($config['viewHistoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getViewHistoryRecommendationWeight()
             || (int) ($config['maxRecommendationPerCategory'] ?? 4) !== $searchConfig->getMaxRecommendationPerCategory()
-            || (float) ($config['recommendationDiversityPenalty'] ?? 0.10) !== $searchConfig->getRecommendationDiversityPenalty();
+            || (float) ($config['recommendationDiversityPenalty'] ?? 0.10) !== $searchConfig->getRecommendationDiversityPenalty()
+            || (bool) ($config['recommendationEnabled'] ?? true) !== $searchConfig->isRecommendationEnabled()
+            || (bool) ($config['recommendationLoggingEnabled'] ?? true) !== $searchConfig->isRecommendationLoggingEnabled();
 
         $searchConfig->setName((string) ($config['name'] ?? 'Default relevance configuration'));
 
@@ -657,6 +659,14 @@ class HomeController extends BaseController
         $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
 
         $searchConfig->setSearchMethod((string) ($config['searchMethod'] ?? 'tfidf'));
+
+        $searchConfig->setRecommendationEnabled(
+            (bool) ($config['recommendationEnabled'] ?? true)
+        );
+
+        $searchConfig->setRecommendationLoggingEnabled(
+            (bool) ($config['recommendationLoggingEnabled'] ?? true)
+        );
 
         $searchConfig->touch();
 

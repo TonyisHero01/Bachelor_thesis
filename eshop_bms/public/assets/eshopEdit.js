@@ -298,6 +298,8 @@ async function save_() {
                 recommendationDiversityPenalty: parseFloat(
                     document.getElementById('recommendation_diversity_penalty')?.value || '0.15'
                 ),
+                recommendationEnabled: document.getElementById('recommendation_enabled')?.checked ?? true,
+                recommendationLoggingEnabled: document.getElementById('recommendation_logging_enabled')?.checked ?? true,
             },
         };
 
