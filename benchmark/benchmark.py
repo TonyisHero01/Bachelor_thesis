@@ -9,6 +9,7 @@ from recommendation_log_service import (
 )
 from html_pages import render_benchmark_page, render_evaluation_page
 from report_storage import save_evaluation_report, load_latest_evaluation_report
+from recommendation_metrics_service import fetch_recommendation_event_metrics
 import requests
 from config import settings
 
@@ -151,11 +152,12 @@ def evaluation_page(
             limit=limit,
         )
     )
-
+    recommendation_metrics = fetch_recommendation_event_metrics()
     return render_evaluation_page(
         report,
         config=config,
         recommendation_log=recommendation_log,
+        recommendation_metrics=recommendation_metrics,
     )
 
 @app.post("/evaluation/update-config")

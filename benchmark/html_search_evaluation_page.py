@@ -478,10 +478,145 @@ def build_search_evaluation_body(report):
 
     return body, search_chart
 
+def build_recommendation_metrics_section(metrics):
+    metrics = metrics or {}
 
-def render_evaluation_page(report, config=None, recommendation_log=None):
+    coverage = metrics.get("coverage", {})
+    diversity = metrics.get("diversity", {})
+    popularity = metrics.get("popularity_amplification", {})
+    freshness = metrics.get("freshness", {})
+
+    top_recommended = popularity.get("top_recommended", [])
+    top_sold = popularity.get("top_sold", [])
+
+    top_recommended_rows = ""
+
+    for item in top_recommended:
+        top_recommended_rows += f"""
+            <tr>
+                <td>{item.get("recommended_sku", "-")}</td>
+                <td>{item.get("recommendation_count", 0)}</td>
+            </tr>
+        """
+
+    top_sold_rows = ""
+
+    for item in top_sold:
+        top_sold_rows += f"""
+            <tr>
+                <td>{item.get("sku", "-")}</td>
+                <td>{item.get("sold_count", 0)}</td>
+            </tr>
+        """
+
+    if not top_recommended_rows:
+        top_recommended_rows = """
+            <tr>
+                <td colspan="2">No recommendation data yet.</td>
+            </tr>
+        """
+
+    if not top_sold_rows:
+        top_sold_rows = """
+            <tr>
+                <td colspan="2">No sales data yet.</td>
+            </tr>
+        """
+
+    return f"""
+        <h2>Recommendation Event Metrics</h2>
+
+        <div class="notice" style="margin-bottom:20px;">
+            These metrics are calculated from RecommendationEventLog impression and click data.
+            They evaluate how recommendations behave inside the e-shop, not only search relevance.
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Coverage</div>
+                <div class="metric-value">{coverage.get("coverage_percent", 0)}%</div>
+                <div class="metric-subtitle">
+                    {coverage.get("recommended_count", 0)}
+                    /
+                    {coverage.get("visible_count", 0)}
+                    visible products
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Diversity</div>
+                <div class="metric-value">{diversity.get("category_count", 0)}</div>
+                <div class="metric-subtitle">
+                    categories, top category share
+                    {diversity.get("top_category_share_percent", 0)}%
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Popularity amplification</div>
+                <div class="metric-value">{popularity.get("popularity_overlap_percent", 0)}%</div>
+                <div class="metric-subtitle">
+                    top overlap
+                    {popularity.get("overlap_count", 0)}
+                    /
+                    {popularity.get("top_recommended_count", 0)}
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Freshness</div>
+                <div class="metric-value">{freshness.get("avg_age_days", 0)} days</div>
+                <div class="metric-subtitle">
+                    {freshness.get("fresh_30d_percent", 0)}%
+                    fresh within 30 days
+                </div>
+            </div>
+        </div>
+
+        <div class="two-column-grid" style="margin-top:24px;">
+            <div class="card-inner">
+                <h3>Top Recommended Products</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Recommendation count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {top_recommended_rows}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-inner">
+                <h3>Top Sold Products</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Sold count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {top_sold_rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    """
+
+def render_evaluation_page(
+    report,
+    config=None,
+    recommendation_log=None,
+    recommendation_metrics=None,
+):
     if config is None:
         config = {}
+
+    if recommendation_metrics is None:
+        recommendation_metrics = {}
 
     body, search_chart = build_search_evaluation_body(report)
 
@@ -513,6 +648,8 @@ def render_evaluation_page(report, config=None, recommendation_log=None):
                 </div>
 
                 {build_config_form(config)}
+
+                {build_recommendation_metrics_section(recommendation_metrics)}
 
                 {build_recommendation_log_section(recommendation_log)}
 
