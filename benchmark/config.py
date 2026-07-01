@@ -28,6 +28,9 @@ class Settings:
     esci_query_limit: int
     elasticsearch_url: str
 
+    queries: list[str]
+
+
 def load_settings() -> Settings:
     database_url = os.getenv("DATABASE_URL")
 
@@ -38,6 +41,30 @@ def load_settings() -> Settings:
 
     report_dir = Path("/app/reports")
     report_dir.mkdir(parents=True, exist_ok=True)
+
+    default_queries = [
+        "shirt",
+        "dress",
+        "shoes",
+        "jacket",
+        "bag",
+        "jeans",
+        "cotton",
+        "leather",
+        "black",
+        "white",
+    ]
+
+    queries_env = os.getenv("BENCHMARK_QUERIES", "")
+
+    if queries_env.strip():
+        queries = [
+            item.strip()
+            for item in queries_env.split(",")
+            if item.strip()
+        ]
+    else:
+        queries = default_queries
 
     return Settings(
         search_url=os.getenv(
@@ -71,10 +98,13 @@ def load_settings() -> Settings:
         esci_query_limit=int(
             os.getenv("ESCI_QUERY_LIMIT", "100")
         ),
+
         elasticsearch_url=os.getenv(
             "ELASTICSEARCH_URL",
             "http://elasticsearch:9200",
         ),
+
+        queries=queries,
     )
 
 
