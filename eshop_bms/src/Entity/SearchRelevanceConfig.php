@@ -92,6 +92,12 @@ class SearchRelevanceConfig
     #[ORM\Column(type: 'string', length: 30, options: ['default' => 'tfidf'])]
     private string $searchMethod = 'tfidf';
 
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    private bool $recommendationEnabled = true;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => true])]
+    private bool $recommendationLoggingEnabled = true;
+
     public function __construct()
     {
         $now = new \DateTimeImmutable();
@@ -282,6 +288,30 @@ class SearchRelevanceConfig
         }
 
         $this->searchMethod = $searchMethod;
+
+        return $this;
+    }
+
+    public function isRecommendationEnabled(): bool
+    {
+        return $this->recommendationEnabled;
+    }
+
+    public function setRecommendationEnabled(bool $recommendationEnabled): self
+    {
+        $this->recommendationEnabled = $recommendationEnabled;
+
+        return $this;
+    }
+
+    public function isRecommendationLoggingEnabled(): bool
+    {
+        return $this->recommendationLoggingEnabled;
+    }
+
+    public function setRecommendationLoggingEnabled(bool $recommendationLoggingEnabled): self
+    {
+        $this->recommendationLoggingEnabled = $recommendationLoggingEnabled;
 
         return $this;
     }
