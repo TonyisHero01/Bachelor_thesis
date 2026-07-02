@@ -175,32 +175,59 @@ def search_api(req: SearchRequest, request: Request):
     started = time.perf_counter()
 
     query = req.query.strip()
+    search_method = get_active_search_method()
 
     if not query:
-        logger.info("[SEARCH_API] method=tfidf endpoint=/search empty_query=true")
+        logger.info(
+            "[SEARCH_API] method=%s endpoint=/search empty_query=true",
+            search_method,
+        )
         return {"results": []}
 
     limit = min(req.limit, settings.max_search_limit)
     skip_log = request.headers.get("X-BENCHMARK") == "1"
 
     logger.info(
-        "[SEARCH_API] method=tfidf endpoint=/search started query=%r limit=%s skip_log=%s ip=%s",
+        "[SEARCH_API] method=%s endpoint=/search started query=%r limit=%s skip_log=%s ip=%s",
+        search_method,
         query,
         limit,
         skip_log,
         client_ip(request),
     )
 
-    results = search_products(
-        query,
-        limit,
-        skip_log=skip_log,
-    )
+    if search_method == "semantic_vector":
+        result = semantic_search_service.search(
+            query=query,
+            limit=limit,
+        )
+
+        results = result.get("results", []) if isinstance(result, dict) else []
+        results = normalize_search_rows(results)
+
+    elif search_method == "elasticsearch_bm25":
+        result = elastic_service.search(
+            query=query,
+            limit=limit,
+        )
+
+        results = result.get("results", []) if isinstance(result, dict) else []
+        results = normalize_search_rows(results)
+
+    else:
+        results = search_products(
+            query,
+            limit,
+            skip_log=skip_log,
+        )
+
+        results = normalize_search_rows(results)
 
     elapsed_ms = (time.perf_counter() - started) * 1000
 
     logger.info(
-        "[SEARCH_API] method=tfidf endpoint=/search finished query=%r results=%s elapsed_ms=%.2f",
+        "[SEARCH_API] method=%s endpoint=/search finished query=%r results=%s elapsed_ms=%.2f",
+        search_method,
         query,
         len(results),
         elapsed_ms,
@@ -300,6 +327,31 @@ def train_compat(
 ):
     return reindex(req, request, background_tasks)
 
+def normalize_search_rows(rows):
+    normalized = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        item = dict(row)
+
+        if "product_sku" not in item and "sku" in item:
+            item["product_sku"] = item["sku"]
+
+        if "sku" not in item and "product_sku" in item:
+            item["sku"] = item["product_sku"]
+
+        if "product_sku" not in item:
+            continue
+
+        if "similarity" not in item:
+            item["similarity"] = 0.0
+
+        normalized.append(item)
+
+    return normalized
+
 def get_active_search_method() -> str:
     from repositories.product_repository import fetch_active_relevance_config
 
@@ -343,14 +395,20 @@ def normalize_recommendation_rows(rows):
     return normalized
 
 
-def recommend_by_sku_with_active_method(sku: str, limit: int):
+def recommend_by_sku_with_active_method(
+    sku: str,
+    limit: int,
+    search_method: str | None = None,
+):
     sku = sku.strip()
 
     if sku == "":
         return []
 
     limit = min(limit, settings.max_search_limit)
-    search_method = get_active_search_method()
+
+    if search_method is None:
+        search_method = get_active_search_method()
 
     if search_method == "semantic_vector":
         product_id = semantic_repository.get_latest_product_id_by_sku(sku)
@@ -394,9 +452,18 @@ def recommend_by_sku_with_active_method(sku: str, limit: int):
 
     return normalize_recommendation_rows(rows)
 
-
-def add_seed_recommendation_scores(scores, seed_sku: str, seed_weight: float, limit: int):
-    rows = recommend_by_sku_with_active_method(seed_sku, limit)
+def add_seed_recommendation_scores(
+    scores,
+    seed_sku: str,
+    seed_weight: float,
+    limit: int,
+    search_method: str | None = None,
+):
+    rows = recommend_by_sku_with_active_method(
+        sku=seed_sku,
+        limit=limit,
+        search_method=search_method,
+    )
 
     for row in rows:
         recommended_sku = str(row.get("product_sku", "")).strip()
@@ -414,6 +481,7 @@ def add_seed_recommendation_scores(scores, seed_sku: str, seed_weight: float, li
 @app.post("/recommend/session", response_model=RecommendResponse)
 def recommend_session_api(req: SessionRecommendRequest):
     limit = min(req.limit, settings.max_search_limit)
+    search_method = get_active_search_method()
 
     scores = {}
     seed_skus = {}
@@ -441,6 +509,7 @@ def recommend_session_api(req: SessionRecommendRequest):
             seed_sku=seed_sku,
             seed_weight=seed_weight,
             limit=max(limit * 3, 10),
+            search_method=search_method,
         )
 
     for seed_sku in seed_skus.keys():
@@ -463,7 +532,7 @@ def recommend_session_api(req: SessionRecommendRequest):
 
     logger.info(
         "[RECOMMEND_SESSION] method=%s seeds=%s results=%s",
-        get_active_search_method(),
+        search_method,
         len(seed_skus),
         len(results),
     )
@@ -477,9 +546,12 @@ def recommend_api(sku: str, limit: int = 10):
     if not sku:
         return {"results": []}
 
+    search_method = get_active_search_method()
+
     results = recommend_by_sku_with_active_method(
         sku=sku,
         limit=limit,
+        search_method=search_method,
     )
 
     return {"results": results}

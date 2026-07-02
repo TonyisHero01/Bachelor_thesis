@@ -1,14 +1,16 @@
 from typing import Dict, Any, List
-from pydantic import BaseModel, Field
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
+
 
 class SemanticSearchRequest(BaseModel):
     query: str
     limit: int = 10
 
+
 class SemanticSimilarRequest(BaseModel):
     product_id: int
     limit: int = 10
+
 
 class SearchRequest(BaseModel):
     query: str = Field(default="", max_length=200)
@@ -16,8 +18,11 @@ class SearchRequest(BaseModel):
 
 
 class SearchResult(BaseModel):
-    product_sku: str
-    similarity: float
+    model_config = ConfigDict(extra="allow")
+
+    product_sku: str | None = None
+    sku: str | None = None
+    similarity: float = 0.0
 
 
 class SearchResponse(BaseModel):
@@ -43,12 +48,18 @@ class ReindexResponse(BaseModel):
     ip: str
     ts: str
 
+
 class RecommendResult(BaseModel):
-    product_sku: str
-    similarity: float
+    model_config = ConfigDict(extra="allow")
+
+    product_sku: str | None = None
+    sku: str | None = None
+    similarity: float = 0.0
+
 
 class RecommendResponse(BaseModel):
     results: List[RecommendResult]
+
 
 class SessionRecommendRequest(BaseModel):
     viewed_skus: List[str] = Field(default_factory=list)
