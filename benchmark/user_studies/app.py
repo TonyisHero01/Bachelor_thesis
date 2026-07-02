@@ -32,19 +32,59 @@ async def show_user_study_form(request: Request):
 @router.post("/submit", response_class=HTMLResponse)
 async def submit_user_study(
     request: Request,
-    recommendation_useful: str = Form(...),
-    search_quality: str = Form(...),
-    response_speed: str = Form(...),
-    product_relevance: str = Form(...),
-    interface_clarity: str = Form(...),
+
+    search_task: str = Form(""),
+    tested_query: str = Form(""),
+
+    tfidf_relevance: str = Form(...),
+    tfidf_ranking_quality: str = Form(...),
+    tfidf_result_diversity: str = Form(...),
+    tfidf_overall_satisfaction: str = Form(...),
+
+    semantic_relevance: str = Form(...),
+    semantic_ranking_quality: str = Form(...),
+    semantic_result_diversity: str = Form(...),
+    semantic_overall_satisfaction: str = Form(...),
+
+    bm25_relevance: str = Form(...),
+    bm25_ranking_quality: str = Form(...),
+    bm25_result_diversity: str = Form(...),
+    bm25_overall_satisfaction: str = Form(...),
+
+    preferred_algorithm: str = Form(...),
+    easiest_to_understand: str = Form(""),
     comment: str = Form(""),
 ):
     answers = {
-        "recommendation_useful": recommendation_useful,
-        "search_quality": search_quality,
-        "response_speed": response_speed,
-        "product_relevance": product_relevance,
-        "interface_clarity": interface_clarity,
+        "search_task": search_task,
+        "tested_query": tested_query,
+
+        "tfidf": {
+            "relevance": tfidf_relevance,
+            "ranking_quality": tfidf_ranking_quality,
+            "result_diversity": tfidf_result_diversity,
+            "overall_satisfaction": tfidf_overall_satisfaction,
+        },
+
+        "semantic_vector": {
+            "relevance": semantic_relevance,
+            "ranking_quality": semantic_ranking_quality,
+            "result_diversity": semantic_result_diversity,
+            "overall_satisfaction": semantic_overall_satisfaction,
+        },
+
+        "elasticsearch_bm25": {
+            "relevance": bm25_relevance,
+            "ranking_quality": bm25_ranking_quality,
+            "result_diversity": bm25_result_diversity,
+            "overall_satisfaction": bm25_overall_satisfaction,
+        },
+
+        "comparison": {
+            "preferred_algorithm": preferred_algorithm,
+            "easiest_to_understand": easiest_to_understand,
+        },
+
         "comment": comment,
     }
 
@@ -52,8 +92,8 @@ async def submit_user_study(
     ip_address = request.client.host if request.client else None
 
     study_id = repo.save_study(
-        form_name="recommendation_user_study",
-        page_type="benchmark",
+        form_name="search_algorithm_comparison_user_study",
+        page_type="benchmark_user_study",
         source="python_user_study_form",
         answers=answers,
         user_agent=user_agent,

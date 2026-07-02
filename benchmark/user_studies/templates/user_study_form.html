@@ -1,95 +1,233 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>User Study Form</title>
+    <title>Uživatelské hodnocení vyhledávacích algoritmů</title>
     <link rel="stylesheet" href="/user-studies/static/user_study.css">
 </head>
 <body>
 <div class="page">
     <div class="card">
-        <h1>User Study</h1>
+        <h1>Uživatelské hodnocení vyhledávacích algoritmů</h1>
 
         <p class="intro">
-            Please evaluate the search and recommendation functions of the e-shop system.
-            Your feedback will be used only for academic evaluation.
+            Prosím porovnejte výsledky vyhledávání vytvořené různými algoritmy
+            v e-shopovém systému. Cílem tohoto formuláře je vyhodnotit,
+            jak uživatelé subjektivně vnímají kvalitu jednotlivých metod.
         </p>
 
         {% if success %}
             <div class="success-message">
-                Thank you. Your response has been saved.
+                Děkujeme. Vaše odpověď byla uložena.
                 <br>
-                Response ID: {{ study_id }}
+                ID odpovědi: {{ study_id }}
             </div>
         {% endif %}
 
         <form method="post" action="/user-studies/submit">
+
             <div class="question">
-                <label>1. Were the recommended products useful?</label>
-                <select name="recommendation_useful" required>
-                    <option value="">Select</option>
-                    <option value="1">1 - Very poor</option>
-                    <option value="2">2 - Poor</option>
-                    <option value="3">3 - Neutral</option>
-                    <option value="4">4 - Good</option>
-                    <option value="5">5 - Excellent</option>
+                <label>Vyhledávací úloha nebo scénář</label>
+                <input
+                    type="text"
+                    name="search_task"
+                    placeholder="Například: Najít vhodné černé tričko nebo podobné produkty"
+                >
+            </div>
+
+            <div class="question">
+                <label>Testovaný vyhledávací dotaz</label>
+                <input
+                    type="text"
+                    name="tested_query"
+                    placeholder="Například: černé bavlněné tričko"
+                >
+            </div>
+
+            <h2>Vyhledávání pomocí TF-IDF</h2>
+
+            <div class="question">
+                <label>Jak relevantní byly výsledky algoritmu TF-IDF?</label>
+                <select name="tfidf_relevance" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Nerelevantní</option>
+                    <option value="2">2 - Spíše nerelevantní</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Relevantní</option>
+                    <option value="5">5 - Velmi relevantní</option>
                 </select>
             </div>
 
             <div class="question">
-                <label>2. How would you rate the quality of search results?</label>
-                <select name="search_quality" required>
-                    <option value="">Select</option>
-                    <option value="1">1 - Very poor</option>
-                    <option value="2">2 - Poor</option>
-                    <option value="3">3 - Neutral</option>
-                    <option value="4">4 - Good</option>
-                    <option value="5">5 - Excellent</option>
+                <label>Jak kvalitní bylo pořadí výsledků algoritmu TF-IDF?</label>
+                <select name="tfidf_ranking_quality" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi špatné</option>
+                    <option value="2">2 - Špatné</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Dobré</option>
+                    <option value="5">5 - Výborné</option>
                 </select>
             </div>
 
             <div class="question">
-                <label>3. How would you rate the response speed?</label>
-                <select name="response_speed" required>
-                    <option value="">Select</option>
-                    <option value="1">1 - Very slow</option>
-                    <option value="2">2 - Slow</option>
-                    <option value="3">3 - Acceptable</option>
-                    <option value="4">4 - Fast</option>
-                    <option value="5">5 - Very fast</option>
+                <label>Jak rozmanité byly výsledky algoritmu TF-IDF?</label>
+                <select name="tfidf_result_diversity" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi opakující se</option>
+                    <option value="2">2 - Málo rozmanité</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Rozmanité</option>
+                    <option value="5">5 - Velmi rozmanité</option>
                 </select>
             </div>
 
             <div class="question">
-                <label>4. Were the shown products relevant to your intent?</label>
-                <select name="product_relevance" required>
-                    <option value="">Select</option>
-                    <option value="1">1 - Not relevant</option>
-                    <option value="2">2 - Slightly relevant</option>
-                    <option value="3">3 - Neutral</option>
-                    <option value="4">4 - Relevant</option>
-                    <option value="5">5 - Highly relevant</option>
+                <label>Celková spokojenost s výsledky algoritmu TF-IDF</label>
+                <select name="tfidf_overall_satisfaction" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi nespokojen/a</option>
+                    <option value="2">2 - Nespokojen/a</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Spokojen/a</option>
+                    <option value="5">5 - Velmi spokojen/a</option>
+                </select>
+            </div>
+
+            <h2>Sémantické vektorové vyhledávání</h2>
+
+            <div class="question">
+                <label>Jak relevantní byly výsledky sémantického vektorového vyhledávání?</label>
+                <select name="semantic_relevance" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Nerelevantní</option>
+                    <option value="2">2 - Spíše nerelevantní</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Relevantní</option>
+                    <option value="5">5 - Velmi relevantní</option>
                 </select>
             </div>
 
             <div class="question">
-                <label>5. Was the interface clear and easy to use?</label>
-                <select name="interface_clarity" required>
-                    <option value="">Select</option>
-                    <option value="1">1 - Very unclear</option>
-                    <option value="2">2 - Unclear</option>
-                    <option value="3">3 - Neutral</option>
-                    <option value="4">4 - Clear</option>
-                    <option value="5">5 - Very clear</option>
+                <label>Jak kvalitní bylo pořadí výsledků sémantického vyhledávání?</label>
+                <select name="semantic_ranking_quality" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi špatné</option>
+                    <option value="2">2 - Špatné</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Dobré</option>
+                    <option value="5">5 - Výborné</option>
                 </select>
             </div>
 
             <div class="question">
-                <label>Additional comment</label>
-                <textarea name="comment" rows="4" placeholder="Optional comment"></textarea>
+                <label>Jak rozmanité byly výsledky sémantického vyhledávání?</label>
+                <select name="semantic_result_diversity" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi opakující se</option>
+                    <option value="2">2 - Málo rozmanité</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Rozmanité</option>
+                    <option value="5">5 - Velmi rozmanité</option>
+                </select>
             </div>
 
-            <button type="submit">Submit feedback</button>
+            <div class="question">
+                <label>Celková spokojenost s výsledky sémantického vyhledávání</label>
+                <select name="semantic_overall_satisfaction" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi nespokojen/a</option>
+                    <option value="2">2 - Nespokojen/a</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Spokojen/a</option>
+                    <option value="5">5 - Velmi spokojen/a</option>
+                </select>
+            </div>
+
+            <h2>Vyhledávání pomocí Elasticsearch BM25</h2>
+
+            <div class="question">
+                <label>Jak relevantní byly výsledky algoritmu Elasticsearch BM25?</label>
+                <select name="bm25_relevance" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Nerelevantní</option>
+                    <option value="2">2 - Spíše nerelevantní</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Relevantní</option>
+                    <option value="5">5 - Velmi relevantní</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>Jak kvalitní bylo pořadí výsledků algoritmu Elasticsearch BM25?</label>
+                <select name="bm25_ranking_quality" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi špatné</option>
+                    <option value="2">2 - Špatné</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Dobré</option>
+                    <option value="5">5 - Výborné</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>Jak rozmanité byly výsledky algoritmu Elasticsearch BM25?</label>
+                <select name="bm25_result_diversity" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi opakující se</option>
+                    <option value="2">2 - Málo rozmanité</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Rozmanité</option>
+                    <option value="5">5 - Velmi rozmanité</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>Celková spokojenost s výsledky algoritmu Elasticsearch BM25</label>
+                <select name="bm25_overall_satisfaction" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="1">1 - Velmi nespokojen/a</option>
+                    <option value="2">2 - Nespokojen/a</option>
+                    <option value="3">3 - Neutrální</option>
+                    <option value="4">4 - Spokojen/a</option>
+                    <option value="5">5 - Velmi spokojen/a</option>
+                </select>
+            </div>
+
+            <h2>Celkové porovnání</h2>
+
+            <div class="question">
+                <label>Který algoritmus podle vás poskytl celkově nejlepší výsledky?</label>
+                <select name="preferred_algorithm" required>
+                    <option value="">Vyberte možnost</option>
+                    <option value="tfidf">TF-IDF</option>
+                    <option value="semantic_vector">Sémantické vektorové vyhledávání</option>
+                    <option value="elasticsearch_bm25">Elasticsearch BM25</option>
+                    <option value="no_clear_difference">Nebyl patrný jasný rozdíl</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>Která sada výsledků byla nejsrozumitelnější?</label>
+                <select name="easiest_to_understand">
+                    <option value="">Vyberte možnost</option>
+                    <option value="tfidf">TF-IDF</option>
+                    <option value="semantic_vector">Sémantické vektorové vyhledávání</option>
+                    <option value="elasticsearch_bm25">Elasticsearch BM25</option>
+                    <option value="no_clear_difference">Nebyl patrný jasný rozdíl</option>
+                </select>
+            </div>
+
+            <div class="question">
+                <label>Doplňující komentář</label>
+                <textarea
+                    name="comment"
+                    rows="4"
+                    placeholder="Volitelný komentář k rozdílům mezi jednotlivými algoritmy"
+                ></textarea>
+            </div>
+
+            <button type="submit">Odeslat hodnocení</button>
         </form>
     </div>
 </div>
