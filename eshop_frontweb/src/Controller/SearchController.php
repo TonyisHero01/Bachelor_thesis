@@ -446,7 +446,14 @@ class SearchController extends BaseController
                 continue;
             }
 
-            $recommendedSku = isset($row['product_sku']) ? trim((string) $row['product_sku']) : '';
+            $recommendedSku = '';
+
+            if (isset($row['product_sku'])) {
+                $recommendedSku = trim((string) $row['product_sku']);
+            } elseif (isset($row['sku'])) {
+                $recommendedSku = trim((string) $row['sku']);
+            }
+
             $similarity = $row['similarity'] ?? null;
 
             if ($recommendedSku === '' || !is_numeric($similarity)) {
@@ -510,16 +517,62 @@ class SearchController extends BaseController
             return null;
         }
 
+        $sku = trim($sku);
+
+        if ($sku === '') {
+            return null;
+        }
+
         $limit = max(1, min($limit, 50));
-        $url = $this->searchServiceBaseUrl . '/recommend/' . rawurlencode($sku);
+        $searchMethod = $this->getActiveSearchMethod();
 
         try {
-            $response = $this->httpClient->request('GET', $url, [
-                'query' => [
+            if ($searchMethod === 'semantic_vector') {
+                $product = $this->entityManager
+                    ->getRepository(Product::class)
+                    ->findLatestVisibleBySku($sku);
+
+                if (!$product instanceof Product || $product->getId() === null) {
+                    $this->logger->warning('[SearchController] Cannot resolve SKU for semantic recommendation', [
+                        'sku' => $sku,
+                    ]);
+
+                    return null;
+                }
+
+                $url = $this->searchServiceBaseUrl . '/semantic/similar';
+
+                $this->logger->info('[SearchController] Calling semantic recommendation', [
+                    'url' => $url,
+                    'sku' => $sku,
+                    'productId' => $product->getId(),
                     'limit' => $limit,
-                ],
-                'timeout' => 5,
-            ]);
+                ]);
+
+                $response = $this->httpClient->request('POST', $url, [
+                    'json' => [
+                        'product_id' => $product->getId(),
+                        'limit' => $limit,
+                    ],
+                    'timeout' => 5,
+                ]);
+            } else {
+                $url = $this->searchServiceBaseUrl . '/recommend/' . rawurlencode($sku);
+
+                $this->logger->info('[SearchController] Calling TF-IDF recommendation', [
+                    'url' => $url,
+                    'sku' => $sku,
+                    'limit' => $limit,
+                    'searchMethod' => $searchMethod,
+                ]);
+
+                $response = $this->httpClient->request('GET', $url, [
+                    'query' => [
+                        'limit' => $limit,
+                    ],
+                    'timeout' => 5,
+                ]);
+            }
 
             $statusCode = $response->getStatusCode();
 
@@ -547,14 +600,16 @@ class SearchController extends BaseController
             return $data;
         } catch (TransportExceptionInterface $e) {
             $this->logger->error('[SearchController] Recommend service transport error', [
-                'url' => $url,
+                'sku' => $sku,
+                'searchMethod' => $searchMethod,
                 'message' => $e->getMessage(),
             ]);
 
             return null;
         } catch (\Throwable $e) {
             $this->logger->error('[SearchController] Recommend service exception', [
-                'url' => $url,
+                'sku' => $sku,
+                'searchMethod' => $searchMethod,
                 'message' => $e->getMessage(),
                 'class' => get_class($e),
             ]);

@@ -201,4 +201,24 @@ class ProductRepository extends ServiceEntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    public function findLatestVisibleBySku(string $sku): ?Product
+    {
+        $sku = trim($sku);
+
+        if ($sku === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.translations', 't')
+            ->addSelect('t')
+            ->where('p.sku = :sku')
+            ->andWhere('p.hidden = false')
+            ->setParameter('sku', $sku)
+            ->orderBy('p.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
