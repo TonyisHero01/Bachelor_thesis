@@ -104,11 +104,10 @@ services:
     container_name: eshop_benchmark
     restart: unless-stopped
     depends_on:
-      depends_on:
-        search-service:
-          condition: service_healthy
-        bms:
-          condition: service_started
+      search-service:
+        condition: service_healthy
+      bms:
+        condition: service_started
     environment:
       DATABASE_URL: ${DATABASE_URL}
       SEARCH_API_KEY: ${SEARCH_API_KEY}
