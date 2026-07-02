@@ -207,3 +207,52 @@ class SemanticVectorRepository:
             return None
 
         return row["id"] if isinstance(row, dict) else row[0]
+    
+    def count_semantic_vectors(self) -> int:
+        sql_table_exists = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_name = 'product_semantic_vector'
+            ) AS exists
+        """
+
+        sql_count = """
+            SELECT COUNT(*) AS cnt
+            FROM product_semantic_vector
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql_table_exists)
+                row = cur.fetchone()
+
+                exists = bool(row["exists"]) if isinstance(row, dict) else bool(row[0])
+
+                if not exists:
+                    return 0
+
+                cur.execute(sql_count)
+                row = cur.fetchone()
+
+        return int(row["cnt"] if isinstance(row, dict) else row[0])
+
+
+    def has_product_vector_by_sku(self, sku: str) -> bool:
+        sql = """
+            SELECT COUNT(*) AS cnt
+            FROM product_semantic_vector v
+            JOIN product p ON p.id = v.product_id
+            WHERE p.sku = %s
+            AND p.hidden = false
+        """
+
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, (sku,))
+                    row = cur.fetchone()
+
+            return int(row["cnt"] if isinstance(row, dict) else row[0]) > 0
+        except Exception:
+            return False

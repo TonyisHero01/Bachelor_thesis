@@ -29,6 +29,10 @@ from semantic_search.semantic_search_service import SemanticSearchService
 from elastic_search.elastic_product_search_service import ElasticProductSearchService
 from semantic_search.semantic_vector_repository import SemanticVectorRepository
 
+import threading
+
+AUTO_REINDEX_LOCK = threading.Lock()
+
 semantic_search_service = SemanticSearchService()
 elastic_service = ElasticProductSearchService()
 semantic_repository = SemanticVectorRepository()
@@ -186,6 +190,8 @@ def search_api(req: SearchRequest, request: Request):
 
     limit = min(req.limit, settings.max_search_limit)
     skip_log = request.headers.get("X-BENCHMARK") == "1"
+
+    ensure_active_method_ready(search_method)
 
     logger.info(
         "[SEARCH_API] method=%s endpoint=/search started query=%r limit=%s skip_log=%s ip=%s",
@@ -410,6 +416,8 @@ def recommend_by_sku_with_active_method(
     if search_method is None:
         search_method = get_active_search_method()
 
+    ensure_active_method_ready(search_method, sku=sku)
+
     if search_method == "semantic_vector":
         product_id = semantic_repository.get_latest_product_id_by_sku(sku)
 
@@ -420,7 +428,7 @@ def recommend_by_sku_with_active_method(
             )
             return []
 
-        result = semantic_search_service.similar_products(
+        result = get_semantic_search_service().similar_products(
             product_id=product_id,
             limit=limit,
         )
@@ -648,3 +656,100 @@ def elastic_search(payload: dict, request: Request):
 
     return result
 
+def ensure_tfidf_ready():
+    status = get_index_status()
+
+    vector_rows = int(status.get("vector_rows", 0))
+    indexed_documents = int(status.get("indexed_documents", 0))
+
+    if vector_rows > 0 and indexed_documents > 0:
+        return
+
+    logger.warning(
+        "[AUTO_REINDEX] TF-IDF index not ready vector_rows=%s indexed_documents=%s",
+        vector_rows,
+        indexed_documents,
+    )
+
+    rebuild_search_index()
+
+    logger.info("[AUTO_REINDEX] TF-IDF reindex finished")
+
+
+def ensure_semantic_ready():
+    count = semantic_repository.count_semantic_vectors()
+
+    if count > 0:
+        return
+
+    logger.warning(
+        "[AUTO_REINDEX] Semantic index not ready vectors=%s",
+        count,
+    )
+
+    get_semantic_search_service().reindex()
+
+    logger.info("[AUTO_REINDEX] Semantic reindex finished")
+
+
+def ensure_semantic_product_ready(sku: str):
+    sku = str(sku or "").strip()
+
+    if sku == "":
+        return
+
+    if semantic_repository.has_product_vector_by_sku(sku):
+        return
+
+    logger.warning(
+        "[AUTO_REINDEX] Semantic vector missing for sku=%s, running semantic reindex",
+        sku,
+    )
+
+    get_semantic_search_service().reindex()
+
+    logger.info(
+        "[AUTO_REINDEX] Semantic product reindex finished sku=%s",
+        sku,
+    )
+
+
+def ensure_elastic_ready():
+    try:
+        if elastic_service.client.indices.exists(index="products"):
+            response = elastic_service.client.count(index="products")
+
+            if int(response.get("count", 0)) > 0:
+                return
+
+        logger.warning("[AUTO_REINDEX] Elasticsearch index not ready")
+
+        products = semantic_repository.get_products_for_indexing()
+
+        elastic_service.create_index()
+        elastic_service.index_products(products)
+
+        logger.info(
+            "[AUTO_REINDEX] Elasticsearch reindex finished indexed_products=%s",
+            len(products),
+        )
+
+    except Exception:
+        logger.exception("[AUTO_REINDEX] Elasticsearch reindex failed")
+        raise
+
+
+def ensure_active_method_ready(search_method: str, sku: str | None = None):
+    with AUTO_REINDEX_LOCK:
+        if search_method == "semantic_vector":
+            if sku:
+                ensure_semantic_product_ready(sku)
+            else:
+                ensure_semantic_ready()
+            return
+
+        if search_method == "elasticsearch_bm25":
+            ensure_elastic_ready()
+            return
+
+        ensure_tfidf_ready()

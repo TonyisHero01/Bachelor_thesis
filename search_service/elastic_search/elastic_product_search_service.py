@@ -212,3 +212,32 @@ class ElasticProductSearchService:
             "limit": limit,
             "results": results,
         }
+    
+    def index_exists(self) -> bool:
+        return self.client.indices.exists(index=INDEX_NAME)
+
+
+    def count_indexed_products(self) -> int:
+        if not self.index_exists():
+            return 0
+
+        response = self.client.count(index=INDEX_NAME)
+
+        return int(response.get("count", 0))
+
+
+    def ensure_index_ready(self):
+        if self.count_indexed_products() > 0:
+            return
+
+        products = self.repository_products_for_indexing()
+        self.create_index()
+        self.index_products(products)
+
+
+    def repository_products_for_indexing(self):
+        from semantic_search.semantic_vector_repository import SemanticVectorRepository
+
+        repository = SemanticVectorRepository()
+
+        return repository.get_products_for_indexing()
