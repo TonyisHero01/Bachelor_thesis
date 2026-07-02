@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Request, Form, Query
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+
 
 from user_studies.repository import UserStudyRepository
 
@@ -20,11 +21,17 @@ repo = UserStudyRepository()
 
 
 @router.get("/", response_class=HTMLResponse)
-async def show_user_study_form(request: Request):
+async def show_user_study_form(
+    request: Request,
+    success: bool = Query(False),
+    study_id: int | None = Query(None),
+):
     return templates.TemplateResponse(
         "user_study_form.html",
         {
             "request": request,
+            "success": success,
+            "study_id": study_id,
         },
     )
 
@@ -100,11 +107,7 @@ async def submit_user_study(
         ip_address=ip_address,
     )
 
-    return templates.TemplateResponse(
-        "user_study_form.html",
-        {
-            "request": request,
-            "success": True,
-            "study_id": study_id,
-        },
+    return RedirectResponse(
+        url=f"/user-studies/?success=1&study_id={study_id}",
+        status_code=303,
     )
