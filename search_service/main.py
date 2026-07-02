@@ -437,10 +437,20 @@ def recommend_by_sku_with_active_method(
         return normalize_recommendation_rows(rows)
 
     if search_method == "elasticsearch_bm25":
-        logger.info(
-            "[RECOMMEND] method=elasticsearch_bm25 fallback=tfidf sku=%s",
-            sku,
+        result = elastic_service.recommend_by_sku(
+            sku=sku,
+            limit=limit,
         )
+
+        rows = result.get("results", []) if isinstance(result, dict) else []
+
+        logger.info(
+            "[RECOMMEND] method=elasticsearch_bm25 sku=%s results=%s",
+            sku,
+            len(rows),
+        )
+
+        return normalize_recommendation_rows(rows)
 
     rows = recommend_products(sku, limit)
 

@@ -1,11 +1,12 @@
 from elasticsearch import Elasticsearch
 
 from config import settings
-from repositories.product_repository import fetch_active_relevance_config
-
+from repositories.product_repository import (
+    fetch_active_relevance_config,
+    fetch_latest_product_by_sku,
+)
 
 INDEX_NAME = "products"
-
 
 class ElasticProductSearchService:
     def __init__(self):
@@ -32,6 +33,115 @@ class ElasticProductSearchService:
                 }
             },
         )
+
+    def recommend_by_sku(self, sku: str, limit: int = 10):
+        sku = str(sku or "").strip()
+
+        if sku == "":
+            return {
+                "method": "elasticsearch_bm25_recommendation",
+                "sku": sku,
+                "limit": limit,
+                "results": [],
+            }
+
+        product = fetch_latest_product_by_sku(sku)
+
+        if not product:
+            return {
+                "method": "elasticsearch_bm25_recommendation",
+                "sku": sku,
+                "limit": limit,
+                "results": [],
+            }
+
+        query_parts = [
+            str(product.get("name") or ""),
+            str(product.get("category") or ""),
+            str(product.get("description") or ""),
+            str(product.get("material") or ""),
+            str(product.get("color") or ""),
+            str(product.get("size") or ""),
+            str(product.get("sku") or ""),
+        ]
+
+        query_text = " ".join(
+            part.strip()
+            for part in query_parts
+            if part and part.strip()
+        )
+
+        if query_text == "":
+            return {
+                "method": "elasticsearch_bm25_recommendation",
+                "sku": sku,
+                "limit": limit,
+                "results": [],
+            }
+
+        response = self.client.search(
+            index=INDEX_NAME,
+            size=max(limit * 3, 20),
+            query={
+                "bool": {
+                    "must": [
+                        {
+                            "multi_match": {
+                                "query": query_text,
+                                "fields": [
+                                    "name^5",
+                                    "category^4",
+                                    "description^2",
+                                    "material^2",
+                                    "color",
+                                    "size",
+                                    "sku^2",
+                                ],
+                                "type": "best_fields",
+                                "operator": "or",
+                            }
+                        }
+                    ],
+                    "must_not": [
+                        {
+                            "term": {
+                                "sku": sku,
+                            }
+                        }
+                    ],
+                }
+            },
+        )
+
+        results = []
+
+        for hit in response["hits"]["hits"]:
+            source = hit["_source"]
+            result_sku = str(source.get("sku") or "").strip()
+
+            if result_sku == "" or result_sku == sku:
+                continue
+
+            results.append({
+                "id": source.get("product_id"),
+                "name": source.get("name"),
+                "description": source.get("description"),
+                "price": source.get("price"),
+                "sku": result_sku,
+                "product_sku": result_sku,
+                "similarity": float(hit["_score"]),
+                "method": "elasticsearch_bm25_recommendation",
+            })
+
+            if len(results) >= limit:
+                break
+
+        return {
+            "method": "elasticsearch_bm25_recommendation",
+            "sku": sku,
+            "limit": limit,
+            "results": results,
+        }
 
     def build_document(self, product):
         return {
