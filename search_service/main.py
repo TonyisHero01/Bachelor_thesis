@@ -753,3 +753,97 @@ def ensure_active_method_ready(search_method: str, sku: str | None = None):
             return
 
         ensure_tfidf_ready()
+
+@app.get("/ready")
+def ready():
+    search_method = get_active_search_method()
+
+    try:
+        if search_method == "semantic_vector":
+            vector_count = semantic_repository.count_semantic_vectors()
+
+            if vector_count <= 0:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "ready": False,
+                        "search_method": search_method,
+                        "reason": "Semantic vector index is not ready",
+                        "vector_count": vector_count,
+                    },
+                )
+
+            return {
+                "ready": True,
+                "search_method": search_method,
+                "vector_count": vector_count,
+            }
+
+        if search_method == "elasticsearch_bm25":
+            if not elastic_service.client.indices.exists(index="products"):
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "ready": False,
+                        "search_method": search_method,
+                        "reason": "Elasticsearch index does not exist",
+                    },
+                )
+
+            response = elastic_service.client.count(index="products")
+            indexed_count = int(response.get("count", 0))
+
+            if indexed_count <= 0:
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "ready": False,
+                        "search_method": search_method,
+                        "reason": "Elasticsearch index is empty",
+                        "indexed_count": indexed_count,
+                    },
+                )
+
+            return {
+                "ready": True,
+                "search_method": search_method,
+                "indexed_count": indexed_count,
+            }
+
+        status = get_index_status()
+
+        vector_rows = int(status.get("vector_rows", 0))
+        indexed_documents = int(status.get("indexed_documents", 0))
+
+        if vector_rows <= 0 and indexed_documents <= 0:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "ready": False,
+                    "search_method": search_method,
+                    "reason": "TF-IDF index is not ready",
+                    "vector_rows": vector_rows,
+                    "indexed_documents": indexed_documents,
+                },
+            )
+
+        return {
+            "ready": True,
+            "search_method": search_method,
+            "vector_rows": vector_rows,
+            "indexed_documents": indexed_documents,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("[READY] readiness check failed")
+
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "ready": False,
+                "search_method": search_method,
+                "reason": str(e),
+            },
+        )

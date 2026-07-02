@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends gcc libpq-dev; \
+    apt-get install -y --no-install-recommends gcc libpq-dev curl; \
     pip install --no-cache-dir --upgrade pip; \
     rm -rf /var/lib/apt/lists/*
 
