@@ -50,7 +50,7 @@ services:
       db:
         condition: service_healthy
       search-service:
-        condition: service_healthy
+        condition: service_started
     networks:
       - backend
 
