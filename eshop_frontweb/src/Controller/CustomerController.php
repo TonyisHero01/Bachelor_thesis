@@ -897,10 +897,12 @@ class CustomerController extends BaseController
 
             try {
                 $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+                $searchMethod = $this->getActiveSearchMethod();
+                $endpoint = $this->getSearchEndpoint($searchMethod);
 
                 $response = $httpClient->request(
                     'POST',
-                    $baseUrl . '/search',
+                    $baseUrl . $endpoint,
                     [
                         'json' => [
                             'query' => $query,
@@ -921,7 +923,7 @@ class CustomerController extends BaseController
                         continue;
                     }
 
-                    $sku = trim((string) ($row['product_sku'] ?? ''));
+                    $sku = $this->getSkuFromSearchRow($row, $searchMethod);
 
                     if ($sku !== '' && !in_array($sku, $skus, true)) {
                         $skus[] = $sku;
@@ -1175,5 +1177,32 @@ class CustomerController extends BaseController
         );
 
         return new JsonResponse(['success' => true]);
+    }
+
+    private function getActiveSearchMethod(): string
+    {
+        $config = $this->entityManager
+            ->getRepository(SearchRelevanceConfig::class)
+            ->findOneBy(['active' => true], ['id' => 'DESC']);
+
+        return $config?->getSearchMethod() ?? 'tfidf';
+    }
+
+    private function getSearchEndpoint(string $searchMethod): string
+    {
+        return match ($searchMethod) {
+            'semantic_vector' => '/semantic/search',
+            'elasticsearch_bm25' => '/elastic/search',
+            default => '/search',
+        };
+    }
+
+    private function getSkuFromSearchRow(array $row, string $searchMethod): string
+    {
+        if ($searchMethod === 'semantic_vector' || $searchMethod === 'elasticsearch_bm25') {
+            return trim((string) ($row['sku'] ?? ''));
+        }
+
+        return trim((string) ($row['product_sku'] ?? ''));
     }
 }

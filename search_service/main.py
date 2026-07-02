@@ -300,32 +300,172 @@ def train_compat(
 ):
     return reindex(req, request, background_tasks)
 
-@app.post("/recommend/session", response_model=RecommendResponse)
-def recommend_session_api(req: SessionRecommendRequest):
-    from tfidf.search_service import recommend_session_products
+def get_active_search_method() -> str:
+    from repositories.product_repository import fetch_active_relevance_config
 
-    limit = min(req.limit, settings.max_search_limit)
+    try:
+        config = fetch_active_relevance_config()
+        method = str(config.get("search_method", "tfidf")).strip()
 
-    results = recommend_session_products(
-        viewed_skus=req.viewed_skus,
-        cart_skus=req.cart_skus,
-        current_sku=req.current_sku,
-        limit=limit,
+        if method == "":
+            return "tfidf"
+
+        return method
+
+    except Exception:
+        logger.exception("[RECOMMEND] failed to load active search method")
+        return "tfidf"
+
+
+def normalize_recommendation_rows(rows):
+    normalized = []
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        item = dict(row)
+
+        if "product_sku" not in item and "sku" in item:
+            item["product_sku"] = item["sku"]
+
+        if "sku" not in item and "product_sku" in item:
+            item["sku"] = item["product_sku"]
+
+        if "product_sku" not in item:
+            continue
+
+        if "similarity" not in item:
+            continue
+
+        normalized.append(item)
+
+    return normalized
+
+
+def recommend_by_sku_with_active_method(sku: str, limit: int):
+    sku = sku.strip()
+
+    if sku == "":
+        return []
+
+    limit = min(limit, settings.max_search_limit)
+    search_method = get_active_search_method()
+
+    if search_method == "semantic_vector":
+        product_id = semantic_repository.get_latest_product_id_by_sku(sku)
+
+        if product_id is None:
+            logger.warning(
+                "[RECOMMEND] semantic_vector cannot resolve sku=%s",
+                sku,
+            )
+            return []
+
+        result = semantic_search_service.similar_products(
+            product_id=product_id,
+            limit=limit,
+        )
+
+        rows = result.get("results", []) if isinstance(result, dict) else []
+
+        logger.info(
+            "[RECOMMEND] method=semantic_vector sku=%s product_id=%s results=%s",
+            sku,
+            product_id,
+            len(rows),
+        )
+
+        return normalize_recommendation_rows(rows)
+
+    if search_method == "elasticsearch_bm25":
+        logger.info(
+            "[RECOMMEND] method=elasticsearch_bm25 fallback=tfidf sku=%s",
+            sku,
+        )
+
+    rows = recommend_products(sku, limit)
+
+    logger.info(
+        "[RECOMMEND] method=tfidf sku=%s results=%s",
+        sku,
+        len(rows),
     )
 
-    return {"results": results}
+    return normalize_recommendation_rows(rows)
+
+
+def add_seed_recommendation_scores(scores, seed_sku: str, seed_weight: float, limit: int):
+    rows = recommend_by_sku_with_active_method(seed_sku, limit)
+
+    for row in rows:
+        recommended_sku = str(row.get("product_sku", "")).strip()
+
+        if recommended_sku == "":
+            continue
+
+        similarity = float(row.get("similarity", 0))
+
+        if similarity <= 0:
+            continue
+
+        scores[recommended_sku] = scores.get(recommended_sku, 0.0) + similarity * seed_weight
 
 @app.post("/recommend/session", response_model=RecommendResponse)
 def recommend_session_api(req: SessionRecommendRequest):
-    from tfidf.search_service import recommend_session_products
-
     limit = min(req.limit, settings.max_search_limit)
 
-    results = recommend_session_products(
-        viewed_skus=req.viewed_skus,
-        cart_skus=req.cart_skus,
-        current_sku=req.current_sku,
-        limit=limit,
+    scores = {}
+    seed_skus = {}
+
+    current_sku = str(req.current_sku or "").strip()
+
+    if current_sku:
+        seed_skus[current_sku] = 1.0
+
+    for sku in req.viewed_skus or []:
+        sku = str(sku).strip()
+
+        if sku:
+            seed_skus[sku] = max(seed_skus.get(sku, 0.0), 0.70)
+
+    for sku in req.cart_skus or []:
+        sku = str(sku).strip()
+
+        if sku:
+            seed_skus[sku] = max(seed_skus.get(sku, 0.0), 0.90)
+
+    for seed_sku, seed_weight in seed_skus.items():
+        add_seed_recommendation_scores(
+            scores=scores,
+            seed_sku=seed_sku,
+            seed_weight=seed_weight,
+            limit=max(limit * 3, 10),
+        )
+
+    for seed_sku in seed_skus.keys():
+        scores.pop(seed_sku, None)
+
+    sorted_items = sorted(
+        scores.items(),
+        key=lambda item: item[1],
+        reverse=True,
+    )
+
+    results = [
+        {
+            "product_sku": sku,
+            "sku": sku,
+            "similarity": score,
+        }
+        for sku, score in sorted_items[:limit]
+    ]
+
+    logger.info(
+        "[RECOMMEND_SESSION] method=%s seeds=%s results=%s",
+        get_active_search_method(),
+        len(seed_skus),
+        len(results),
     )
 
     return {"results": results}
@@ -337,8 +477,10 @@ def recommend_api(sku: str, limit: int = 10):
     if not sku:
         return {"results": []}
 
-    limit = min(limit, settings.max_search_limit)
-    results = recommend_products(sku, limit)
+    results = recommend_by_sku_with_active_method(
+        sku=sku,
+        limit=limit,
+    )
 
     return {"results": results}
 
@@ -423,20 +565,4 @@ def elastic_search(payload: dict, request: Request):
     )
 
     return result
-
-@app.post("/recommend/session", response_model=RecommendResponse)
-def recommend_session_api(req: SessionRecommendRequest):
-    from tfidf.search_service import recommend_session_products
-
-    limit = min(req.limit, settings.max_search_limit)
-
-    results = recommend_session_products(
-        viewed_skus=req.viewed_skus,
-        cart_skus=req.cart_skus,
-        current_sku=req.current_sku,
-        limit=limit,
-    )
-
-    return {"results": results}
-
 

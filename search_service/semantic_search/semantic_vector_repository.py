@@ -186,3 +186,24 @@ class SemanticVectorRepository:
                     ),
                 )
                 return cur.fetchall()
+            
+
+    def get_latest_product_id_by_sku(self, sku: str):
+        sql = """
+            SELECT id
+            FROM product
+            WHERE sku = %s
+            AND hidden = false
+            ORDER BY id DESC
+            LIMIT 1
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (sku,))
+                row = cur.fetchone()
+
+        if row is None:
+            return None
+
+        return row["id"] if isinstance(row, dict) else row[0]
