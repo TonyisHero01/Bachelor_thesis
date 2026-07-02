@@ -33,7 +33,7 @@ import threading
 
 AUTO_REINDEX_LOCK = threading.Lock()
 
-semantic_search_service = SemanticSearchService()
+semantic_search_service: SemanticSearchService | None = None
 elastic_service = ElasticProductSearchService()
 semantic_repository = SemanticVectorRepository()
 
@@ -58,6 +58,16 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
+
+def get_semantic_search_service() -> SemanticSearchService:
+    global semantic_search_service
+
+    if semantic_search_service is None:
+        logger.info("[SEMANTIC] loading semantic search service")
+        semantic_search_service = SemanticSearchService()
+        logger.info("[SEMANTIC] semantic search service loaded")
+
+    return semantic_search_service
 
 def run_full_reindex_background(reason=None, context=None):
     if REINDEX_STATE["running"]:
@@ -106,7 +116,7 @@ def health():
 
 @app.post("/semantic/reindex")
 def semantic_reindex():
-    return semantic_search_service.reindex()
+    return get_semantic_search_service().reindex()
 
 @app.post("/semantic/search")
 def semantic_search(request: SemanticSearchRequest, http_request: Request):
@@ -118,6 +128,8 @@ def semantic_search(request: SemanticSearchRequest, http_request: Request):
         logger.info("[SEARCH_API] method=semantic_vector endpoint=/semantic/search empty_query=true")
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
+    ensure_semantic_ready()
+
     logger.info(
         "[SEARCH_API] method=semantic_vector endpoint=/semantic/search started query=%r limit=%s ip=%s",
         query,
@@ -125,7 +137,7 @@ def semantic_search(request: SemanticSearchRequest, http_request: Request):
         client_ip(http_request),
     )
 
-    result = semantic_search_service.search(
+    result = get_semantic_search_service().search(
         query=query,
         limit=request.limit,
     )
@@ -144,7 +156,9 @@ def semantic_search(request: SemanticSearchRequest, http_request: Request):
 
 @app.post("/semantic/similar")
 def semantic_similar(request: SemanticSimilarRequest):
-    return semantic_search_service.similar_products(
+    ensure_semantic_ready()
+
+    return get_semantic_search_service().similar_products(
         product_id=request.product_id,
         limit=request.limit
     )
@@ -158,7 +172,8 @@ def reload_config_api(request: Request):
     try:
         config = fetch_active_relevance_config()
         search_index.config = config
-        semantic_search_service.config = config
+        if semantic_search_service is not None:
+            semantic_search_service.config = config
         elastic_service.config = config
 
         logger.info("[CONFIG] search config reloaded")
@@ -203,11 +218,10 @@ def search_api(req: SearchRequest, request: Request):
     )
 
     if search_method == "semantic_vector":
-        result = semantic_search_service.search(
+        result = get_semantic_search_service().search(
             query=query,
             limit=limit,
         )
-
         results = result.get("results", []) if isinstance(result, dict) else []
         results = normalize_search_rows(results)
 
@@ -216,7 +230,6 @@ def search_api(req: SearchRequest, request: Request):
             query=query,
             limit=limit,
         )
-
         results = result.get("results", []) if isinstance(result, dict) else []
         results = normalize_search_rows(results)
 
@@ -226,7 +239,6 @@ def search_api(req: SearchRequest, request: Request):
             limit,
             skip_log=skip_log,
         )
-
         results = normalize_search_rows(results)
 
     elapsed_ms = (time.perf_counter() - started) * 1000
@@ -635,6 +647,8 @@ def elastic_search(payload: dict, request: Request):
         logger.info("[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search empty_query=true")
         return {"results": []}
 
+    ensure_elastic_ready()
+
     logger.info(
         "[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search started query=%r limit=%s ip=%s",
         query,
@@ -687,7 +701,7 @@ def ensure_semantic_ready():
         count,
     )
 
-    semantic_search_service.reindex()
+    get_semantic_search_service().reindex()
 
     logger.info("[AUTO_REINDEX] Semantic reindex finished")
 
@@ -706,7 +720,7 @@ def ensure_semantic_product_ready(sku: str):
         sku,
     )
 
-    semantic_search_service.reindex()
+    get_semantic_search_service().reindex()
 
     logger.info(
         "[AUTO_REINDEX] Semantic product reindex finished sku=%s",
@@ -756,94 +770,8 @@ def ensure_active_method_ready(search_method: str, sku: str | None = None):
 
 @app.get("/ready")
 def ready():
-    search_method = get_active_search_method()
-
-    try:
-        if search_method == "semantic_vector":
-            vector_count = semantic_repository.count_semantic_vectors()
-
-            if vector_count <= 0:
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "ready": False,
-                        "search_method": search_method,
-                        "reason": "Semantic vector index is not ready",
-                        "vector_count": vector_count,
-                    },
-                )
-
-            return {
-                "ready": True,
-                "search_method": search_method,
-                "vector_count": vector_count,
-            }
-
-        if search_method == "elasticsearch_bm25":
-            if not elastic_service.client.indices.exists(index="products"):
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "ready": False,
-                        "search_method": search_method,
-                        "reason": "Elasticsearch index does not exist",
-                    },
-                )
-
-            response = elastic_service.client.count(index="products")
-            indexed_count = int(response.get("count", 0))
-
-            if indexed_count <= 0:
-                raise HTTPException(
-                    status_code=503,
-                    detail={
-                        "ready": False,
-                        "search_method": search_method,
-                        "reason": "Elasticsearch index is empty",
-                        "indexed_count": indexed_count,
-                    },
-                )
-
-            return {
-                "ready": True,
-                "search_method": search_method,
-                "indexed_count": indexed_count,
-            }
-
-        status = get_index_status()
-
-        vector_rows = int(status.get("vector_rows", 0))
-        indexed_documents = int(status.get("indexed_documents", 0))
-
-        if vector_rows <= 0 and indexed_documents <= 0:
-            raise HTTPException(
-                status_code=503,
-                detail={
-                    "ready": False,
-                    "search_method": search_method,
-                    "reason": "TF-IDF index is not ready",
-                    "vector_rows": vector_rows,
-                    "indexed_documents": indexed_documents,
-                },
-            )
-
-        return {
-            "ready": True,
-            "search_method": search_method,
-            "vector_rows": vector_rows,
-            "indexed_documents": indexed_documents,
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("[READY] readiness check failed")
-
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "ready": False,
-                "search_method": search_method,
-                "reason": str(e),
-            },
-        )
+    return {
+        "ready": True,
+        "service": settings.app_name,
+        "version": settings.app_version,
+    }

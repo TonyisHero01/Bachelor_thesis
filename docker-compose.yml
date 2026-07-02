@@ -95,6 +95,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      bms:
+        condition: service_started
       search-service:
         condition: service_healthy
     networks:
