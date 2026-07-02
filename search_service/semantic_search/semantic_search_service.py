@@ -3,11 +3,17 @@ from semantic_search.semantic_vector_repository import SemanticVectorRepository
 from repositories.product_repository import fetch_active_relevance_config
 import re
 
+
 class SemanticSearchService:
     def __init__(self):
         self.repository = SemanticVectorRepository()
         self.embedding_service = EmbeddingService()
         self.config = fetch_active_relevance_config()
+
+    def ensure_storage(self):
+        self.repository.ensure_table(
+            self.embedding_service.get_dimension()
+        )
 
     def normalize_text(self, text: str):
         if text is None:
@@ -21,7 +27,6 @@ class SemanticSearchService:
 
         return text
 
-
     def tokenize(self, text: str):
         text = self.normalize_text(text)
 
@@ -30,7 +35,6 @@ class SemanticSearchService:
             for token in text.split()
             if len(token) >= 2
         }
-
 
     def lexical_overlap_score(self, query: str, result: dict):
         query_tokens = self.tokenize(query)
@@ -50,7 +54,6 @@ class SemanticSearchService:
             return 0.0
 
         return len(query_tokens & product_tokens) / len(query_tokens)
-
 
     def rerank_results(self, query: str, results: list[dict], limit: int):
         for row in results:
@@ -104,11 +107,11 @@ class SemanticSearchService:
             parts.append(f"size: {size}")
 
         return ". ".join(parts)
-    
+
     def reload_config(self):
         self.config = fetch_active_relevance_config()
         return self.config
-    
+
     def apply_score_weights(self, results):
         semantic_weight = float(self.config.get("semantic_vector_weight", 1.0))
 
@@ -123,6 +126,8 @@ class SemanticSearchService:
         return results
 
     def reindex(self):
+        self.ensure_storage()
+
         products = self.repository.get_products_for_indexing()
 
         items = []
@@ -166,6 +171,8 @@ class SemanticSearchService:
         }
 
     def search(self, query: str, limit: int = 10):
+        self.ensure_storage()
+
         normalized_query = self.normalize_text(query)
 
         embedding = self.embedding_service.create_embedding(normalized_query)
@@ -195,6 +202,8 @@ class SemanticSearchService:
         }
 
     def similar_products(self, product_id: int, limit: int = 10):
+        self.ensure_storage()
+
         product_vector = self.repository.get_product_vector(product_id)
 
         if product_vector is None:

@@ -1,9 +1,14 @@
 from sentence_transformers import SentenceTransformer
 from config import settings
 
+
 class EmbeddingService:
     def __init__(self):
         self.model = SentenceTransformer(settings.model_name)
+        self.embedding_dimension = self.model.get_sentence_embedding_dimension()
+
+    def get_dimension(self) -> int:
+        return int(self.embedding_dimension)
 
     def create_embedding(self, text: str):
         vector = self.model.encode(
