@@ -687,7 +687,7 @@ def ensure_semantic_ready():
         count,
     )
 
-    get_semantic_search_service().reindex()
+    semantic_search_service.reindex()
 
     logger.info("[AUTO_REINDEX] Semantic reindex finished")
 
@@ -706,7 +706,7 @@ def ensure_semantic_product_ready(sku: str):
         sku,
     )
 
-    get_semantic_search_service().reindex()
+    semantic_search_service.reindex()
 
     logger.info(
         "[AUTO_REINDEX] Semantic product reindex finished sku=%s",
