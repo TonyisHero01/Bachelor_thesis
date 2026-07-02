@@ -23,7 +23,7 @@ class Product
     #[ORM\JoinColumn(name: "category_id", referencedColumnName: "id", nullable: true)]
     private ?Category $category = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
     #[ORM\Column]
@@ -190,6 +190,36 @@ class Product
     public function setImageUrls(?array $image_urls): static { $this->image_urls = $image_urls; return $this; }
 
     /**
+     * Get creation timestamp.
+     *
+     * @return \DateTimeImmutable|null
+     */
+    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+
+    /**
+     * Set creation timestamp.
+     *
+     * @param \DateTimeImmutable $createdAt
+     * @return self
+     */
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
+
+    /**
+     * Get update timestamp.
+     *
+     * @return \DateTimeImmutable|null
+     */
+    public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
+
+    /**
+     * Set update timestamp.
+     *
+     * @param \DateTimeImmutable $updatedAt
+     * @return self
+     */
+    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static { $this->updatedAt = $updatedAt; return $this; }
+
+    /**
      * Get the size.
      *
      * @return Size|null
@@ -211,6 +241,12 @@ class Product
      */
     public function getWidth(): ?float { return $this->width; }
 
+    /**
+     * Set the width.
+     *
+     * @param float|null $width
+     * @return self
+     */
     public function setWidth(?float $width): static { $this->width = $width; return $this; }
 
     /**
@@ -220,6 +256,12 @@ class Product
      */
     public function getHeight(): ?float { return $this->height; }
 
+    /**
+     * Set the height.
+     *
+     * @param float|null $height
+     * @return self
+     */
     public function setHeight(?float $height): static { $this->height = $height; return $this; }
 
     /**
@@ -229,6 +271,12 @@ class Product
      */
     public function getLength(): ?float { return $this->length; }
 
+    /**
+     * Set the length.
+     *
+     * @param float|null $length
+     * @return self
+     */
     public function setLength(?float $length): static { $this->length = $length; return $this; }
 
     /**
@@ -238,6 +286,12 @@ class Product
      */
     public function getWeight(): ?float { return $this->weight; }
 
+    /**
+     * Set the weight.
+     *
+     * @param float|null $weight
+     * @return self
+     */
     public function setWeight(?float $weight): static { $this->weight = $weight; return $this; }
 
     /**
@@ -247,6 +301,12 @@ class Product
      */
     public function getMaterial(): ?string { return $this->material; }
 
+    /**
+     * Set the material.
+     *
+     * @param string|null $material
+     * @return self
+     */
     public function setMaterial(?string $material): static { $this->material = $material; return $this; }
 
     /**
@@ -256,6 +316,12 @@ class Product
      */
     public function getColor(): ?Color { return $this->color; }
 
+    /**
+     * Set the color.
+     *
+     * @param Color|null $color
+     * @return self
+     */
     public function setColor(?Color $color): static { $this->color = $color; return $this; }
 
     /**
@@ -265,15 +331,27 @@ class Product
      */
     public function getPrice(): ?float { return $this->price; }
 
+    /**
+     * Set the price.
+     *
+     * @param float $price
+     * @return self
+     */
     public function setPrice(float $price): static { $this->price = $price; return $this; }
 
     /**
-     * Get visibility flag.
+     * Get whether the product is hidden.
      *
      * @return bool
      */
     public function getHidden(): bool { return $this->hidden; }
 
+    /**
+     * Set whether the product is hidden.
+     *
+     * @param bool $hidden
+     * @return self
+     */
     public function setHidden(bool $hidden): static { $this->hidden = $hidden; return $this; }
 
     /**
@@ -283,6 +361,12 @@ class Product
      */
     public function getDiscount(): float { return $this->discount; }
 
+    /**
+     * Set the discount percentage.
+     *
+     * @param float $discount
+     * @return self
+     */
     public function setDiscount(float $discount): static { $this->discount = $discount; return $this; }
 
     /**
@@ -292,6 +376,12 @@ class Product
      */
     public function getCurrency(): ?Currency { return $this->currency; }
 
+    /**
+     * Set the currency.
+     *
+     * @param Currency $currency
+     * @return self
+     */
     public function setCurrency(Currency $currency): static { $this->currency = $currency; return $this; }
 
     /**
@@ -301,15 +391,27 @@ class Product
      */
     public function getAttributes(): ?array { return $this->attributes; }
 
+    /**
+     * Set custom attributes.
+     *
+     * @param array|null $attributes
+     * @return self
+     */
     public function setAttributes(?array $attributes): static { $this->attributes = $attributes; return $this; }
 
     /**
-     * Get the version.
+     * Get the product version.
      *
      * @return int
      */
     public function getVersion(): int { return $this->version; }
 
+    /**
+     * Set the product version.
+     *
+     * @param int $version
+     * @return self
+     */
     public function setVersion(int $version): static { $this->version = $version; return $this; }
 
     /**
@@ -319,6 +421,12 @@ class Product
      */
     public function getSku(): ?string { return $this->sku; }
 
+    /**
+     * Set the SKU.
+     *
+     * @param string $sku
+     * @return self
+     */
     public function setSku(string $sku): static { $this->sku = $sku; return $this; }
 
     /**
@@ -328,25 +436,13 @@ class Product
      */
     public function getTaxRate(): float { return $this->taxRate; }
 
+    /**
+     * Set the tax rate.
+     *
+     * @param float $taxRate
+     * @return self
+     */
     public function setTaxRate(float $taxRate): static { $this->taxRate = $taxRate; return $this; }
-
-    /**
-     * Get creation timestamp.
-     *
-     * @return \DateTimeImmutable|null
-     */
-    public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static { $this->createdAt = $createdAt; return $this; }
-
-    /**
-     * Get update timestamp.
-     *
-     * @return \DateTimeImmutable|null
-     */
-    public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static { $this->updatedAt = $updatedAt; return $this; }
 
     /**
      * Get translations collection.
@@ -370,6 +466,7 @@ class Product
             $this->translations->add($translation);
             $translation->setProduct($this);
         }
+
         return $this;
     }
 
@@ -393,16 +490,17 @@ class Product
      */
     public function getTranslation(?string $locale): ?ProductTranslation
     {
-        foreach ($this->translations as $t) {
-            if ($t->getLocale() === $locale) {
-                return $t;
+        foreach ($this->translations as $translation) {
+            if ($translation->getLocale() === $locale) {
+                return $translation;
             }
         }
+
         return null;
     }
 
     /**
-     * Get translated name.
+     * Get translated product name.
      *
      * @param string|null $locale
      * @return string
@@ -413,7 +511,7 @@ class Product
     }
 
     /**
-     * Get translated description.
+     * Get translated product description.
      *
      * @param string|null $locale
      * @return string
@@ -424,7 +522,7 @@ class Product
     }
 
     /**
-     * Get translated material.
+     * Get translated product material.
      *
      * @param string|null $locale
      * @return string
@@ -435,7 +533,7 @@ class Product
     }
 
     /**
-     * Check if product has images.
+     * Check if the product has images.
      *
      * @return bool
      */
