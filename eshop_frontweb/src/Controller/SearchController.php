@@ -48,34 +48,17 @@ class SearchController extends BaseController
             ->findOneBy([], ['id' => 'DESC']);
     }
 
-    private function getActiveSearchMethod(): string
+    private function getSkuFromSearchServiceRow(array $row): string
     {
-        $config = $this->entityManager
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
-
-        return $config?->getSearchMethod() ?? 'tfidf';
-    }
-
-    private function getSearchEndpoint(string $searchMethod): string
-    {
-        return match ($searchMethod) {
-            'semantic_vector' => '/semantic/search',
-            'elasticsearch_bm25' => '/elastic/search',
-            default => '/search',
-        };
-    }
-
-    private function getSkuFromSearchRow(array $row, string $searchMethod): string
-    {
-        if (
-            $searchMethod === 'semantic_vector'
-            || $searchMethod === 'elasticsearch_bm25'
-        ) {
-            return isset($row['sku']) ? trim((string) $row['sku']) : '';
+        if (isset($row['product_sku'])) {
+            return trim((string) $row['product_sku']);
         }
 
-        return isset($row['product_sku']) ? trim((string) $row['product_sku']) : '';
+        if (isset($row['sku'])) {
+            return trim((string) $row['sku']);
+        }
+
+        return '';
     }
 
     /**
@@ -103,20 +86,20 @@ class SearchController extends BaseController
             return new JsonResponse(['error' => 'Search system error'], 500);
         }
 
-        $searchMethod = $this->getActiveSearchMethod();
         $skuToSimilarity = [];
 
         foreach (($raw['results'] ?? []) as $row) {
             if (!is_array($row)) {
                 continue;
             }
-            $sku = $this->getSkuFromSearchRow($row, $searchMethod);
 
+            $sku = $this->getSkuFromSearchServiceRow($row);
             $sim = $row['similarity'] ?? null;
 
             if ($sku === '' || !is_numeric($sim)) {
                 continue;
             }
+
             $skuToSimilarity[$sku] = (float) $sim;
         }
 
@@ -292,7 +275,6 @@ class SearchController extends BaseController
             return [];
         }
 
-        $searchMethod = $this->getActiveSearchMethod();
         $skuToSimilarity = [];
 
         foreach (($raw['results'] ?? []) as $row) {
@@ -300,12 +282,14 @@ class SearchController extends BaseController
                 continue;
             }
 
-            $sku = $this->getSkuFromSearchRow($row, $searchMethod);
+            $sku = $this->getSkuFromSearchServiceRow($row);
 
             $sim = $row['similarity'] ?? null;
+
             if ($sku === '' || !is_numeric($sim)) {
                 continue;
             }
+
             $skuToSimilarity[$sku] = (float) $sim;
         }
 
@@ -359,14 +343,12 @@ class SearchController extends BaseController
         }
 
         $limit = max(1, min($limit, 200));
-        $searchMethod = $this->getActiveSearchMethod();
-        $endpoint = $this->getSearchEndpoint($searchMethod);
-        $url = $this->searchServiceBaseUrl . $endpoint;
+        $url = $this->searchServiceBaseUrl . '/search';
 
-        $this->logger->info('[SearchController] Frontweb selected search method', [
-            'searchMethod' => $searchMethod,
-            'endpoint' => $endpoint,
+        $this->logger->info('[SearchController] Calling search service', [
+            'url' => $url,
             'query' => $query,
+            'limit' => $limit,
         ]);
 
         try {
@@ -448,11 +430,7 @@ class SearchController extends BaseController
 
             $recommendedSku = '';
 
-            if (isset($row['product_sku'])) {
-                $recommendedSku = trim((string) $row['product_sku']);
-            } elseif (isset($row['sku'])) {
-                $recommendedSku = trim((string) $row['sku']);
-            }
+            $recommendedSku = $this->getSkuFromSearchServiceRow($row);
 
             $similarity = $row['similarity'] ?? null;
 
@@ -524,55 +502,21 @@ class SearchController extends BaseController
         }
 
         $limit = max(1, min($limit, 50));
-        $searchMethod = $this->getActiveSearchMethod();
+        $url = $this->searchServiceBaseUrl . '/recommend/' . rawurlencode($sku);
+
+        $this->logger->info('[SearchController] Calling recommend service', [
+            'url' => $url,
+            'sku' => $sku,
+            'limit' => $limit,
+        ]);
 
         try {
-            if ($searchMethod === 'semantic_vector') {
-                $product = $this->entityManager
-                    ->getRepository(Product::class)
-                    ->findLatestVisibleBySku($sku);
-
-                if (!$product instanceof Product || $product->getId() === null) {
-                    $this->logger->warning('[SearchController] Cannot resolve SKU for semantic recommendation', [
-                        'sku' => $sku,
-                    ]);
-
-                    return null;
-                }
-
-                $url = $this->searchServiceBaseUrl . '/semantic/similar';
-
-                $this->logger->info('[SearchController] Calling semantic recommendation', [
-                    'url' => $url,
-                    'sku' => $sku,
-                    'productId' => $product->getId(),
+            $response = $this->httpClient->request('GET', $url, [
+                'query' => [
                     'limit' => $limit,
-                ]);
-
-                $response = $this->httpClient->request('POST', $url, [
-                    'json' => [
-                        'product_id' => $product->getId(),
-                        'limit' => $limit,
-                    ],
-                    'timeout' => 5,
-                ]);
-            } else {
-                $url = $this->searchServiceBaseUrl . '/recommend/' . rawurlencode($sku);
-
-                $this->logger->info('[SearchController] Calling TF-IDF recommendation', [
-                    'url' => $url,
-                    'sku' => $sku,
-                    'limit' => $limit,
-                    'searchMethod' => $searchMethod,
-                ]);
-
-                $response = $this->httpClient->request('GET', $url, [
-                    'query' => [
-                        'limit' => $limit,
-                    ],
-                    'timeout' => 5,
-                ]);
-            }
+                ],
+                'timeout' => 5,
+            ]);
 
             $statusCode = $response->getStatusCode();
 
@@ -601,7 +545,6 @@ class SearchController extends BaseController
         } catch (TransportExceptionInterface $e) {
             $this->logger->error('[SearchController] Recommend service transport error', [
                 'sku' => $sku,
-                'searchMethod' => $searchMethod,
                 'message' => $e->getMessage(),
             ]);
 
@@ -609,7 +552,6 @@ class SearchController extends BaseController
         } catch (\Throwable $e) {
             $this->logger->error('[SearchController] Recommend service exception', [
                 'sku' => $sku,
-                'searchMethod' => $searchMethod,
                 'message' => $e->getMessage(),
                 'class' => get_class($e),
             ]);
@@ -788,8 +730,6 @@ class SearchController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
-        $searchMethod = $this->getActiveSearchMethod();
-
         foreach ($logs as $log) {
             $query = trim((string) ($log['query'] ?? ''));
 
@@ -808,7 +748,7 @@ class SearchController extends BaseController
                     continue;
                 }
 
-                $sku = $this->getSkuFromSearchRow($row, $searchMethod);
+                $sku = $this->getSkuFromSearchServiceRow($row);
                 $similarity = (float) ($row['similarity'] ?? 0);
 
                 if ($sku === '' || $similarity <= 0) {

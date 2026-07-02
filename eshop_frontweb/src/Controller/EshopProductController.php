@@ -238,33 +238,6 @@ class EshopProductController extends BaseController
         return new JsonResponse(['cartCount' => (int) $cartTotalQuantity]);
     }
 
-    private function getActiveSearchMethod(): string
-    {
-        $config = $this->entityManager
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
-
-        return $config?->getSearchMethod() ?? 'tfidf';
-    }
-
-    private function getSearchEndpoint(string $searchMethod): string
-    {
-        return match ($searchMethod) {
-            'semantic_vector' => '/semantic/search',
-            'elasticsearch_bm25' => '/elastic/search',
-            default => '/search',
-        };
-    }
-
-    private function getSkuFromSearchRow(array $row, string $searchMethod): string
-    {
-        if ($searchMethod === 'semantic_vector' || $searchMethod === 'elasticsearch_bm25') {
-            return trim((string) ($row['sku'] ?? ''));
-        }
-
-        return trim((string) ($row['product_sku'] ?? ''));
-    }
-
     private function getRecommendedSkuFromRow(array $row): string
     {
         if (isset($row['product_sku'])) {
@@ -276,85 +249,6 @@ class EshopProductController extends BaseController
         }
 
         return '';
-    }
-
-    private function callRecommendationApi(
-        HttpClientInterface $httpClient,
-        string $sku,
-        int $limit
-    ): ?array {
-        $sku = trim($sku);
-
-        if ($sku === '') {
-            return null;
-        }
-
-        $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
-        $limit = max(1, min($limit, 50));
-        $searchMethod = $this->getActiveSearchMethod();
-
-        try {
-            if ($searchMethod === 'semantic_vector') {
-                $product = $this->entityManager
-                    ->getRepository(Product::class)
-                    ->findLatestVisibleBySku($sku);
-
-                if (!$product instanceof Product || $product->getId() === null) {
-                    $this->logger->warning('[Recommendation] Cannot resolve SKU for semantic recommendation', [
-                        'sku' => $sku,
-                    ]);
-
-                    return null;
-                }
-
-                $this->logger->info('[Recommendation] Calling semantic similar', [
-                    'sku' => $sku,
-                    'productId' => $product->getId(),
-                    'limit' => $limit,
-                ]);
-
-                $response = $httpClient->request('POST', $baseUrl . '/semantic/similar', [
-                    'json' => [
-                        'product_id' => $product->getId(),
-                        'limit' => $limit,
-                    ],
-                    'timeout' => 5,
-                ]);
-            } else {
-                $this->logger->info('[Recommendation] Calling TF-IDF recommend', [
-                    'sku' => $sku,
-                    'limit' => $limit,
-                    'searchMethod' => $searchMethod,
-                ]);
-
-                $response = $httpClient->request('GET', $baseUrl . '/recommend/' . rawurlencode($sku), [
-                    'query' => [
-                        'limit' => $limit,
-                    ],
-                    'timeout' => 5,
-                ]);
-            }
-
-            if ($response->getStatusCode() >= 400) {
-                return null;
-            }
-
-            $data = $response->toArray(false);
-
-            if (!isset($data['results']) || !is_array($data['results'])) {
-                return null;
-            }
-
-            return $data;
-        } catch (\Throwable $e) {
-            $this->logger->warning('[Recommendation] Failed to call recommendation API', [
-                'sku' => $sku,
-                'searchMethod' => $searchMethod,
-                'message' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
     }
 
     private function buildHybridRecommendations(
@@ -523,7 +417,7 @@ class EshopProductController extends BaseController
                     continue;
                 }
 
-                $recommendedSku = trim((string) ($row['product_sku'] ?? ''));
+                $recommendedSku = $this->getRecommendedSkuFromRow($row);
                 $similarity = (float) ($row['similarity'] ?? 0);
 
                 if ($recommendedSku === '' || $similarity <= 0) {
@@ -559,31 +453,51 @@ class EshopProductController extends BaseController
             return;
         }
 
-        $data = $this->callRecommendationApi(
-            $httpClient,
-            $sku,
-            20
-        );
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
-        if ($data === null) {
-            return;
-        }
+            $response = $httpClient->request(
+                'GET',
+                $baseUrl . '/recommend/' . rawurlencode($sku),
+                [
+                    'query' => [
+                        'limit' => 20,
+                    ],
+                    'timeout' => 5,
+                ]
+            );
 
-        foreach (($data['results'] ?? []) as $row) {
-            if (!is_array($row)) {
-                continue;
+            if ($response->getStatusCode() >= 400) {
+                return;
             }
 
-            $recommendedSku = $this->getRecommendedSkuFromRow($row);
-            $similarity = (float) ($row['similarity'] ?? 0);
+            $data = $response->toArray(false);
 
-            if ($recommendedSku === '' || $similarity <= 0) {
-                continue;
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $recommendedSku = $this->getRecommendedSkuFromRow($row);
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($recommendedSku === '' || $similarity <= 0) {
+                    continue;
+                }
+
+                $scores[$recommendedSku]
+                    = ($scores[$recommendedSku] ?? 0)
+                    + $similarity;
             }
 
-            $scores[$recommendedSku]
-                = ($scores[$recommendedSku] ?? 0)
-                + $similarity;
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                '[Recommendation] Failed to fetch product recommendations',
+                [
+                    'sku' => $sku,
+                    'message' => $e->getMessage(),
+                ]
+            );
         }
     }
 
@@ -686,12 +600,10 @@ class EshopProductController extends BaseController
 
             try {
                 $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
-                $searchMethod = $this->getActiveSearchMethod();
-                $endpoint = $this->getSearchEndpoint($searchMethod);
 
                 $response = $httpClient->request(
                     'POST',
-                    $baseUrl . $endpoint,
+                    $baseUrl . '/search',
                     [
                         'json' => [
                             'query' => $query,
@@ -708,12 +620,11 @@ class EshopProductController extends BaseController
                 $data = $response->toArray(false);
 
                 foreach (($data['results'] ?? []) as $searchRow) {
-
                     if (!is_array($searchRow)) {
                         continue;
                     }
 
-                    $sku = $this->getSkuFromSearchRow($searchRow, $searchMethod);
+                    $sku = $this->getRecommendedSkuFromRow($searchRow);
 
                     if ($sku === '') {
                         continue;
@@ -744,29 +655,49 @@ class EshopProductController extends BaseController
             return;
         }
 
-        $data = $this->callRecommendationApi(
-            $httpClient,
-            $sku,
-            10
-        );
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
-        if ($data === null) {
-            return;
-        }
+            $response = $httpClient->request(
+                'GET',
+                $baseUrl . '/recommend/' . rawurlencode($sku),
+                [
+                    'query' => [
+                        'limit' => 10,
+                    ],
+                    'timeout' => 5,
+                ]
+            );
 
-        foreach (($data['results'] ?? []) as $row) {
-            if (!is_array($row)) {
-                continue;
+            if ($response->getStatusCode() >= 400) {
+                return;
             }
 
-            $recommendedSku = $this->getRecommendedSkuFromRow($row);
-            $similarity = (float) ($row['similarity'] ?? 0);
+            $data = $response->toArray(false);
 
-            if ($recommendedSku !== '' && $similarity > 0) {
-                $scores[$recommendedSku]
-                    = ($scores[$recommendedSku] ?? 0)
-                    + ($similarity * $weight);
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $recommendedSku = $this->getRecommendedSkuFromRow($row);
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($recommendedSku !== '' && $similarity > 0) {
+                    $scores[$recommendedSku]
+                        = ($scores[$recommendedSku] ?? 0)
+                        + ($similarity * $weight);
+                }
             }
+
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                '[Recommendation] Failed to add recommendation scores',
+                [
+                    'sku' => $sku,
+                    'message' => $e->getMessage(),
+                ]
+            );
         }
     }
 

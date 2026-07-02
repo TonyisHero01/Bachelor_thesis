@@ -378,7 +378,7 @@ class EshopHomeController extends BaseController
 
             foreach ($results as $item) {
 
-                $sku = trim((string) ($item['product_sku'] ?? ''));
+                $sku = $this->getSkuFromSearchServiceRow($item);
 
                 if ($sku === '') {
                     continue;
@@ -403,7 +403,11 @@ class EshopHomeController extends BaseController
         $results = $this->callSearchServiceRecommend($sku, 5, $httpClient);
 
         foreach ($results as $item) {
-            $recommendedSku = trim((string) ($item['product_sku'] ?? ''));
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $recommendedSku = $this->getSkuFromSearchServiceRow($item);
             $similarity = (float) ($item['similarity'] ?? 0);
 
             if ($recommendedSku !== '' && $similarity > 0) {
@@ -494,7 +498,7 @@ class EshopHomeController extends BaseController
 
             foreach ($results as $item) {
 
-                $sku = trim((string) ($item['product_sku'] ?? ''));
+                $sku = $this->getSkuFromSearchServiceRow($item);
 
                 if ($sku === '') {
                     continue;
@@ -617,6 +621,19 @@ class EshopHomeController extends BaseController
         shuffle($withImages);
 
         return array_slice($withImages, 0, $limit);
+    }
+
+    private function getSkuFromSearchServiceRow(array $row): string
+    {
+        if (isset($row['product_sku'])) {
+            return trim((string) $row['product_sku']);
+        }
+
+        if (isset($row['sku'])) {
+            return trim((string) $row['sku']);
+        }
+
+        return '';
     }
 
     private function applyRecommendationDiversity(
