@@ -23,7 +23,7 @@ class Product
     #[ORM\JoinColumn(name: "category_id", referencedColumnName: "id", nullable: true)]
     private ?Category $category = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
     #[ORM\Column]
