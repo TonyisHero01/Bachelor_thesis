@@ -69,3 +69,6 @@ search_service/*.pyc
 # Docker dev only
 #################################
 docker-compose.override.yml
+
+benchmark/esci-data/
+*.parquet

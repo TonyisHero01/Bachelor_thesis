@@ -121,6 +121,7 @@ services:
       - "8084:8000"
     volumes:
       - benchmark_reports:/app/reports
+      - ./benchmark/esci-data:/app/esci-data:ro
     networks:
       - backend
   elasticsearch:
