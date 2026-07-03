@@ -212,28 +212,39 @@ def load_esci_products_by_ids(product_category_map: dict[str, str]):
         "product_locale",
     ]
 
-    products = []
+    unique_products = {}
 
-    for row_group_index in range(parquet_file.num_row_groups):
-        table = parquet_file.read_row_group(
-            row_group_index,
+    for batch_index, batch in enumerate(
+        parquet_file.iter_batches(
+            batch_size=5000,
             columns=columns,
-        )
+        ),
+        start=1,
+    ):
+        df = batch.to_pandas()
 
-        df = table.to_pandas()
+        df["product_id"] = df["product_id"].astype(str)
 
         df = df[
             (df["product_locale"] == "us")
-            & (df["product_id"].astype(str).isin(product_ids))
+            & (df["product_id"].isin(product_ids))
         ]
 
         if df.empty:
+            if batch_index % 100 == 0:
+                print(
+                    f"Scanned batches: {batch_index}, "
+                    f"loaded products: {len(unique_products)}"
+                )
             continue
 
         for _, row in df.iterrows():
-            sku = str(row["product_id"]).strip()
+            sku = str(row.get("product_id") or "").strip()
 
             if not sku:
+                continue
+
+            if sku in unique_products:
                 continue
 
             category = product_category_map.get(sku)
@@ -259,18 +270,22 @@ def load_esci_products_by_ids(product_category_map: dict[str, str]):
                 if part
             )
 
-            products.append({
+            unique_products[sku] = {
                 "sku": sku,
                 "name": title if title else sku,
                 "description": full_description,
                 "brand": brand,
                 "color": color,
                 "category": category,
-            })
+            }
 
-    unique_products = {}
-    for product in products:
-        unique_products[product["sku"]] = product
+        print(
+            f"Scanned batches: {batch_index}, "
+            f"loaded products: {len(unique_products)}"
+        )
+
+        if len(unique_products) >= PRODUCT_COUNT:
+            break
 
     result = list(unique_products.values())
 
@@ -278,7 +293,7 @@ def load_esci_products_by_ids(product_category_map: dict[str, str]):
 
     return result
 
-def run_full_reindex():
+def post_reindex_endpoint(endpoint: str, payload: dict | None = None, timeout: int = 1800):
     headers = {
         "Content-Type": "application/json",
     }
@@ -286,27 +301,56 @@ def run_full_reindex():
     if SEARCH_API_KEY:
         headers["X-API-KEY"] = SEARCH_API_KEY
 
+    url = f"{SEARCH_URL}{endpoint}"
+
+    print(f"Calling reindex endpoint: {url}")
+
     response = requests.post(
-        f"{SEARCH_URL}/reindex",
+        url,
         headers=headers,
-        json={
-            "mode": "full",
-            "reason": "benchmark_data_generator",
-            "context": {
-                "stage": "after_product_catalog_generation",
-                "product_count": PRODUCT_COUNT,
-                "customer_count": CUSTOMER_COUNT,
-            },
-        },
-        timeout=120,
+        json=payload or {},
+        timeout=timeout,
     )
 
     if response.status_code >= 400:
         raise RuntimeError(
-            f"Reindex failed: {response.status_code} {response.text}"
+            f"Reindex failed at {endpoint}: "
+            f"{response.status_code} {response.text}"
         )
 
-    print("Full reindex finished.")
+    print(f"Finished reindex endpoint: {endpoint}")
+
+
+def run_full_reindex():
+    context = {
+        "stage": "after_product_catalog_generation",
+        "product_count": PRODUCT_COUNT,
+        "customer_count": CUSTOMER_COUNT,
+    }
+
+    post_reindex_endpoint(
+        "/reindex",
+        payload={
+            "mode": "full",
+            "reason": "benchmark_data_generator",
+            "context": context,
+        },
+        timeout=1800,
+    )
+
+    post_reindex_endpoint(
+        "/semantic/reindex",
+        payload={},
+        timeout=3600,
+    )
+
+    post_reindex_endpoint(
+        "/elastic/reindex",
+        payload={},
+        timeout=1800,
+    )
+
+    print("All search indexes rebuilt.")
 
 def clear_data(cur):
     cur.execute("DELETE FROM customer_product_view_log;")
