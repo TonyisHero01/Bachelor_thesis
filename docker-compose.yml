@@ -120,7 +120,6 @@ services:
     ports:
       - "8084:8000"
     volumes:
-      - esci_data:/app/esci-data
       - benchmark_reports:/app/reports
     networks:
       - backend
@@ -149,6 +148,5 @@ networks:
 
 volumes:
   pgdata:
-  esci_data:
   benchmark_reports:
   esdata:
