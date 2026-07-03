@@ -142,7 +142,7 @@ def extract_sku(item: dict, method: str):
 
 def call_search_method(method: str, query: str, limit: int):
     endpoint = {
-        "tfidf": "/search",
+        "tfidf": "/tfidf/search",
         "semantic_vector": "/semantic/search",
         "elasticsearch_bm25": "/elastic/search",
     }[method]

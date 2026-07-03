@@ -156,6 +156,51 @@ def semantic_reindex(request: Request):
             detail="Semantic reindex failed",
         )
 
+@app.post("/tfidf/search")
+def tfidf_search(payload: dict, request: Request):
+    started = time.perf_counter()
+
+    query = str(payload.get("query", "")).strip()
+    limit = int(payload.get("limit", 10))
+    limit = min(limit, settings.max_search_limit)
+
+    if query == "":
+        logger.info("[SEARCH_API] method=tfidf endpoint=/tfidf/search empty_query=true")
+        return {"results": []}
+
+    ensure_tfidf_ready()
+
+    logger.info(
+        "[SEARCH_API] method=tfidf endpoint=/tfidf/search started query=%r limit=%s ip=%s",
+        query,
+        limit,
+        client_ip(request),
+    )
+
+    results = search_products(
+        query,
+        limit,
+        skip_log=True,
+    )
+
+    results = normalize_search_rows(results)
+
+    elapsed_ms = (time.perf_counter() - started) * 1000
+
+    logger.info(
+        "[SEARCH_API] method=tfidf endpoint=/tfidf/search finished query=%r results=%s elapsed_ms=%.2f",
+        query,
+        len(results),
+        elapsed_ms,
+    )
+
+    return {
+        "method": "tfidf",
+        "query": query,
+        "limit": limit,
+        "results": results,
+    }
+
 @app.post("/semantic/search")
 def semantic_search(request: SemanticSearchRequest, http_request: Request):
     started = time.perf_counter()
