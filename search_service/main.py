@@ -115,8 +115,46 @@ def health():
     }
 
 @app.post("/semantic/reindex")
-def semantic_reindex():
-    return get_semantic_search_service().reindex()
+def semantic_reindex(request: Request):
+    started = time.perf_counter()
+
+    logger.info(
+        "[SEMANTIC_REINDEX] request received ip=%s",
+        client_ip(request),
+    )
+
+    try:
+        logger.info("[SEMANTIC_REINDEX] loading semantic service if needed")
+
+        service = get_semantic_search_service()
+
+        logger.info("[SEMANTIC_REINDEX] semantic service ready, starting reindex")
+
+        result = service.reindex()
+
+        elapsed_ms = (time.perf_counter() - started) * 1000
+
+        logger.info(
+            "[SEMANTIC_REINDEX] finished elapsed_ms=%.2f result=%s",
+            elapsed_ms,
+            result,
+        )
+
+        return result
+
+    except Exception as exc:
+        elapsed_ms = (time.perf_counter() - started) * 1000
+
+        logger.exception(
+            "[SEMANTIC_REINDEX] failed elapsed_ms=%.2f error=%s",
+            elapsed_ms,
+            exc,
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Semantic reindex failed",
+        )
 
 @app.post("/semantic/search")
 def semantic_search(request: SemanticSearchRequest, http_request: Request):
