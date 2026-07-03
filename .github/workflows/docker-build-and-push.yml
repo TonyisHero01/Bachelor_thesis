@@ -57,6 +57,20 @@ jobs:
               - 'benchmark/**'
             workflow:
               - '.github/workflows/**'
+      - name: Pull Git LFS files for benchmark dataset
+        if: |
+          matrix.service == 'benchmark' &&
+          (
+            steps.changes.outputs.benchmark == 'true' ||
+            steps.changes.outputs.workflow == 'true' ||
+            github.event_name == 'workflow_dispatch' ||
+            github.ref_type == 'tag'
+          )
+        shell: bash
+        run: |
+          git lfs install
+          git lfs pull --include="benchmark/esci-data/**" --exclude=""
+          ls -lh benchmark/esci-data/shopping_queries_dataset
 
       - name: Login to GitHub Container Registry
         if: |
