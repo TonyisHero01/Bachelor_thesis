@@ -4,6 +4,8 @@ import psycopg2
 from datetime import datetime, timedelta
 import os
 import requests
+import pandas as pd
+import pyarrow.parquet as pq
 
 SEARCH_URL = os.getenv("SEARCH_URL", "http://search-service:8000").rstrip("/")
 SEARCH_API_KEY = os.getenv("SEARCH_API_KEY")
@@ -44,90 +46,6 @@ COLORS = [
 
 SIZES = ["S", "M", "L", "XL"]
 
-PRODUCT_TEMPLATES = {
-    "Laptops": [
-        "Lenovo ThinkPad X1 Carbon",
-        "MacBook Air M3",
-        "Dell XPS 13",
-        "ASUS ROG Zephyrus G14",
-        "HP Spectre x360",
-        "Acer Swift Go",
-        "MSI Stealth 16",
-    ],
-    "Smartphones": [
-        "iPhone 17 Pro",
-        "Samsung Galaxy S26",
-        "Xiaomi Note 17",
-        "Google Pixel 10",
-        "OnePlus 14",
-        "Honor Magic 8",
-        "Motorola Edge 70",
-    ],
-    "Keyboards": [
-        "Logitech MX Keys",
-        "Keychron K2",
-        "Razer Huntsman Mini",
-        "Apple Magic Keyboard",
-        "SteelSeries Apex Pro",
-        "Corsair K70",
-    ],
-    "Mice": [
-        "Logitech MX Master 4",
-        "Razer DeathAdder V4",
-        "Apple Magic Mouse 3",
-        "Logitech G Pro X",
-        "SteelSeries Rival 5",
-        "Microsoft Surface Mouse",
-    ],
-    "Headphones": [
-        "Sony WH-1000XM6",
-        "AirPods Pro 3",
-        "Bose QuietComfort Ultra",
-        "JBL Tune 770NC",
-        "Sennheiser Momentum 5",
-        "HyperX Cloud Alpha",
-    ],
-    "Monitors": [
-        "Dell UltraSharp U2725",
-        "Samsung Odyssey G7",
-        "LG UltraGear 27GP",
-        "ASUS ProArt PA279",
-        "BenQ Mobiuz EX2710",
-        "AOC Q27G",
-    ],
-    "T-Shirts": [
-        "Nike Sportswear Tee",
-        "Adidas Essentials Tee",
-        "Uniqlo Airism Tee",
-        "Tommy Hilfiger Crew Tee",
-        "Calvin Klein Cotton Tee",
-    ],
-    "Jackets": [
-        "The North Face Nuptse",
-        "Columbia Pike Lake",
-        "Nike Windrunner",
-        "Adidas Terrex Multi",
-        "Levi's Trucker Jacket",
-        "Patagonia Nano Puff",
-    ],
-    "Shoes": [
-        "Nike Pegasus 42",
-        "Adidas Ultraboost 6",
-        "New Balance 1080",
-        "Asics Gel-Nimbus 27",
-        "Puma Velocity Nitro",
-        "Vans Old Skool",
-    ],
-    "Accessories": [
-        "Native Union Belt Cable",
-        "Anker PowerPort Mini",
-        "Belkin BoostCharge",
-        "tomtoc Laptop Sleeve",
-        "Spigen Ultra Hybrid Case",
-        "Ugreen USB-C Hub",
-    ],
-}
-
 MATERIALS = {
     "Laptops": ["aluminum", "plastic", "magnesium"],
     "Smartphones": ["glass", "aluminum", "plastic"],
@@ -139,112 +57,6 @@ MATERIALS = {
     "Jackets": ["cotton", "polyester", "denim", "leather"],
     "Shoes": ["leather", "textile", "rubber"],
     "Accessories": ["plastic", "nylon", "metal"],
-}
-
-SEMANTIC_USE_CASES = {
-    "Laptops": [
-        "portable computer for work, study, programming, office tasks, gaming, video calls, and travel",
-        "notebook computer suitable for students, developers, designers, business users, and gamers",
-        "device for productivity, multitasking, entertainment, coding, remote work, and presentations",
-    ],
-    "Smartphones": [
-        "mobile phone for communication, taking photos, social media, navigation, music, and everyday use",
-        "compact personal device suitable for photography, messaging, calls, internet browsing, and travel",
-        "handheld smart device for users who need a camera, apps, video, and online services",
-    ],
-    "Keyboards": [
-        "device for typing, writing documents, programming, gaming, office work, and comfortable computer control",
-        "input device suitable for fast typing, coding, work, study, and long computer sessions",
-        "keyboard for users who need accurate text input, shortcuts, gaming control, and productivity",
-    ],
-    "Mice": [
-        "pointing device for computer control, gaming, office work, browsing, design, and productivity",
-        "ergonomic input device suitable for laptop users, desktop users, gamers, and office workers",
-        "mouse for precise cursor movement, comfortable daily use, and fast navigation",
-    ],
-    "Headphones": [
-        "audio device for music, calls, gaming, online meetings, travel, and noise isolation",
-        "headset suitable for listening, communication, video calls, entertainment, and concentration",
-        "sound device for users who need private audio, microphone support, and comfortable long use",
-    ],
-    "Monitors": [
-        "screen for gaming, office work, watching videos, programming, design, and multitasking",
-        "display suitable for computer users who need a larger workspace, clear image, and visual comfort",
-        "external screen for laptops, desktops, productivity, entertainment, and professional work",
-    ],
-    "T-Shirts": [
-        "casual cotton clothing for everyday wear, summer, comfort, travel, and relaxed style",
-        "lightweight shirt suitable for warm weather, home use, city wear, and simple outfits",
-        "comfortable top for people looking for breathable casual fashion",
-    ],
-    "Jackets": [
-        "warm outerwear for winter, cold weather, outdoor activities, travel, and everyday protection",
-        "jacket suitable for users who need warmth, wind protection, city style, and seasonal clothing",
-        "outer layer for cold days, commuting, walking, travel, and casual fashion",
-    ],
-    "Shoes": [
-        "comfortable footwear for running, walking, sport, travel, and daily movement",
-        "shoes suitable for active users, outdoor walking, city use, training, and casual wear",
-        "footwear for people who need comfort, stability, and everyday mdescriptionobility",
-    ],
-    "Accessories": [
-        "useful accessory for laptops, phones, travel, charging, carrying devices, and everyday convenience",
-        "supporting product for mobile devices, computers, commuting, organization, and digital lifestyle",
-        "practical item for users who need protection, connection, charging, or carrying equipment",
-    ],
-}
-
-SEMANTIC_PRODUCT_TEXTS = {
-    "Laptops": [
-        "A portable computer for students, office workers, developers, remote meetings, study, programming, business travel, and light entertainment.",
-        "A compact workstation for people who need document editing, multitasking, video calls, coding, presentations, and mobility.",
-        "A high performance personal computer for users who play modern games, edit media, run creative software, and need strong graphics performance.",
-    ],
-    "Smartphones": [
-        "A pocket mobile device for daily communication, taking photos, messaging, navigation, social media, video recording, and online services.",
-        "A compact smart device for users who want a good camera, mobile apps, internet access, calls, music, and travel convenience.",
-        "A handheld phone for photography, chatting, video calls, maps, payments, entertainment, and everyday personal organization.",
-    ],
-    "Keyboards": [
-        "An input device for writing documents, programming, working in an office, controlling a computer, gaming, shortcuts, and long typing sessions.",
-        "A typing accessory for users who create text, write code, study, work remotely, and need accurate comfortable input.",
-        "A desk input tool for productivity, fast writing, software development, office work, and computer control.",
-    ],
-    "Mice": [
-        "A hand controlled pointing device for browsing, office work, gaming, design software, cursor movement, and everyday computer navigation.",
-        "A compact controller for laptop and desktop users who need precision, comfort, scrolling, clicking, and fast screen interaction.",
-        "An ergonomic desk accessory for people who spend many hours using a computer and need smooth control.",
-    ],
-    "Headphones": [
-        "A personal audio device for listening to music, online meetings, calls, gaming communication, travel, concentration, and noise reduction.",
-        "A wireless sound accessory for private listening, commuting, video conferences, entertainment, and microphone use.",
-        "A headset for users who need clear voice calls, immersive sound, focus at work, and comfortable long listening.",
-    ],
-    "Monitors": [
-        "A large visual display for gaming, office multitasking, watching videos, programming, creative work, and connecting to a computer.",
-        "An external screen for users who need more workspace, sharper image, visual comfort, and productivity.",
-        "A display panel for entertainment, study, design, coding, spreadsheets, and working with multiple windows.",
-    ],
-    "T-Shirts": [
-        "A light casual top for summer, warm weather, everyday outfits, home use, travel, and breathable comfort.",
-        "Comfortable upper body clothing for people who want simple style, soft material, and relaxed daily wear.",
-        "A casual shirt for sport, city wear, warm days, leisure time, and easy outfit combination.",
-    ],
-    "Jackets": [
-        "Warm outerwear for cold weather, winter commuting, wind protection, walking outside, travel, and daily use.",
-        "A protective clothing layer for low temperatures, city style, seasonal wear, and outdoor activity.",
-        "An outer layer for people who need warmth, comfort, and protection during autumn or winter.",
-    ],
-    "Shoes": [
-        "Comfortable footwear for running, walking, fitness training, travel, daily movement, and active users.",
-        "Shoes for people who need stability, cushioning, mobility, outdoor walking, sport, and everyday comfort.",
-        "Light footwear for city use, casual outfits, commuting, long walks, and regular movement.",
-    ],
-    "Accessories": [
-        "A practical accessory for charging, protecting, connecting, carrying, or organizing mobile devices and computers.",
-        "A useful item for travel, commuting, laptop protection, phone protection, cable connection, and digital lifestyle.",
-        "A support product for users who need better device portability, power, connection, storage, or protection.",
-    ],
 }
 
 SEARCH_QUERIES = [
@@ -260,6 +72,37 @@ SEARCH_QUERIES = [
     "bag for carrying a laptop",
 ]
 
+CATEGORY_KEYWORDS = {
+    "Laptops": ["laptop", "notebook", "computer", "pc", "macbook"],
+    "Smartphones": ["phone", "smartphone", "iphone", "galaxy", "mobile"],
+    "Keyboards": ["keyboard", "typing"],
+    "Mice": ["mouse", "mice"],
+    "Headphones": ["headphones", "earbuds", "headset"],
+    "Monitors": ["monitor", "screen", "display"],
+    "T-Shirts": ["t shirt", "t-shirt", "shirt", "tee"],
+    "Jackets": ["jacket", "coat", "hoodie", "winter"],
+    "Shoes": ["shoes", "sneakers", "boots"],
+    "Accessories": ["case", "cable", "charger", "adapter", "bag", "sleeve", "hub"],
+}
+
+ESCI_BASE_DIR = os.getenv(
+    "ESCI_BASE_DIR",
+    "/app/esci-data/shopping_queries_dataset",
+)
+
+ESCI_EXAMPLES_PATH = os.path.join(
+    ESCI_BASE_DIR,
+    "shopping_queries_dataset_examples.parquet",
+)
+
+ESCI_PRODUCTS_PATH = os.path.join(
+    ESCI_BASE_DIR,
+    "shopping_queries_dataset_products.parquet",
+)
+
+ESCI_QUERY_LIMIT = int(os.getenv("ESCI_QUERY_LIMIT", "300"))
+ESCI_PRODUCTS_PER_QUERY = int(os.getenv("ESCI_PRODUCTS_PER_QUERY", "25"))
+
 def pick_even(items, index):
     return items[(index - 1) % len(items)]
 
@@ -271,6 +114,169 @@ def connect():
         user=DB_USER,
         password=DB_PASSWORD,
     )
+
+def guess_category(text: str):
+    text = str(text or "").lower()
+
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in text:
+                return category
+
+    return None
+
+def load_esci_product_category_map():
+    print("Loading ESCI examples...")
+
+    df = pd.read_parquet(
+        ESCI_EXAMPLES_PATH,
+        columns=[
+            "query",
+            "product_id",
+            "product_locale",
+            "esci_label",
+            "split",
+        ],
+    )
+
+    df = df[
+        (df["product_locale"] == "us")
+        & (df["split"] == "test")
+        & (df["esci_label"].isin(["E", "S", "C"]))
+    ]
+
+    product_category_map = {}
+    selected_queries = 0
+
+    for query, group in df.groupby("query"):
+        category = guess_category(query)
+
+        if not category:
+            continue
+
+        relevant_group = group[group["esci_label"].isin(["E", "S"])]
+
+        if len(relevant_group) == 0:
+            continue
+
+        query_product_ids = (
+            group["product_id"]
+            .dropna()
+            .astype(str)
+            .drop_duplicates()
+            .head(ESCI_PRODUCTS_PER_QUERY)
+            .tolist()
+        )
+
+        if not query_product_ids:
+            continue
+
+        for product_id in query_product_ids:
+            if product_id not in product_category_map:
+                product_category_map[product_id] = category
+
+        selected_queries += 1
+
+        if selected_queries >= ESCI_QUERY_LIMIT:
+            break
+
+        if len(product_category_map) >= PRODUCT_COUNT:
+            break
+
+    print(f"Selected ESCI queries: {selected_queries}")
+    print(f"Selected ESCI product ids: {len(product_category_map)}")
+
+    return product_category_map
+
+def load_esci_products_by_ids(product_category_map: dict[str, str]):
+    print("Loading selected ESCI products...")
+
+    product_ids = {
+        str(product_id)
+        for product_id in product_category_map.keys()
+        if product_id
+    }
+
+    if not product_ids:
+        return []
+
+    parquet_file = pq.ParquetFile(ESCI_PRODUCTS_PATH)
+
+    columns = [
+        "product_id",
+        "product_title",
+        "product_description",
+        "product_bullet_point",
+        "product_brand",
+        "product_color",
+        "product_locale",
+    ]
+
+    products = []
+
+    for row_group_index in range(parquet_file.num_row_groups):
+        table = parquet_file.read_row_group(
+            row_group_index,
+            columns=columns,
+        )
+
+        df = table.to_pandas()
+
+        df = df[
+            (df["product_locale"] == "us")
+            & (df["product_id"].astype(str).isin(product_ids))
+        ]
+
+        if df.empty:
+            continue
+
+        for _, row in df.iterrows():
+            sku = str(row["product_id"]).strip()
+
+            if not sku:
+                continue
+
+            category = product_category_map.get(sku)
+
+            if not category:
+                continue
+
+            title = str(row.get("product_title") or "").strip()
+            description = str(row.get("product_description") or "").strip()
+            bullet_point = str(row.get("product_bullet_point") or "").strip()
+            brand = str(row.get("product_brand") or "").strip()
+            color = str(row.get("product_color") or "").strip()
+
+            full_description = " ".join(
+                part
+                for part in [
+                    title,
+                    description,
+                    bullet_point,
+                    f"Brand: {brand}." if brand else "",
+                    f"Color: {color}." if color else "",
+                ]
+                if part
+            )
+
+            products.append({
+                "sku": sku,
+                "name": title if title else sku,
+                "description": full_description,
+                "brand": brand,
+                "color": color,
+                "category": category,
+            })
+
+    unique_products = {}
+    for product in products:
+        unique_products[product["sku"]] = product
+
+    result = list(unique_products.values())
+
+    print(f"Loaded ESCI products: {len(result)}")
+
+    return result
 
 def run_full_reindex():
     headers = {
@@ -367,66 +373,60 @@ def insert_sizes(cur):
     return size_ids
 
 
-def random_product_name(category):
-    base = random.choice(PRODUCT_TEMPLATES[category])
-    model = random.choice(["", "Plus", "Pro", "Max", "Ultra", "2026", "SE"])
-    number = random.choice(["", "", "", str(random.randint(2, 9))])
-
-    parts = [base, model, number]
-
-    return " ".join(
-        part for part in parts
-        if part.strip()
-    )
-
-
 def insert_products(cur, category_ids, color_ids, size_ids):
     products = []
 
-    category_names = list(category_ids.keys())
-    color_names = list(color_ids.keys())
-    size_names = list(size_ids.keys())
+    product_category_map = load_esci_product_category_map()
+    esci_products = load_esci_products_by_ids(product_category_map)
+
+    if not esci_products:
+        raise RuntimeError("No ESCI products loaded. Check ESCI parquet files.")
 
     now = datetime.now()
 
-    for i in range(1, PRODUCT_COUNT + 1):
-        sku = f"SKU{i:05d}"
-        
-        category = pick_even(category_names, i)
-        name = random_product_name(category)
-        color = pick_even(color_names, i)
+    for index, esci_product in enumerate(esci_products, start=1):
+        sku = esci_product["sku"]
+        name = esci_product["name"]
+        description = esci_product["description"]
+        brand = esci_product["brand"]
+        category = esci_product["category"]
 
-        materials = MATERIALS[category]
-        material = pick_even(materials, i)
+        category_id = category_ids[category]
+
+        color_text = str(esci_product.get("color") or "").lower()
+
+        if "black" in color_text:
+            color_id = color_ids["Black"]
+        elif "white" in color_text:
+            color_id = color_ids["White"]
+        elif "blue" in color_text:
+            color_id = color_ids["Blue"]
+        elif "red" in color_text:
+            color_id = color_ids["Red"]
+        else:
+            color_id = color_ids["Gray"]
+
+        material = random.choice(MATERIALS.get(category, ["unknown"]))
 
         is_fashion = category in ["T-Shirts", "Jackets", "Shoes"]
 
         if is_fashion:
-            size_name = pick_even(size_names, i)
+            size_name = random.choice(SIZES)
             size_id = size_ids[size_name]
         else:
             size_id = None
 
-        price = round(random.uniform(199, 45000), 2)
+        price = round(random.uniform(5, 3000), 2)
         stock = random.randint(0, 250)
 
-        semantic_text = random.choice(SEMANTIC_PRODUCT_TEXTS[category])
-
-        description = (
-            f"{name}. "
-            f"{semantic_text} "
-            f"Customers may search for this product by describing what they want to do, "
-            f"not only by writing the exact product category. "
-            f"Color: {color}. Material: {material}."
-        )
-
         attributes = {
-            "brand": random.choice(["Nokasa", "NovaTech", "UrbanLine", "CoreMax", "EshopPro"]),
-            "quality": random.choice(["standard", "premium", "professional"]),
-            "usage": random.choice(["home", "office", "gaming", "travel", "sport"]),
+            "source": "amazon_esci",
+            "brand": brand,
+            "original_product_id": sku,
+            "benchmark_category": category,
         }
 
-        image = f"product-{i:05d}.jpg"
+        image = f"esci-product-{index:05d}.jpg"
 
         cur.execute(
             """
@@ -478,9 +478,9 @@ def insert_products(cur, category_ids, color_ids, size_ids):
                 random.choice([100, 100, 100, 90, 80, 70]),
                 json.dumps(attributes),
                 sku,
-                category_ids[category],
+                category_id,
                 size_id,
-                color_ids[color],
+                color_id,
             ),
         )
 
@@ -493,8 +493,12 @@ def insert_products(cur, category_ids, color_ids, size_ids):
             "category": category,
         })
 
-    return products
+        if len(products) >= PRODUCT_COUNT:
+            break
 
+    print(f"Inserted ESCI products: {len(products)}")
+
+    return products
 
 def insert_customers(cur):
     customers = []
