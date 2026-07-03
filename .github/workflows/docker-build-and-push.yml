@@ -57,7 +57,7 @@ jobs:
               - 'benchmark/**'
             workflow:
               - '.github/workflows/**'
-      - name: Pull Git LFS files for benchmark dataset
+      - name: Download ESCI dataset for benchmark image
         if: |
           matrix.service == 'benchmark' &&
           (
@@ -68,10 +68,21 @@ jobs:
           )
         shell: bash
         run: |
-          git lfs install
-          git lfs pull --include="benchmark/esci-data/**" --exclude=""
-          ls -lh benchmark/esci-data/shopping_queries_dataset
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
 
+          rm -rf benchmark/esci-data
+
+          GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/amazon-science/esci-data.git benchmark/esci-data
+
+          cd benchmark/esci-data
+          git lfs install --local
+          git lfs pull --include="shopping_queries_dataset/*.parquet" --exclude=""
+          cd ../..
+
+          ls -lh benchmark/esci-data/shopping_queries_dataset
+          du -sh benchmark/esci-data
+          
       - name: Login to GitHub Container Registry
         if: |
           steps.changes.outputs[matrix.service] == 'true' ||
