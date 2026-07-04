@@ -95,12 +95,19 @@ def build_rating_summary(rows):
             "result_diversity": [],
             "overall_satisfaction": [],
         },
+        "elasticsearch_bm25": {
+            "label": "Elasticsearch BM25",
+            "relevance": [],
+            "ranking_quality": [],
+            "result_diversity": [],
+            "overall_satisfaction": [],
+        },
     }
 
     for row in rows:
         answers = row.get("answers", {})
 
-        for method in ["tfidf", "semantic_vector"]:
+        for method in ["tfidf", "semantic_vector", "elasticsearch_bm25"]:
             method_answers = answers.get(method, {})
 
             if not isinstance(method_answers, dict):

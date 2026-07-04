@@ -10,6 +10,9 @@ def method_label(value):
     if value == "semantic_vector":
         return "Semantic Vector"
 
+    if value == "elasticsearch_bm25":
+        return "Elasticsearch BM25"
+
     if value == "no_clear_difference":
         return "No clear difference"
 
