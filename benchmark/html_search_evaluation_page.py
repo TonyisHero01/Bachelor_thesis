@@ -2,7 +2,7 @@ import json
 
 from html_common import percentage, status_label, page_style
 from html_recommendation_log_page import build_recommendation_log_section
-
+from html_user_study_evaluation_page import build_user_study_section
 
 def method_label(method):
     if method == "tfidf":
@@ -611,12 +611,17 @@ def render_evaluation_page(
     config=None,
     recommendation_log=None,
     recommendation_metrics=None,
+    user_study_metrics=None,
 ):
     if config is None:
         config = {}
 
     if recommendation_metrics is None:
         recommendation_metrics = {}
+
+    if user_study_metrics is None:
+
+        user_study_metrics = {}
 
     body, search_chart = build_search_evaluation_body(report)
 
@@ -650,6 +655,8 @@ def render_evaluation_page(
                 {build_config_form(config)}
 
                 {build_recommendation_metrics_section(recommendation_metrics)}
+
+                {build_user_study_section(user_study_metrics)}
 
                 {build_recommendation_log_section(recommendation_log)}
 

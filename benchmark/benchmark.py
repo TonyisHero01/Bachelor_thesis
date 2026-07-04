@@ -15,6 +15,7 @@ from config import settings
 
 from fastapi.staticfiles import StaticFiles
 from user_studies.app import router as user_studies_router
+from user_study_metrics_service import fetch_user_study_metrics
 
 app = FastAPI(title="E-shop Search Benchmark")
 
@@ -164,11 +165,14 @@ def evaluation_page(
         )
     )
     recommendation_metrics = fetch_recommendation_event_metrics()
+    user_study_metrics = fetch_user_study_metrics()
+
     return render_evaluation_page(
         report,
         config=config,
         recommendation_log=recommendation_log,
         recommendation_metrics=recommendation_metrics,
+        user_study_metrics=user_study_metrics,
     )
 
 @app.post("/evaluation/update-config")
