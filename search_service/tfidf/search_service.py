@@ -1,8 +1,6 @@
 import logging
 from typing import Dict
 import time
-import psycopg2
-from config import settings
 
 from repositories.product_repository import (
     fetch_products,
@@ -245,10 +243,7 @@ def search_products(
     query: str,
     limit: int = 50,
     retry: bool = True,
-    skip_log: bool = False,
 ):
-    start = time.perf_counter()
-
     try:
         if search_index.matrix is None:
             logger.warning("[SEARCH] matrix empty -> reload vectors")
@@ -330,7 +325,6 @@ def search_products(
                 query=query,
                 limit=limit,
                 retry=False,
-                skip_log=skip_log,
             )
 
         except Exception:
@@ -361,16 +355,6 @@ def search_products(
         key=lambda x: x["similarity"],
         reverse=True,
     )[:limit]
-
-    elapsed_ms = (time.perf_counter() - start) * 1000
-
-    if not skip_log:
-        log_search(
-            query=query,
-            method="hybrid",
-            result_count=len(results),
-            response_time_ms=elapsed_ms,
-        )
 
     return results
 
@@ -410,18 +394,3 @@ def get_index_status() -> dict:
         "vector_rows": count_product_vectors(),
         "indexed_documents": len(search_index.documents),
     }
-
-def log_search(query, method, result_count, response_time_ms):
-    try:
-        conn = psycopg2.connect(settings.database_url)
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO search_query_log
-            (query, method, result_count, response_time_ms)
-            VALUES (%s, %s, %s, %s)
-        """, (query, method, result_count, response_time_ms))
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"[LOG][ERROR] Failed to log search: {e}")

@@ -180,7 +180,6 @@ def tfidf_search(payload: dict, request: Request):
     results = search_products(
         query,
         limit,
-        skip_log=True,
     )
 
     results = normalize_search_rows(results)
@@ -272,6 +271,49 @@ def reload_config_api(request: Request):
         logger.exception("[CONFIG] reload failed")
         raise HTTPException(status_code=500, detail="Config reload failed")
 
+def save_search_query_log(
+    query: str,
+    method: str,
+    result_count: int,
+    response_time_ms: float,
+):
+    import psycopg2
+
+    try:
+        conn = psycopg2.connect(settings.database_url)
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            INSERT INTO search_query_log (
+                query,
+                method,
+                result_count,
+                response_time_ms,
+                created_at
+            )
+            VALUES (%s, %s, %s, %s, NOW())
+            """,
+            (
+                query,
+                method,
+                result_count,
+                response_time_ms,
+            ),
+        )
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+    except Exception:
+        logger.exception(
+            "[SEARCH_LOG] failed to save search query log query=%r method=%s",
+            query,
+            method,
+        )
+
 @app.post("/search", response_model=SearchResponse)
 def search_api(req: SearchRequest, request: Request):
     started = time.perf_counter()
@@ -320,11 +362,18 @@ def search_api(req: SearchRequest, request: Request):
         results = search_products(
             query,
             limit,
-            skip_log=skip_log,
         )
         results = normalize_search_rows(results)
 
     elapsed_ms = (time.perf_counter() - started) * 1000
+
+    if not skip_log:
+        save_search_query_log(
+            query=query,
+            method=search_method,
+            result_count=len(results),
+            response_time_ms=elapsed_ms,
+        )
 
     logger.info(
         "[SEARCH_API] method=%s endpoint=/search finished query=%r results=%s elapsed_ms=%.2f",

@@ -560,6 +560,28 @@ class SearchController extends BaseController
         }
     }
 
+    private function getCurrentSearchMethod(): string
+    {
+        try {
+            $config = $this->entityManager
+                ->getRepository(SearchRelevanceConfig::class)
+                ->findOneBy(
+                    ['active' => true],
+                    ['id' => 'DESC']
+                );
+
+            if ($config instanceof SearchRelevanceConfig) {
+                return $config->getSearchMethod();
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('[SearchController] Failed to read search method config', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return 'tfidf';
+    }
+
     private function saveCustomerSearchLog(Request $request, string $query, int $resultCount): void
     {
         try {
