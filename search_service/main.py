@@ -33,6 +33,13 @@ import threading
 
 AUTO_REINDEX_LOCK = threading.Lock()
 
+RECOMMEND_CACHE = {}
+RECOMMEND_CACHE_TTL_SECONDS = 600
+
+MAX_VIEWED_SEEDS = 5
+MAX_CART_SEEDS = 5
+MAX_TOTAL_RECOMMENDATION_SEEDS = 8
+
 semantic_search_service: SemanticSearchService | None = None
 elastic_service = ElasticProductSearchService()
 semantic_repository = SemanticVectorRepository()
@@ -59,6 +66,29 @@ app = FastAPI(
     version=settings.app_version,
 )
 
+def get_recommend_cache(cache_key: str):
+    item = RECOMMEND_CACHE.get(cache_key)
+
+    if item is None:
+        return None
+
+    if time.time() - item["created_at"] > RECOMMEND_CACHE_TTL_SECONDS:
+        RECOMMEND_CACHE.pop(cache_key, None)
+        return None
+
+    return item["results"]
+
+
+def set_recommend_cache(cache_key: str, results):
+    RECOMMEND_CACHE[cache_key] = {
+        "created_at": time.time(),
+        "results": results,
+    }
+
+
+def clear_recommend_cache():
+    RECOMMEND_CACHE.clear()
+
 def get_semantic_search_service() -> SemanticSearchService:
     global semantic_search_service
 
@@ -69,24 +99,184 @@ def get_semantic_search_service() -> SemanticSearchService:
 
     return semantic_search_service
 
-def run_full_reindex_background(reason=None, context=None):
+def run_full_reindex_background(reason=None, context=None, search_method=None):
     if REINDEX_STATE["running"]:
         return
+
+    if search_method is None:
+        search_method = get_active_search_method()
 
     REINDEX_STATE["running"] = True
     REINDEX_STATE["last_started_at"] = datetime.utcnow().isoformat() + "Z"
     REINDEX_STATE["last_error"] = None
+    REINDEX_STATE["last_method"] = search_method
 
     try:
-        updated = rebuild_search_index()
-        REINDEX_STATE["last_updated"] = updated
+        result = reindex_active_method_full(search_method)
+        clear_recommend_cache()
+
+        REINDEX_STATE["last_updated"] = result
         REINDEX_STATE["last_finished_at"] = datetime.utcnow().isoformat() + "Z"
-        logger.info("[REINDEX][BACKGROUND] finished updated=%s", updated)
+
+        logger.info(
+            "[REINDEX][BACKGROUND] finished method=%s result=%s",
+            search_method,
+            result,
+        )
+
     except Exception as e:
-        logger.exception("[REINDEX][BACKGROUND] failed")
+        logger.exception(
+            "[REINDEX][BACKGROUND] failed method=%s",
+            search_method,
+        )
         REINDEX_STATE["last_error"] = str(e)
+
     finally:
         REINDEX_STATE["running"] = False
+
+def reindex_active_method_full(search_method: str):
+    search_method = str(search_method or "tfidf").strip()
+
+    if search_method == "semantic_vector":
+        logger.info("[REINDEX] active_method=semantic_vector full reindex started")
+
+        result = get_semantic_search_service().reindex()
+
+        logger.info(
+            "[REINDEX] active_method=semantic_vector full reindex finished result=%s",
+            result,
+        )
+
+        return {
+            "method": "semantic_vector",
+            "result": result,
+        }
+
+    if search_method == "elasticsearch_bm25":
+        logger.info("[REINDEX] active_method=elasticsearch_bm25 full reindex started")
+
+        products = semantic_repository.get_products_for_indexing()
+
+        elastic_service.create_index()
+        elastic_service.index_products(products)
+
+        result = {
+            "method": "elasticsearch_bm25",
+            "indexed_products": len(products),
+        }
+
+        logger.info(
+            "[REINDEX] active_method=elasticsearch_bm25 full reindex finished result=%s",
+            result,
+        )
+
+        return result
+
+    logger.info("[REINDEX] active_method=tfidf full reindex started")
+
+    updated = rebuild_search_index()
+
+    result = {
+        "method": "tfidf",
+        "updated": updated,
+    }
+
+    logger.info(
+        "[REINDEX] active_method=tfidf full reindex finished result=%s",
+        result,
+    )
+
+    return result
+
+
+def reindex_active_method_partial(search_method: str, sku: str):
+    search_method = str(search_method or "tfidf").strip()
+    sku = str(sku or "").strip()
+
+    if sku == "":
+        raise HTTPException(
+            status_code=400,
+            detail="SKU is required for partial reindex",
+        )
+
+    if search_method == "semantic_vector":
+        logger.info(
+            "[REINDEX] active_method=semantic_vector partial reindex requested sku=%s",
+            sku,
+        )
+
+        service = get_semantic_search_service()
+
+        if hasattr(service, "reindex_product_by_sku"):
+            result = service.reindex_product_by_sku(sku)
+
+            return {
+                "method": "semantic_vector",
+                "mode": "partial",
+                "sku": sku,
+                "result": result,
+            }
+
+        logger.warning(
+            "[REINDEX] semantic partial method missing, falling back to full semantic reindex sku=%s",
+            sku,
+        )
+
+        result = service.reindex()
+
+        return {
+            "method": "semantic_vector",
+            "mode": "full_fallback",
+            "sku": sku,
+            "result": result,
+        }
+
+    if search_method == "elasticsearch_bm25":
+        logger.info(
+            "[REINDEX] active_method=elasticsearch_bm25 partial reindex requested sku=%s",
+            sku,
+        )
+
+        if hasattr(elastic_service, "reindex_product_by_sku"):
+            result = elastic_service.reindex_product_by_sku(sku)
+
+            return {
+                "method": "elasticsearch_bm25",
+                "mode": "partial",
+                "sku": sku,
+                "result": result,
+            }
+
+        logger.warning(
+            "[REINDEX] elastic partial method missing, falling back to full elastic reindex sku=%s",
+            sku,
+        )
+
+        products = semantic_repository.get_products_for_indexing()
+
+        elastic_service.create_index()
+        elastic_service.index_products(products)
+
+        return {
+            "method": "elasticsearch_bm25",
+            "mode": "full_fallback",
+            "sku": sku,
+            "indexed_products": len(products),
+        }
+
+    logger.info(
+        "[REINDEX] active_method=tfidf partial reindex started sku=%s",
+        sku,
+    )
+
+    updated = partial_reindex_product(sku)
+
+    return {
+        "method": "tfidf",
+        "mode": "partial",
+        "sku": sku,
+        "updated": updated,
+    }
 
 def client_ip(request: Request) -> str:
     xff = request.headers.get("x-forwarded-for")
@@ -401,30 +591,54 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
 
     try:
         if req.mode == "check":
+            search_method = get_active_search_method()
             status = get_index_status()
+
+            semantic_vectors = semantic_repository.count_semantic_vectors()
+
+            elastic_count = 0
+
+            try:
+                if elastic_service.client.indices.exists(index="products"):
+                    response = elastic_service.client.count(index="products")
+                    elastic_count = int(response.get("count", 0))
+            except Exception:
+                logger.warning("[REINDEX] failed to read elastic index count")
 
             return {
                 "ok": True,
                 "mode": "check",
+                "active_method": search_method,
                 "product_rows": status["product_rows"],
                 "distinct_skus": status["distinct_skus"],
-                "vector_rows": status["vector_rows"],
+                "tfidf_vector_rows": status["vector_rows"],
+                "semantic_vector_rows": semantic_vectors,
+                "elastic_index_rows": elastic_count,
                 "reason": req.reason,
                 "context": req.context,
                 "ip": client_ip(request),
                 "ts": started.isoformat() + "Z",
             }
-
         if req.mode == "partial":
             if not req.sku:
-                raise HTTPException(status_code=400, detail="SKU is required for partial reindex")
+                raise HTTPException(
+                    status_code=400,
+                    detail="SKU is required for partial reindex",
+                )
 
-            updated = partial_reindex_product(req.sku)
+            search_method = get_active_search_method()
+
+            result = reindex_active_method_partial(
+                search_method=search_method,
+                sku=req.sku,
+            )
+            clear_recommend_cache()
 
             return {
                 "ok": True,
                 "mode": "partial",
-                "updated": updated,
+                "active_method": search_method,
+                "result": result,
                 "reason": req.reason,
                 "context": req.context,
                 "ip": client_ip(request),
@@ -442,11 +656,25 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
                 "ts": started.isoformat() + "Z",
             }
 
+        search_method = get_active_search_method()
+
         background_tasks.add_task(
             run_full_reindex_background,
             req.reason,
             req.context,
+            search_method,
         )
+
+        return {
+            "ok": True,
+            "mode": "full",
+            "active_method": search_method,
+            "updated": 0,
+            "reason": "full reindex queued",
+            "context": req.context,
+            "ip": client_ip(request),
+            "ts": started.isoformat() + "Z",
+        }
 
         return {
             "ok": True,
@@ -560,6 +788,19 @@ def recommend_by_sku_with_active_method(
     if search_method is None:
         search_method = get_active_search_method()
 
+    cache_key = f"{search_method}:{sku}:{limit}"
+    cached_results = get_recommend_cache(cache_key)
+
+    if cached_results is not None:
+        logger.info(
+            "[RECOMMEND_CACHE] hit method=%s sku=%s limit=%s results=%s",
+            search_method,
+            sku,
+            limit,
+            len(cached_results),
+        )
+        return cached_results
+
     ensure_active_method_ready(search_method, sku=sku)
 
     if search_method == "semantic_vector":
@@ -578,15 +819,18 @@ def recommend_by_sku_with_active_method(
         )
 
         rows = result.get("results", []) if isinstance(result, dict) else []
+        results = normalize_recommendation_rows(rows)
 
         logger.info(
             "[RECOMMEND] method=semantic_vector sku=%s product_id=%s results=%s",
             sku,
             product_id,
-            len(rows),
+            len(results),
         )
 
-        return normalize_recommendation_rows(rows)
+        set_recommend_cache(cache_key, results)
+
+        return results
 
     if search_method == "elasticsearch_bm25":
         result = elastic_service.recommend_by_sku(
@@ -595,24 +839,30 @@ def recommend_by_sku_with_active_method(
         )
 
         rows = result.get("results", []) if isinstance(result, dict) else []
+        results = normalize_recommendation_rows(rows)
 
         logger.info(
             "[RECOMMEND] method=elasticsearch_bm25 sku=%s results=%s",
             sku,
-            len(rows),
+            len(results),
         )
 
-        return normalize_recommendation_rows(rows)
+        set_recommend_cache(cache_key, results)
+
+        return results
 
     rows = recommend_products(sku, limit)
+    results = normalize_recommendation_rows(rows)
 
     logger.info(
         "[RECOMMEND] method=tfidf sku=%s results=%s",
         sku,
-        len(rows),
+        len(results),
     )
 
-    return normalize_recommendation_rows(rows)
+    set_recommend_cache(cache_key, results)
+
+    return results
 
 def add_seed_recommendation_scores(
     scores,
@@ -640,37 +890,50 @@ def add_seed_recommendation_scores(
 
         scores[recommended_sku] = scores.get(recommended_sku, 0.0) + similarity * seed_weight
 
-@app.post("/recommend/session", response_model=RecommendResponse)
-def recommend_session_api(req: SessionRecommendRequest):
-    limit = min(req.limit, settings.max_search_limit)
-    search_method = get_active_search_method()
+def build_recommendations_from_weighted_seeds(
+    weighted_seeds,
+    limit: int,
+    search_method: str | None = None,
+):
+    limit = min(limit, settings.max_search_limit)
+
+    if search_method is None:
+        search_method = get_active_search_method()
 
     scores = {}
     seed_skus = {}
 
-    current_sku = str(req.current_sku or "").strip()
+    for item in weighted_seeds:
+        if not isinstance(item, dict):
+            continue
 
-    if current_sku:
-        seed_skus[current_sku] = 1.0
+        sku = str(item.get("sku", "")).strip()
 
-    for sku in req.viewed_skus or []:
-        sku = str(sku).strip()
+        if sku == "":
+            continue
 
-        if sku:
-            seed_skus[sku] = max(seed_skus.get(sku, 0.0), 0.70)
+        try:
+            weight = float(item.get("weight", 1.0))
+        except (TypeError, ValueError):
+            weight = 1.0
 
-    for sku in req.cart_skus or []:
-        sku = str(sku).strip()
+        if weight <= 0:
+            continue
 
-        if sku:
-            seed_skus[sku] = max(seed_skus.get(sku, 0.0), 0.90)
+        seed_skus[sku] = max(seed_skus.get(sku, 0.0), weight)
 
-    for seed_sku, seed_weight in seed_skus.items():
+    seed_items = sorted(
+        seed_skus.items(),
+        key=lambda item: item[1],
+        reverse=True,
+    )[:MAX_TOTAL_RECOMMENDATION_SEEDS]
+
+    for seed_sku, seed_weight in seed_items:
         add_seed_recommendation_scores(
             scores=scores,
             seed_sku=seed_sku,
             seed_weight=seed_weight,
-            limit=max(limit * 3, 10),
+            limit=max(limit * 2, 10),
             search_method=search_method,
         )
 
@@ -693,13 +956,90 @@ def recommend_session_api(req: SessionRecommendRequest):
     ]
 
     logger.info(
-        "[RECOMMEND_SESSION] method=%s seeds=%s results=%s",
+        "[RECOMMEND_BATCH_BUILD] method=%s seeds=%s used_seeds=%s results=%s",
         search_method,
         len(seed_skus),
+        len(seed_items),
         len(results),
     )
 
-    return {"results": results}
+    return results
+
+@app.post("/recommend/batch", response_model=RecommendResponse)
+def recommend_batch_api(payload: dict):
+    limit = int(payload.get("limit", 10))
+    limit = min(limit, settings.max_search_limit)
+
+    seeds = payload.get("seeds", [])
+
+    if not isinstance(seeds, list):
+        raise HTTPException(
+            status_code=400,
+            detail="seeds must be a list",
+        )
+
+    search_method = get_active_search_method()
+
+    results = build_recommendations_from_weighted_seeds(
+        weighted_seeds=seeds,
+        limit=limit,
+        search_method=search_method,
+    )
+
+    return {
+        "results": results,
+    }
+
+@app.post("/recommend/session", response_model=RecommendResponse)
+def recommend_session_api(req: SessionRecommendRequest):
+    limit = min(req.limit, settings.max_search_limit)
+
+    seeds = []
+
+    current_sku = str(req.current_sku or "").strip()
+
+    if current_sku:
+        seeds.append({
+            "sku": current_sku,
+            "weight": 1.0,
+        })
+
+    for sku in list(req.viewed_skus or [])[:MAX_VIEWED_SEEDS]:
+        sku = str(sku).strip()
+
+        if sku:
+            seeds.append({
+                "sku": sku,
+                "weight": 0.70,
+            })
+
+    for sku in list(req.cart_skus or [])[:MAX_CART_SEEDS]:
+        sku = str(sku).strip()
+
+        if sku:
+            seeds.append({
+                "sku": sku,
+                "weight": 0.90,
+            })
+
+    search_method = get_active_search_method()
+
+    results = build_recommendations_from_weighted_seeds(
+        weighted_seeds=seeds,
+        limit=limit,
+        search_method=search_method,
+    )
+
+    logger.info(
+        "[RECOMMEND_SESSION] method=%s input_seeds=%s results=%s",
+        search_method,
+        len(seeds),
+        len(results),
+    )
+
+    return {
+        "results": results,
+    }
 
 @app.get("/recommend/{sku}", response_model=RecommendResponse)
 def recommend_api(sku: str, limit: int = 10):

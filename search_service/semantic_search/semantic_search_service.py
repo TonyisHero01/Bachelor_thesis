@@ -169,6 +169,68 @@ class SemanticSearchService:
             "status": "ok",
             "indexed_products": indexed_count,
         }
+    
+    def reindex_product_by_sku(self, sku: str):
+        self.ensure_storage()
+
+        sku = str(sku or "").strip()
+
+        if sku == "":
+            return {
+                "status": "error",
+                "message": "SKU is empty",
+                "updated": 0,
+                "deleted": 0,
+            }
+
+        product = self.repository.get_product_for_indexing_by_sku(sku)
+
+        if product is None:
+            self.repository.delete_embedding_by_sku(sku)
+
+            return {
+                "status": "ok",
+                "mode": "semantic_partial",
+                "sku": sku,
+                "updated": 0,
+                "deleted": 1,
+                "message": "Product not found, old semantic vector deleted if it existed.",
+            }
+
+        product_id = product["id"] if isinstance(product, dict) else product[0]
+
+        document = self.build_product_document(product)
+
+        if document == "":
+            self.repository.delete_embedding_by_product_id(product_id)
+
+            return {
+                "status": "ok",
+                "mode": "semantic_partial",
+                "sku": sku,
+                "product_id": product_id,
+                "updated": 0,
+                "deleted": 1,
+                "message": "Product document is empty, semantic vector deleted.",
+            }
+
+        embedding = self.embedding_service.create_embedding(document)
+        pgvector = self.embedding_service.to_pgvector(embedding)
+
+        self.repository.save_embedding(
+            product_id,
+            pgvector,
+        )
+
+        return {
+            "status": "ok",
+            "mode": "semantic_partial",
+            "sku": sku,
+            "product_id": product_id,
+            "updated": 1,
+            "deleted": 0,
+            "document": document,
+        }
 
     def search(self, query: str, limit: int = 10):
         self.ensure_storage()

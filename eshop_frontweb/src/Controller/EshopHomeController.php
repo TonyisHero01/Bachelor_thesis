@@ -220,16 +220,32 @@ class EshopHomeController extends BaseController
         if ($customer instanceof Customer) {
             $this->addWishlistScores($scores, $customer, $httpClient, $wishlistWeight);
             $this->addOrderHistoryScores($scores, $customer, $httpClient, $orderWeight);
-            $this->addCustomerSearchHistoryScores($scores, $customer, $httpClient, $searchWeight);
+            $this->addCustomerSearchHistoryScores(
+                $scores,
+                $customer,
+                $httpClient,
+                $searchWeight,
+                3
+            );
 
             if ($scores === []) {
-                $this->addGlobalPopularSearchScores($scores, $httpClient, $searchWeight);
+                $this->addGlobalPopularSearchScores(
+                    $scores,
+                    $httpClient,
+                    $searchWeight,
+                    3
+                );
                 $this->addGlobalPopularOrderScores($scores, $httpClient, $orderWeight);
                 $this->addGlobalWishlistScores($scores, $httpClient, $wishlistWeight);
             }
         }
         else {
-            $this->addGlobalPopularSearchScores($scores, $httpClient, $searchWeight);
+            $this->addGlobalPopularSearchScores(
+                $scores,
+                $httpClient,
+                $searchWeight,
+                3
+            );
             $this->addGlobalPopularOrderScores($scores, $httpClient, $orderWeight);
             $this->addGlobalWishlistScores($scores, $httpClient, $wishlistWeight);
         }
@@ -294,8 +310,7 @@ class EshopHomeController extends BaseController
         Customer $customer,
         HttpClientInterface $httpClient,
         float $weight
-    ): void
-    {
+    ): void {
         $wishlistIds = $customer->getWishlist();
 
         if ($wishlistIds === []) {
@@ -306,16 +321,28 @@ class EshopHomeController extends BaseController
             ->getRepository(Product::class)
             ->findBy(['id' => $wishlistIds]);
 
+        $seedWeights = [];
+
         foreach ($products as $product) {
-            if ($product instanceof Product && $product->getSku()) {
-                $this->addRecommendedSkuScores(
-                    $scores,
-                    (string) $product->getSku(),
-                    $weight,
-                    $httpClient
-                );
+            if (!$product instanceof Product) {
+                continue;
             }
+
+            $sku = trim((string) $product->getSku());
+
+            if ($sku === '') {
+                continue;
+            }
+
+            $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
         }
+
+        $this->addRecommendedBatchSkuScores(
+            $scores,
+            $seedWeights,
+            $httpClient,
+            20
+        );
     }
 
     private function addOrderHistoryScores(
@@ -323,8 +350,7 @@ class EshopHomeController extends BaseController
         Customer $customer,
         HttpClientInterface $httpClient,
         float $weight
-    ): void
-    {
+    ): void {
         $rows = $this->entityManager->createQueryBuilder()
             ->select('oi.sku AS sku')
             ->from(OrderItem::class, 'oi')
@@ -336,20 +362,32 @@ class EshopHomeController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
+        $seedWeights = [];
+
         foreach ($rows as $row) {
             $sku = trim((string) ($row['sku'] ?? ''));
 
-            if ($sku !== '') {
-                $this->addRecommendedSkuScores($scores, $sku, $weight, $httpClient);
+            if ($sku === '') {
+                continue;
             }
+
+            $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
         }
+
+        $this->addRecommendedBatchSkuScores(
+            $scores,
+            $seedWeights,
+            $httpClient,
+            20
+        );
     }
 
     private function addCustomerSearchHistoryScores(
         array &$scores,
         Customer $customer,
         HttpClientInterface $httpClient,
-        float $weight
+        float $weight,
+        int $maxQueries = 3
     ): void {
 
         $logs = $this->entityManager->createQueryBuilder()
@@ -358,9 +396,11 @@ class EshopHomeController extends BaseController
             ->where('l.customer = :customer')
             ->setParameter('customer', $customer)
             ->orderBy('l.createdAt', 'DESC')
-            ->setMaxResults(5)
+            ->setMaxResults($maxQueries)
             ->getQuery()
             ->getArrayResult();
+
+        $usedQueries = [];
 
         foreach ($logs as $log) {
 
@@ -370,13 +410,25 @@ class EshopHomeController extends BaseController
                 continue;
             }
 
+            $queryKey = mb_strtolower($query);
+
+            if (isset($usedQueries[$queryKey])) {
+                continue;
+            }
+
+            $usedQueries[$queryKey] = true;
+
             $results = $this->callSearchServiceSearch(
                 $query,
-                3,
+                5,
                 $httpClient
             );
 
-            foreach ($results as $item) {
+            foreach ($results as $index => $item) {
+
+                if (!is_array($item)) {
+                    continue;
+                }
 
                 $sku = $this->getSkuFromSearchServiceRow($item);
 
@@ -384,12 +436,11 @@ class EshopHomeController extends BaseController
                     continue;
                 }
 
-                $this->addRecommendedSkuScores(
-                    $scores,
-                    $sku,
-                    $weight,
-                    $httpClient
-                );
+                $similarity = (float) ($item['similarity'] ?? 1.0);
+                $positionWeight = 1.0 / ($index + 1);
+
+                $scores[$sku] = ($scores[$sku] ?? 0.0)
+                    + ($similarity * $positionWeight * $weight);
             }
         }
     }
@@ -441,6 +492,81 @@ class EshopHomeController extends BaseController
         }
     }
 
+    private function addRecommendedBatchSkuScores(
+        array &$scores,
+        array $seedWeights,
+        HttpClientInterface $httpClient,
+        int $limit = 20
+    ): void {
+        $results = $this->callSearchServiceRecommendBatch(
+            $seedWeights,
+            $limit,
+            $httpClient
+        );
+
+        foreach ($results as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $recommendedSku = $this->getSkuFromSearchServiceRow($item);
+            $similarity = (float) ($item['similarity'] ?? 0);
+
+            if ($recommendedSku !== '' && $similarity > 0) {
+                $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0.0) + $similarity;
+            }
+        }
+    }
+
+    private function callSearchServiceRecommendBatch(
+        array $seedWeights,
+        int $limit,
+        HttpClientInterface $httpClient
+    ): array {
+        $seeds = [];
+
+        foreach ($seedWeights as $sku => $weight) {
+            $sku = trim((string) $sku);
+            $weight = (float) $weight;
+
+            if ($sku === '' || $weight <= 0) {
+                continue;
+            }
+
+            $seeds[] = [
+                'sku' => $sku,
+                'weight' => $weight,
+            ];
+        }
+
+        if ($seeds === []) {
+            return [];
+        }
+
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+            $response = $httpClient->request('POST', $baseUrl . '/recommend/batch', [
+                'json' => [
+                    'seeds' => $seeds,
+                    'limit' => $limit,
+                ],
+                'timeout' => 2.0,
+                'max_duration' => 3.0,
+            ]);
+
+            if ($response->getStatusCode() >= 400) {
+                return [];
+            }
+
+            $data = $response->toArray(false);
+
+            return is_array($data['results'] ?? null) ? $data['results'] : [];
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     private function callSearchServiceSearch(
         string $query,
         int $limit,
@@ -450,11 +576,15 @@ class EshopHomeController extends BaseController
             $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
 
             $response = $httpClient->request('POST', $baseUrl . '/search', [
+                'headers' => [
+                    'X-BENCHMARK' => '1',
+                ],
                 'json' => [
                     'query' => $query,
                     'limit' => $limit,
                 ],
-                'timeout' => 5,
+                'timeout' => 2.0,
+                'max_duration' => 3.0,
             ]);
 
             if ($response->getStatusCode() >= 400) {
@@ -471,16 +601,19 @@ class EshopHomeController extends BaseController
     private function addGlobalPopularSearchScores(
         array &$scores,
         HttpClientInterface $httpClient,
-        float $weight
+        float $weight,
+        int $maxQueries = 3
     ): void {
 
         $logs = $this->entityManager->createQueryBuilder()
             ->select('l.query AS query')
             ->from(CustomerSearchLog::class, 'l')
             ->orderBy('l.createdAt', 'DESC')
-            ->setMaxResults(10)
+            ->setMaxResults($maxQueries)
             ->getQuery()
             ->getArrayResult();
+
+        $usedQueries = [];
 
         foreach ($logs as $log) {
 
@@ -490,13 +623,25 @@ class EshopHomeController extends BaseController
                 continue;
             }
 
+            $queryKey = mb_strtolower($query);
+
+            if (isset($usedQueries[$queryKey])) {
+                continue;
+            }
+
+            $usedQueries[$queryKey] = true;
+
             $results = $this->callSearchServiceSearch(
                 $query,
-                3,
+                5,
                 $httpClient
             );
 
-            foreach ($results as $item) {
+            foreach ($results as $index => $item) {
+
+                if (!is_array($item)) {
+                    continue;
+                }
 
                 $sku = $this->getSkuFromSearchServiceRow($item);
 
@@ -504,12 +649,11 @@ class EshopHomeController extends BaseController
                     continue;
                 }
 
-                $this->addRecommendedSkuScores(
-                    $scores,
-                    $sku,
-                    $weight,
-                    $httpClient
-                );
+                $similarity = (float) ($item['similarity'] ?? 1.0);
+                $positionWeight = 1.0 / ($index + 1);
+
+                $scores[$sku] = ($scores[$sku] ?? 0.0)
+                    + ($similarity * $positionWeight * $weight);
             }
         }
     }

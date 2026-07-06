@@ -66,6 +66,79 @@ class EshopProductController extends BaseController
         );
     }
 
+    private function addRecommendedBatchSkuScores(
+        array &$scores,
+        array $seedWeights,
+        HttpClientInterface $httpClient,
+        int $limit = 20
+    ): void {
+        $seeds = [];
+
+        foreach ($seedWeights as $sku => $weight) {
+            $sku = trim((string) $sku);
+            $weight = (float) $weight;
+
+            if ($sku === '' || $weight <= 0) {
+                continue;
+            }
+
+            $seeds[] = [
+                'sku' => $sku,
+                'weight' => $weight,
+            ];
+        }
+
+        if ($seeds === []) {
+            return;
+        }
+
+        try {
+            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+
+            $response = $httpClient->request(
+                'POST',
+                $baseUrl . '/recommend/batch',
+                [
+                    'json' => [
+                        'seeds' => $seeds,
+                        'limit' => $limit,
+                    ],
+                    'timeout' => 2.0,
+                    'max_duration' => 3.0,
+                ]
+            );
+
+            if ($response->getStatusCode() >= 400) {
+                return;
+            }
+
+            $data = $response->toArray(false);
+
+            foreach (($data['results'] ?? []) as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $recommendedSku = $this->getRecommendedSkuFromRow($row);
+                $similarity = (float) ($row['similarity'] ?? 0);
+
+                if ($recommendedSku === '' || $similarity <= 0) {
+                    continue;
+                }
+
+                $scores[$recommendedSku] = ($scores[$recommendedSku] ?? 0.0) + $similarity;
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                '[Recommendation][Batch] Failed to fetch batch recommendations',
+                [
+                    'seed_count' => count($seeds),
+                    'message' => $e->getMessage(),
+                ]
+            );
+        }
+    }
+
     /**
      * Displays product detail page for the given product id.
      */
@@ -255,7 +328,8 @@ class EshopProductController extends BaseController
         Request $request,
         Product $currentProduct,
         HttpClientInterface $httpClient,
-        int $limit = 5
+        int $limit = 8,
+        bool $includeSearchHistory = false
     ): array {
         $scores = [];
 
@@ -278,11 +352,11 @@ class EshopProductController extends BaseController
         $viewWeight =
             (float) ($config?->getViewHistoryRecommendationWeight() ?? 0.35);
 
-        $this->addTfidfScores(
-            $scores,
-            $currentProduct,
-            $httpClient
-        );
+        //$this->addTfidfScores(
+            //$scores,
+            //$currentProduct,
+            //$httpClient
+        //);
 
         $this->addSessionRecommendationScores(
             $scores,
@@ -294,8 +368,16 @@ class EshopProductController extends BaseController
 
         $this->addWishlistScores($scores, $request, $httpClient, $wishlistWeight);
         $this->addOrderHistoryScores($scores, $request, $httpClient, $orderWeight);
-        $this->addSearchHistoryScores($scores, $request, $httpClient, $searchWeight);
-        $this->addViewHistoryScores($scores, $request, $httpClient, $viewWeight);
+        if ($includeSearchHistory) {
+            $this->addSearchHistoryScores(
+                $scores,
+                $request,
+                $httpClient,
+                $searchWeight,
+                3
+            );
+        }
+        //$this->addViewHistoryScores($scores, $request, $httpClient, $viewWeight);
 
         $currentSku = trim((string) $currentProduct->getSku());
 
@@ -386,7 +468,7 @@ class EshopProductController extends BaseController
             return;
         }
 
-        $viewedSkus = $this->getRecentViewedSkus($request, 20);
+        $viewedSkus = $this->getRecentViewedSkus($request, 5);
         $cartSkus = $this->getCurrentCartSkus();
 
         try {
@@ -523,16 +605,28 @@ class EshopProductController extends BaseController
             ->getRepository(Product::class)
             ->findBy(['id' => $wishlistIds]);
 
+        $seedWeights = [];
+
         foreach ($products as $product) {
-            if ($product instanceof Product && $product->getSku()) {
-                $this->addRecommendedSkuScores(
-                    $scores,
-                    (string) $product->getSku(),
-                    $weight,
-                    $httpClient
-                );
+            if (!$product instanceof Product) {
+                continue;
             }
+
+            $sku = trim((string) $product->getSku());
+
+            if ($sku === '') {
+                continue;
+            }
+
+            $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
         }
+
+        $this->addRecommendedBatchSkuScores(
+            $scores,
+            $seedWeights,
+            $httpClient,
+            20
+        );
     }
 
     private function addOrderHistoryScores(
@@ -554,7 +648,7 @@ class EshopProductController extends BaseController
             ->where('o.customer = :customer')
             ->setParameter('customer', $user)
             ->orderBy('o.orderCreatedAt', 'DESC')
-            ->setMaxResults(50)
+            ->setMaxResults(10)
             ->getQuery()
             ->getArrayResult();
 
@@ -562,7 +656,24 @@ class EshopProductController extends BaseController
             $sku = trim((string) ($row['sku'] ?? ''));
 
             if ($sku !== '') {
-                $this->addRecommendedSkuScores($scores, $sku, $weight, $httpClient);
+                $seedWeights = [];
+
+                foreach ($rows as $row) {
+                    $sku = trim((string) ($row['sku'] ?? ''));
+
+                    if ($sku === '') {
+                        continue;
+                    }
+
+                    $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
+                }
+
+                $this->addRecommendedBatchSkuScores(
+                    $scores,
+                    $seedWeights,
+                    $httpClient,
+                    20
+                );
             }
         }
     }
@@ -571,75 +682,84 @@ class EshopProductController extends BaseController
         array &$scores,
         Request $request,
         HttpClientInterface $httpClient,
-        float $weight
+        float $weight = 0.25,
+        int $maxQueries = 3
     ): void {
-        $user = $this->getUser();
+        try {
+            $user = $this->getUser();
+            $sessionId = $request->getSession()->getId();
 
-        $qb = $this->entityManager->createQueryBuilder()
-            ->select('l.query')
-            ->from(CustomerSearchLog::class, 'l')
-            ->orderBy('l.createdAt', 'DESC')
-            ->setMaxResults(5);
+            $qb = $this->entityManager
+                ->getRepository(CustomerSearchLog::class)
+                ->createQueryBuilder('log')
+                ->orderBy('log.createdAt', 'DESC')
+                ->setMaxResults($maxQueries);
 
-        if ($user instanceof Customer) {
-            $qb->where('l.customer = :customer')
-                ->setParameter('customer', $user);
-        } else {
-            $qb->where('l.sessionId = :sessionId')
-                ->setParameter('sessionId', $request->getSession()->getId());
-        }
-
-        $logs = $qb->getQuery()->getArrayResult();
-
-        foreach ($logs as $log) {
-            $query = trim((string) ($log['query'] ?? ''));
-
-            if ($query === '') {
-                continue;
+            if ($user instanceof Customer) {
+                $qb
+                    ->where('log.customer = :customer')
+                    ->setParameter('customer', $user);
+            } else {
+                $qb
+                    ->where('log.sessionId = :sessionId')
+                    ->setParameter('sessionId', $sessionId);
             }
 
-            try {
-                $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
+            $logs = $qb
+                ->getQuery()
+                ->getResult();
 
-                $response = $httpClient->request(
-                    'POST',
-                    $baseUrl . '/search',
-                    [
-                        'json' => [
-                            'query' => $query,
-                            'limit' => 3,
-                        ],
-                        'timeout' => 5,
-                    ]
-                );
-
-                if ($response->getStatusCode() >= 400) {
+            foreach ($logs as $log) {
+                if (!$log instanceof CustomerSearchLog) {
                     continue;
                 }
 
-                $data = $response->toArray(false);
+                $query = trim((string) $log->getQuery());
 
-                foreach (($data['results'] ?? []) as $searchRow) {
-                    if (!is_array($searchRow)) {
+                if ($query === '') {
+                    continue;
+                }
+
+                $response = $httpClient->request('POST', $this->searchServiceUrl . '/search', [
+                    'headers' => [
+                        'X-BENCHMARK' => '1',
+                    ],
+                    'json' => [
+                        'query' => $query,
+                        'limit' => 5,
+                    ],
+                    'timeout' => 2.0,
+                    'max_duration' => 3.0,
+                ]);
+
+                $data = $response->toArray(false);
+                $results = $data['results'] ?? [];
+
+                foreach ($results as $index => $row) {
+                    if (!is_array($row)) {
                         continue;
                     }
 
-                    $sku = $this->getRecommendedSkuFromRow($searchRow);
+                    $sku = trim((string) ($row['product_sku'] ?? $row['sku'] ?? ''));
 
                     if ($sku === '') {
                         continue;
                     }
 
-                    $this->addRecommendedSkuScores(
-                        $scores,
-                        $sku,
-                        $weight,
-                        $httpClient
-                    );
+                    $similarity = (float) ($row['similarity'] ?? 1.0);
+                    $positionWeight = 1.0 / ($index + 1);
+
+                    $scores[$sku] = ($scores[$sku] ?? 0.0)
+                        + ($similarity * $positionWeight * $weight);
                 }
-            } catch (\Throwable) {
-                continue;
             }
+        } catch (\Throwable $exception) {
+            $this->logger->warning(
+                '[Recommendation] Failed to add search history scores.',
+                [
+                    'message' => $exception->getMessage(),
+                ]
+            );
         }
     }
 
