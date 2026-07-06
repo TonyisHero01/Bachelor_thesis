@@ -33,6 +33,36 @@ import threading
 
 AUTO_REINDEX_LOCK = threading.Lock()
 
+SUPPORTED_SEARCH_METHODS = {
+    "tfidf",
+    "semantic_vector",
+    "elasticsearch_bm25",
+}
+
+ACTIVE_METHOD_CACHE = {
+    "method": None,
+    "expires_at": 0,
+}
+
+ACTIVE_METHOD_TTL_SECONDS = 30
+
+READY_CACHE = {
+    "tfidf": {
+        "ready": False,
+        "checked_at": 0,
+    },
+    "semantic_vector": {
+        "ready": False,
+        "checked_at": 0,
+    },
+    "elasticsearch_bm25": {
+        "ready": False,
+        "checked_at": 0,
+    },
+}
+
+READY_CACHE_TTL_SECONDS = 60
+
 RECOMMEND_CACHE = {}
 RECOMMEND_CACHE_TTL_SECONDS = 600
 
@@ -65,6 +95,37 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
 )
+
+def normalize_search_method(method: str | None) -> str:
+    method = str(method or "tfidf").strip()
+
+    if method not in SUPPORTED_SEARCH_METHODS:
+        return "tfidf"
+
+    return method
+
+
+def clear_active_method_cache():
+    ACTIVE_METHOD_CACHE["method"] = None
+    ACTIVE_METHOD_CACHE["expires_at"] = 0
+
+
+def clear_ready_cache(search_method: str | None = None):
+    if search_method is None:
+        for item in READY_CACHE.values():
+            item["ready"] = False
+            item["checked_at"] = 0
+        return
+
+    search_method = normalize_search_method(search_method)
+
+    READY_CACHE[search_method]["ready"] = False
+    READY_CACHE[search_method]["checked_at"] = 0
+
+
+def clear_runtime_caches(search_method: str | None = None):
+    clear_recommend_cache()
+    clear_ready_cache(search_method)
 
 def get_recommend_cache(cache_key: str):
     item = RECOMMEND_CACHE.get(cache_key)
@@ -113,7 +174,7 @@ def run_full_reindex_background(reason=None, context=None, search_method=None):
 
     try:
         result = reindex_active_method_full(search_method)
-        clear_recommend_cache()
+        clear_runtime_caches(search_method)
 
         REINDEX_STATE["last_updated"] = result
         REINDEX_STATE["last_finished_at"] = datetime.utcnow().isoformat() + "Z"
@@ -135,7 +196,7 @@ def run_full_reindex_background(reason=None, context=None, search_method=None):
         REINDEX_STATE["running"] = False
 
 def reindex_active_method_full(search_method: str):
-    search_method = str(search_method or "tfidf").strip()
+    search_method = normalize_search_method(search_method)
 
     if search_method == "semantic_vector":
         logger.info("[REINDEX] active_method=semantic_vector full reindex started")
@@ -190,7 +251,7 @@ def reindex_active_method_full(search_method: str):
 
 
 def reindex_active_method_partial(search_method: str, sku: str):
-    search_method = str(search_method or "tfidf").strip()
+    search_method = normalize_search_method(search_method)
     sku = str(sku or "").strip()
 
     if sku == "":
@@ -321,6 +382,7 @@ def semantic_reindex(request: Request):
         logger.info("[SEMANTIC_REINDEX] semantic service ready, starting reindex")
 
         result = service.reindex()
+        clear_runtime_caches("semantic_vector")
 
         elapsed_ms = (time.perf_counter() - started) * 1000
 
@@ -358,7 +420,7 @@ def tfidf_search(payload: dict, request: Request):
         logger.info("[SEARCH_API] method=tfidf endpoint=/tfidf/search empty_query=true")
         return {"results": []}
 
-    ensure_tfidf_ready()
+    ensure_method_ready("tfidf")
 
     logger.info(
         "[SEARCH_API] method=tfidf endpoint=/tfidf/search started query=%r limit=%s ip=%s",
@@ -400,7 +462,7 @@ def semantic_search(request: SemanticSearchRequest, http_request: Request):
         logger.info("[SEARCH_API] method=semantic_vector endpoint=/semantic/search empty_query=true")
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    ensure_semantic_ready()
+    ensure_method_ready("semantic_vector")
 
     logger.info(
         "[SEARCH_API] method=semantic_vector endpoint=/semantic/search started query=%r limit=%s ip=%s",
@@ -428,7 +490,7 @@ def semantic_search(request: SemanticSearchRequest, http_request: Request):
 
 @app.post("/semantic/similar")
 def semantic_similar(request: SemanticSimilarRequest):
-    ensure_semantic_ready()
+    ensure_method_ready("semantic_vector")
 
     return get_semantic_search_service().similar_products(
         product_id=request.product_id,
@@ -447,6 +509,10 @@ def reload_config_api(request: Request):
         if semantic_search_service is not None:
             semantic_search_service.config = config
         elastic_service.config = config
+
+        clear_active_method_cache()
+        clear_ready_cache()
+        clear_recommend_cache()
 
         logger.info("[CONFIG] search config reloaded")
 
@@ -505,7 +571,11 @@ def save_search_query_log(
         )
 
 @app.post("/search", response_model=SearchResponse)
-def search_api(req: SearchRequest, request: Request):
+def search_api(
+    req: SearchRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
     started = time.perf_counter()
 
     query = req.query.strip()
@@ -521,8 +591,6 @@ def search_api(req: SearchRequest, request: Request):
     limit = min(req.limit, settings.max_search_limit)
     skip_log = request.headers.get("X-BENCHMARK") == "1"
 
-    ensure_active_method_ready(search_method)
-
     logger.info(
         "[SEARCH_API] method=%s endpoint=/search started query=%r limit=%s skip_log=%s ip=%s",
         search_method,
@@ -532,37 +600,21 @@ def search_api(req: SearchRequest, request: Request):
         client_ip(request),
     )
 
-    if search_method == "semantic_vector":
-        result = get_semantic_search_service().search(
-            query=query,
-            limit=limit,
-        )
-        results = result.get("results", []) if isinstance(result, dict) else []
-        results = normalize_search_rows(results)
-
-    elif search_method == "elasticsearch_bm25":
-        result = elastic_service.search(
-            query=query,
-            limit=limit,
-        )
-        results = result.get("results", []) if isinstance(result, dict) else []
-        results = normalize_search_rows(results)
-
-    else:
-        results = search_products(
-            query,
-            limit,
-        )
-        results = normalize_search_rows(results)
+    results = search_with_method(
+        search_method=search_method,
+        query=query,
+        limit=limit,
+    )
 
     elapsed_ms = (time.perf_counter() - started) * 1000
 
     if not skip_log:
-        save_search_query_log(
-            query=query,
-            method=search_method,
-            result_count=len(results),
-            response_time_ms=elapsed_ms,
+        background_tasks.add_task(
+            save_search_query_log,
+            query,
+            search_method,
+            len(results),
+            elapsed_ms,
         )
 
     logger.info(
@@ -632,7 +684,7 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
                 search_method=search_method,
                 sku=req.sku,
             )
-            clear_recommend_cache()
+            clear_runtime_caches(search_method)
 
             return {
                 "ok": True,
@@ -675,17 +727,6 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
             "ip": client_ip(request),
             "ts": started.isoformat() + "Z",
         }
-
-        return {
-            "ok": True,
-            "mode": "full",
-            "updated": 0,
-            "reason": "full reindex queued",
-            "context": req.context,
-            "ip": client_ip(request),
-            "ts": started.isoformat() + "Z",
-        }
-
     except HTTPException:
         raise
     except Exception:
@@ -730,22 +771,70 @@ def normalize_search_rows(rows):
 
     return normalized
 
+def search_with_method(
+    search_method: str,
+    query: str,
+    limit: int,
+):
+    search_method = normalize_search_method(search_method)
+    query = str(query or "").strip()
+    limit = min(limit, settings.max_search_limit)
+
+    if query == "":
+        return []
+
+    ensure_method_ready(search_method)
+
+    if search_method == "semantic_vector":
+        result = get_semantic_search_service().search(
+            query=query,
+            limit=limit,
+        )
+
+        rows = result.get("results", []) if isinstance(result, dict) else []
+
+        return normalize_search_rows(rows)
+
+    if search_method == "elasticsearch_bm25":
+        result = elastic_service.search(
+            query=query,
+            limit=limit,
+        )
+
+        rows = result.get("results", []) if isinstance(result, dict) else []
+
+        return normalize_search_rows(rows)
+
+    rows = search_products(
+        query,
+        limit,
+    )
+
+    return normalize_search_rows(rows)
+
 def get_active_search_method() -> str:
+    now = time.time()
+
+    if (
+        ACTIVE_METHOD_CACHE["method"] is not None
+        and now < ACTIVE_METHOD_CACHE["expires_at"]
+    ):
+        return ACTIVE_METHOD_CACHE["method"]
+
     from repositories.product_repository import fetch_active_relevance_config
 
     try:
         config = fetch_active_relevance_config()
-        method = str(config.get("search_method", "tfidf")).strip()
+        method = normalize_search_method(config.get("search_method", "tfidf"))
 
-        if method == "":
-            return "tfidf"
+        ACTIVE_METHOD_CACHE["method"] = method
+        ACTIVE_METHOD_CACHE["expires_at"] = now + ACTIVE_METHOD_TTL_SECONDS
 
         return method
 
     except Exception:
-        logger.exception("[RECOMMEND] failed to load active search method")
+        logger.exception("[CONFIG] failed to load active search method")
         return "tfidf"
-
 
 def normalize_recommendation_rows(rows):
     normalized = []
@@ -788,6 +877,8 @@ def recommend_by_sku_with_active_method(
     if search_method is None:
         search_method = get_active_search_method()
 
+    search_method = normalize_search_method(search_method)
+
     cache_key = f"{search_method}:{sku}:{limit}"
     cached_results = get_recommend_cache(cache_key)
 
@@ -801,7 +892,7 @@ def recommend_by_sku_with_active_method(
         )
         return cached_results
 
-    ensure_active_method_ready(search_method, sku=sku)
+    ensure_method_ready(search_method, sku=sku)
 
     if search_method == "semantic_vector":
         product_id = semantic_repository.get_latest_product_id_by_sku(sku)
@@ -899,6 +990,8 @@ def build_recommendations_from_weighted_seeds(
 
     if search_method is None:
         search_method = get_active_search_method()
+
+    search_method = normalize_search_method(search_method)
 
     scores = {}
     seed_skus = {}
@@ -1099,6 +1192,7 @@ def elastic_reindex():
     elastic_service.create_index()
 
     elastic_service.index_products(products)
+    clear_runtime_caches("elasticsearch_bm25")
 
     return {
 
@@ -1119,7 +1213,7 @@ def elastic_search(payload: dict, request: Request):
         logger.info("[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search empty_query=true")
         return {"results": []}
 
-    ensure_elastic_ready()
+    ensure_method_ready("elasticsearch_bm25")
 
     logger.info(
         "[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search started query=%r limit=%s ip=%s",
@@ -1142,13 +1236,49 @@ def elastic_search(payload: dict, request: Request):
 
     return result
 
-def ensure_tfidf_ready():
+@app.get("/ready")
+def ready():
+    return {
+        "ready": True,
+        "service": settings.app_name,
+        "version": settings.app_version,
+    }
+
+def ensure_method_ready(search_method: str, sku: str | None = None):
+    search_method = normalize_search_method(search_method)
+
+    with AUTO_REINDEX_LOCK:
+        if search_method == "tfidf":
+            ensure_tfidf_ready_cached()
+            return
+
+        if search_method == "semantic_vector":
+            ensure_semantic_ready_cached(sku)
+            return
+
+        if search_method == "elasticsearch_bm25":
+            ensure_elastic_ready_cached()
+            return
+
+
+def ensure_active_method_ready(search_method: str, sku: str | None = None):
+    ensure_method_ready(search_method, sku)
+
+def ensure_tfidf_ready_cached():
+    now = time.time()
+    cache = READY_CACHE["tfidf"]
+
+    if cache["ready"] and now - cache["checked_at"] < READY_CACHE_TTL_SECONDS:
+        return
+
     status = get_index_status()
 
     vector_rows = int(status.get("vector_rows", 0))
     indexed_documents = int(status.get("indexed_documents", 0))
 
     if vector_rows > 0 and indexed_documents > 0:
+        cache["ready"] = True
+        cache["checked_at"] = now
         return
 
     logger.warning(
@@ -1159,13 +1289,49 @@ def ensure_tfidf_ready():
 
     rebuild_search_index()
 
+    cache["ready"] = True
+    cache["checked_at"] = time.time()
+
     logger.info("[AUTO_REINDEX] TF-IDF reindex finished")
 
 
-def ensure_semantic_ready():
+def ensure_semantic_ready_cached(sku: str | None = None):
+    now = time.time()
+    cache = READY_CACHE["semantic_vector"]
+
+    if sku:
+        sku = str(sku).strip()
+
+        if sku == "":
+            return
+
+        if semantic_repository.has_product_vector_by_sku(sku):
+            return
+
+        logger.warning(
+            "[AUTO_REINDEX] Semantic vector missing for sku=%s",
+            sku,
+        )
+
+        service = get_semantic_search_service()
+
+        if hasattr(service, "reindex_product_by_sku"):
+            service.reindex_product_by_sku(sku)
+            clear_recommend_cache()
+            return
+
+        service.reindex()
+        clear_runtime_caches("semantic_vector")
+        return
+
+    if cache["ready"] and now - cache["checked_at"] < READY_CACHE_TTL_SECONDS:
+        return
+
     count = semantic_repository.count_semantic_vectors()
 
     if count > 0:
+        cache["ready"] = True
+        cache["checked_at"] = now
         return
 
     logger.warning(
@@ -1175,37 +1341,28 @@ def ensure_semantic_ready():
 
     get_semantic_search_service().reindex()
 
+    cache["ready"] = True
+    cache["checked_at"] = time.time()
+
+    clear_recommend_cache()
+
     logger.info("[AUTO_REINDEX] Semantic reindex finished")
 
 
-def ensure_semantic_product_ready(sku: str):
-    sku = str(sku or "").strip()
+def ensure_elastic_ready_cached():
+    now = time.time()
+    cache = READY_CACHE["elasticsearch_bm25"]
 
-    if sku == "":
+    if cache["ready"] and now - cache["checked_at"] < READY_CACHE_TTL_SECONDS:
         return
 
-    if semantic_repository.has_product_vector_by_sku(sku):
-        return
-
-    logger.warning(
-        "[AUTO_REINDEX] Semantic vector missing for sku=%s, running semantic reindex",
-        sku,
-    )
-
-    get_semantic_search_service().reindex()
-
-    logger.info(
-        "[AUTO_REINDEX] Semantic product reindex finished sku=%s",
-        sku,
-    )
-
-
-def ensure_elastic_ready():
     try:
         if elastic_service.client.indices.exists(index="products"):
             response = elastic_service.client.count(index="products")
 
             if int(response.get("count", 0)) > 0:
+                cache["ready"] = True
+                cache["checked_at"] = now
                 return
 
         logger.warning("[AUTO_REINDEX] Elasticsearch index not ready")
@@ -1215,6 +1372,11 @@ def ensure_elastic_ready():
         elastic_service.create_index()
         elastic_service.index_products(products)
 
+        cache["ready"] = True
+        cache["checked_at"] = time.time()
+
+        clear_recommend_cache()
+
         logger.info(
             "[AUTO_REINDEX] Elasticsearch reindex finished indexed_products=%s",
             len(products),
@@ -1223,27 +1385,3 @@ def ensure_elastic_ready():
     except Exception:
         logger.exception("[AUTO_REINDEX] Elasticsearch reindex failed")
         raise
-
-
-def ensure_active_method_ready(search_method: str, sku: str | None = None):
-    with AUTO_REINDEX_LOCK:
-        if search_method == "semantic_vector":
-            if sku:
-                ensure_semantic_product_ready(sku)
-            else:
-                ensure_semantic_ready()
-            return
-
-        if search_method == "elasticsearch_bm25":
-            ensure_elastic_ready()
-            return
-
-        ensure_tfidf_ready()
-
-@app.get("/ready")
-def ready():
-    return {
-        "ready": True,
-        "service": settings.app_name,
-        "version": settings.app_version,
-    }
