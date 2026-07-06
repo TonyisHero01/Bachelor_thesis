@@ -663,7 +663,6 @@ class EshopHomeController extends BaseController
         HttpClientInterface $httpClient,
         float $weight
     ): void {
-
         $rows = $this->entityManager->createQueryBuilder()
             ->select('oi.sku AS sku, COUNT(oi.id) AS cnt')
             ->from(OrderItem::class, 'oi')
@@ -673,21 +672,24 @@ class EshopHomeController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
-        foreach ($rows as $row) {
+        $seedWeights = [];
 
+        foreach ($rows as $row) {
             $sku = trim((string) ($row['sku'] ?? ''));
 
             if ($sku === '') {
                 continue;
             }
 
-            $this->addRecommendedSkuScores(
-                $scores,
-                $sku,
-                $weight,
-                $httpClient
-            );
+            $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
         }
+
+        $this->addRecommendedBatchSkuScores(
+            $scores,
+            $seedWeights,
+            $httpClient,
+            20
+        );
     }
 
     private function addGlobalWishlistScores(
@@ -695,24 +697,29 @@ class EshopHomeController extends BaseController
         HttpClientInterface $httpClient,
         float $weight
     ): void {
-
-        $customers = $this->entityManager
-            ->getRepository(Customer::class)
-            ->findAll();
+        $customers = $this->entityManager->createQueryBuilder()
+            ->select('c')
+            ->from(Customer::class, 'c')
+            ->orderBy('c.id', 'DESC')
+            ->setMaxResults(200)
+            ->getQuery()
+            ->getResult();
 
         $wishlistCount = [];
 
         foreach ($customers as $customer) {
-
             if (!$customer instanceof Customer) {
                 continue;
             }
 
             foreach ($customer->getWishlist() as $productId) {
-
                 $wishlistCount[$productId] =
                     ($wishlistCount[$productId] ?? 0) + 1;
             }
+        }
+
+        if ($wishlistCount === []) {
+            return;
         }
 
         arsort($wishlistCount);
@@ -720,26 +727,35 @@ class EshopHomeController extends BaseController
         $topProductIds = array_slice(
             array_keys($wishlistCount),
             0,
-            20
+            10
         );
 
         $products = $this->entityManager
             ->getRepository(Product::class)
             ->findBy(['id' => $topProductIds]);
 
-        foreach ($products as $product) {
+        $seedWeights = [];
 
-            if (!$product instanceof Product || !$product->getSku()) {
+        foreach ($products as $product) {
+            if (!$product instanceof Product) {
                 continue;
             }
 
-            $this->addRecommendedSkuScores(
-                $scores,
-                (string) $product->getSku(),
-                $weight,
-                $httpClient
-            );
+            $sku = trim((string) $product->getSku());
+
+            if ($sku === '') {
+                continue;
+            }
+
+            $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
         }
+
+        $this->addRecommendedBatchSkuScores(
+            $scores,
+            $seedWeights,
+            $httpClient,
+            20
+        );
     }
 
     private function findFallbackRandomProducts(int $limit = 10): array
