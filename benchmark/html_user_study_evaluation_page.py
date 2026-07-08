@@ -119,8 +119,6 @@ def build_user_study_recent_rows(metrics):
                 <td>{h(method_label(item.get("preferred_algorithm", "")))}</td>
                 <td>{h(method_label(item.get("easiest_to_understand", "")))}</td>
                 <td>{h(item.get("comment", ""))}</td>
-                <td>{h(item.get("session_id", ""))}</td>
-                <td>{h(item.get("customer_id", ""))}</td>
                 <td>{h(item.get("id", ""))}</td>
             </tr>
         """
@@ -166,8 +164,6 @@ def build_user_study_section(metrics):
                         <th>Preferred algorithm</th>
                         <th>Easiest to understand</th>
                         <th>Comment</th>
-                        <th>Session</th>
-                        <th>Customer</th>
                         <th>ID</th>
                     </tr>
                 </thead>

@@ -9,7 +9,7 @@ from http_client import request_json
 SEARCH_METHODS = {
     "tfidf": {
         "method": "POST",
-        "url": lambda query: f"{settings.search_url}/search",
+        "url": lambda query: f"{settings.search_url}/tfidf/search",
         "json": lambda query: {"query": query, "limit": 10},
         "params": lambda query: None,
     },
@@ -19,11 +19,11 @@ SEARCH_METHODS = {
         "json": lambda query: {"query": query, "limit": 10},
         "params": lambda query: None,
     },
-    "sql_like": {
-        "method": "GET",
-        "url": lambda query: f"{settings.bms_url}/search-like",
-        "json": lambda query: None,
-        "params": lambda query: {"q": query},
+    "elasticsearch_bm25": {
+        "method": "POST",
+        "url": lambda query: f"{settings.search_url}/elastic/search",
+        "json": lambda query: {"query": query, "limit": 10},
+        "params": lambda query: None,
     },
 }
 
@@ -58,7 +58,7 @@ def run_benchmark():
 
     first_query = settings.queries[0]
 
-    for method_name in ["tfidf", "semantic_vector"]:
+    for method_name in ["tfidf", "semantic_vector", "elasticsearch_bm25"]:
         status, data, elapsed = call_method(method_name, first_query)
 
         rows.append({
@@ -70,7 +70,7 @@ def run_benchmark():
         })
 
     for query in settings.queries:
-        for method_name in ["tfidf", "semantic_vector", "sql_like"]:
+        for method_name in ["tfidf", "semantic_vector", "elasticsearch_bm25"]:
             times = []
             result_count = 0
             final_status = 200
