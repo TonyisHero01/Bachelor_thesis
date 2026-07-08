@@ -518,10 +518,10 @@ def build_recommendation_metrics_section(metrics):
             </tr>
         """
 
-    if not top_sold_rows:
-        top_sold_rows = """
+    if not top_popular_rows:
+        top_popular_rows = """
             <tr>
-                <td colspan="2">No sales data yet.</td>
+                <td colspan="4">No popularity data yet.</td>
             </tr>
         """
 
