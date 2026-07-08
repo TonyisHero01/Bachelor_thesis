@@ -10,6 +10,8 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 class RecommendationEventLogger
 {
+    private const IMPRESSION_DEDUPLICATION_SECONDS = 600;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RequestStack $requestStack,
@@ -71,18 +73,49 @@ class RecommendationEventLogger
         $user = $this->security->getUser();
         $customer = $user instanceof Customer ? $user : null;
 
+        $persistedCount = 0;
+        $seenInThisBatch = [];
+
         foreach ($recommendations as $index => $item) {
             $recommendedSku = null;
             $score = null;
 
             if (is_array($item)) {
-                $recommendedSku = $item['sku'] ?? null;
+                $recommendedSku = $item['sku'] ?? $item['product_sku'] ?? null;
                 $score = isset($item['score']) ? (float) $item['score'] : null;
             } elseif (is_object($item) && method_exists($item, 'getSku')) {
                 $recommendedSku = $item->getSku();
             }
 
-            if (!$recommendedSku) {
+            $recommendedSku = trim((string) $recommendedSku);
+
+            if ($recommendedSku === '') {
+                continue;
+            }
+
+            $sourceSkuKey = trim((string) ($sourceSku ?? ''));
+
+            $batchKey = implode('|', [
+                $sessionId,
+                $pageType,
+                $sourceSkuKey,
+                $recommendedSku,
+                $algorithm,
+            ]);
+
+            if (isset($seenInThisBatch[$batchKey])) {
+                continue;
+            }
+
+            $seenInThisBatch[$batchKey] = true;
+
+            if ($this->hasRecentImpression(
+                $sessionId,
+                $pageType,
+                $sourceSku,
+                $recommendedSku,
+                $algorithm
+            )) {
                 continue;
             }
 
@@ -98,8 +131,54 @@ class RecommendationEventLogger
             $log->setEventType('impression');
 
             $this->entityManager->persist($log);
+            $persistedCount++;
         }
 
-        $this->entityManager->flush();
+        if ($persistedCount > 0) {
+            $this->entityManager->flush();
+        }
+    }
+
+    private function hasRecentImpression(
+        string $sessionId,
+        string $pageType,
+        ?string $sourceSku,
+        string $recommendedSku,
+        string $algorithm
+    ): bool {
+        $since = new \DateTimeImmutable(
+            sprintf('-%d seconds', self::IMPRESSION_DEDUPLICATION_SECONDS)
+        );
+
+        $sourceSku = trim((string) ($sourceSku ?? ''));
+
+        $qb = $this->entityManager
+            ->createQueryBuilder()
+            ->select('COUNT(l.id)')
+            ->from(RecommendationEventLog::class, 'l')
+            ->where('l.sessionId = :sessionId')
+            ->andWhere('l.pageType = :pageType')
+            ->andWhere('l.recommendedSku = :recommendedSku')
+            ->andWhere('l.algorithm = :algorithm')
+            ->andWhere('l.eventType = :eventType')
+            ->andWhere('l.createdAt >= :since')
+            ->setParameter('sessionId', $sessionId)
+            ->setParameter('pageType', $pageType)
+            ->setParameter('recommendedSku', $recommendedSku)
+            ->setParameter('algorithm', $algorithm)
+            ->setParameter('eventType', 'impression')
+            ->setParameter('since', $since);
+
+        if ($sourceSku === '') {
+            $qb
+                ->andWhere('(l.sourceSku IS NULL OR l.sourceSku = :emptySourceSku)')
+                ->setParameter('emptySourceSku', '');
+        } else {
+            $qb
+                ->andWhere('l.sourceSku = :sourceSku')
+                ->setParameter('sourceSku', $sourceSku);
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult() > 0;
     }
 }

@@ -12,14 +12,14 @@ def normalize_log_filters(filters: dict | None):
     if filters is None:
         filters = {}
 
-    limit = filters.get("limit", 200)
+    limit = filters.get("limit", 20)
 
     try:
         limit = int(limit)
     except Exception:
-        limit = 200
+        limit = 20
 
-    limit = max(20, min(limit, 1000))
+    limit = max(1, min(limit, 20))
 
     return {
         "event_type": (filters.get("event_type") or "").strip(),
@@ -80,6 +80,11 @@ def build_recommendation_log_where(filters: dict):
 
     return "WHERE " + " AND ".join(conditions), params
 
+def add_where_condition(where_sql: str, condition: str) -> str:
+    if where_sql:
+        return where_sql + " AND " + condition
+
+    return "WHERE " + condition
 
 def fetch_grouped_recommendation_log(cur, where_sql, params, column):
     cur.execute(
@@ -126,6 +131,22 @@ def fetch_count(cur, where_sql, params, extra_condition=None):
 
     return int(cur.fetchone()[0] or 0)
 
+def build_event_from_row(row):
+    return {
+        "id": row[0],
+        "session_id": str(row[1] or ""),
+        "customer_id": row[2],
+        "page_type": str(row[3] or ""),
+        "source_sku": str(row[4] or ""),
+        "source_name": str(row[5] or ""),
+        "recommended_sku": str(row[6] or ""),
+        "recommended_name": str(row[7] or ""),
+        "algorithm": str(row[8] or ""),
+        "rank_position": row[9],
+        "score": row[10],
+        "event_type": str(row[11] or ""),
+        "created_at": row[12].isoformat() if row[12] else "",
+    }
 
 def fetch_recommendation_event_log_report(filters: dict | None = None):
     filters = normalize_log_filters(filters)
@@ -206,8 +227,7 @@ def fetch_recommendation_event_log_report(filters: dict | None = None):
         "page_type",
     )
 
-    cur.execute(
-        f"""
+    base_event_select_sql = f"""
         SELECT
             rel.id,
             rel.session_id,
@@ -237,6 +257,11 @@ def fetch_recommendation_event_log_report(filters: dict | None = None):
             FROM product
             ORDER BY sku, id DESC
         ) recommended_product ON recommended_product.sku = rel.recommended_sku
+    """
+
+    cur.execute(
+        f"""
+        {base_event_select_sql}
         {where_sql}
         ORDER BY rel.created_at DESC, rel.id DESC
         LIMIT %s
@@ -244,24 +269,72 @@ def fetch_recommendation_event_log_report(filters: dict | None = None):
         params + [filters["limit"]],
     )
 
-    events = []
+    recent_events = [
+        build_event_from_row(row)
+        for row in cur.fetchall()
+    ]
 
-    for row in cur.fetchall():
-        events.append({
-            "id": row[0],
-            "session_id": str(row[1] or ""),
-            "customer_id": row[2],
-            "page_type": str(row[3] or ""),
-            "source_sku": str(row[4] or ""),
-            "source_name": str(row[5] or ""),
-            "recommended_sku": str(row[6] or ""),
-            "recommended_name": str(row[7] or ""),
-            "algorithm": str(row[8] or ""),
-            "rank_position": row[9],
-            "score": row[10],
-            "event_type": str(row[11] or ""),
-            "created_at": row[12].isoformat() if row[12] else "",
-        })
+    events_by_id = {
+        event["id"]: event
+        for event in recent_events
+    }
+
+    events = recent_events
+
+    has_click = any(
+        event.get("event_type") == "click"
+        for event in events
+    )
+
+    if filters["event_type"] == "" and not has_click:
+        click_where_sql = add_where_condition(
+            where_sql,
+            "rel.event_type = 'click'"
+        )
+
+        cur.execute(
+            f"""
+            {base_event_select_sql}
+            {click_where_sql}
+            ORDER BY rel.created_at DESC, rel.id DESC
+            LIMIT 3
+            """,
+            params,
+        )
+
+        recent_clicks = [
+            build_event_from_row(row)
+            for row in cur.fetchall()
+        ]
+
+        for click_event in recent_clicks:
+            events_by_id[click_event["id"]] = click_event
+
+        click_events = [
+            event
+            for event in events_by_id.values()
+            if event.get("event_type") == "click"
+        ]
+
+        other_events = [
+            event
+            for event in events_by_id.values()
+            if event.get("event_type") != "click"
+        ]
+
+        click_events = sorted(
+            click_events,
+            key=lambda item: (item.get("created_at", ""), item.get("id", 0)),
+            reverse=True,
+        )
+
+        other_events = sorted(
+            other_events,
+            key=lambda item: (item.get("created_at", ""), item.get("id", 0)),
+            reverse=True,
+        )
+
+        events = (click_events + other_events)[:filters["limit"]]
 
     cur.close()
     conn.close()

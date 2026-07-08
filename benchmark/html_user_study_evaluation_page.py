@@ -51,19 +51,8 @@ def build_user_study_summary(metrics):
                 <span>Total user study responses</span>
                 <strong>{summary.get("total_responses", 0)}</strong>
             </div>
-
-            <div class="metric-card">
-                <span>Unique sessions</span>
-                <strong>{summary.get("unique_sessions", 0)}</strong>
-            </div>
-
-            <div class="metric-card">
-                <span>Known customers</span>
-                <strong>{summary.get("known_customers", 0)}</strong>
-            </div>
         </div>
     """
-
 
 def build_user_study_rating_table(metrics):
     ratings = metrics.get("ratings", {}) if metrics else {}
