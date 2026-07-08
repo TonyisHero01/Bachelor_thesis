@@ -487,7 +487,7 @@ def build_recommendation_metrics_section(metrics):
     freshness = metrics.get("freshness", {})
 
     top_recommended = popularity.get("top_recommended", [])
-    top_sold = popularity.get("top_sold", [])
+    top_popular = popularity.get("top_popular", [])
 
     top_recommended_rows = ""
 
@@ -499,13 +499,15 @@ def build_recommendation_metrics_section(metrics):
             </tr>
         """
 
-    top_sold_rows = ""
+    top_popular_rows = ""
 
-    for item in top_sold:
-        top_sold_rows += f"""
+    for item in top_popular:
+        top_popular_rows += f"""
             <tr>
                 <td>{item.get("sku", "-")}</td>
+                <td>{item.get("view_count", 0)}</td>
                 <td>{item.get("sold_count", 0)}</td>
+                <td>{item.get("popularity_score", 0)}</td>
             </tr>
         """
 
@@ -590,16 +592,18 @@ def build_recommendation_metrics_section(metrics):
             </div>
 
             <div class="card-inner">
-                <h3>Top Sold Products</h3>
+                <h3>Top Popular Products</h3>
                 <table>
                     <thead>
                         <tr>
                             <th>SKU</th>
-                            <th>Sold count</th>
+                            <th>Views</th>
+                            <th>Sold</th>
+                            <th>Popularity score</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {top_sold_rows}
+                        {top_popular_rows}
                     </tbody>
                 </table>
             </div>

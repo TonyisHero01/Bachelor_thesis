@@ -143,11 +143,22 @@ def fetch_popularity_amplification() -> dict:
             WHERE event_type = 'impression'
               AND recommended_sku IS NOT NULL
               AND recommended_sku <> ''
+              AND recommended_sku <> 'UNKNOWN'
             GROUP BY recommended_sku
             ORDER BY recommendation_count DESC
             LIMIT 10
         ),
-        top_sold AS (
+        view_popularity AS (
+            SELECT
+                sku,
+                COUNT(*) AS view_count
+            FROM customer_product_view_log
+            WHERE sku IS NOT NULL
+              AND sku <> ''
+              AND sku <> 'UNKNOWN'
+            GROUP BY sku
+        ),
+        sales_popularity AS (
             SELECT
                 sku,
                 SUM(quantity) AS sold_count
@@ -156,22 +167,37 @@ def fetch_popularity_amplification() -> dict:
               AND sku <> ''
               AND sku <> 'UNKNOWN'
             GROUP BY sku
-            ORDER BY sold_count DESC
+        ),
+        top_popular AS (
+            SELECT
+                COALESCE(v.sku, s.sku) AS sku,
+                COALESCE(v.view_count, 0) AS view_count,
+                COALESCE(s.sold_count, 0) AS sold_count,
+                (
+                    COALESCE(v.view_count, 0)
+                    + COALESCE(s.sold_count, 0) * 5
+                ) AS popularity_score
+            FROM view_popularity v
+            FULL OUTER JOIN sales_popularity s ON s.sku = v.sku
+            ORDER BY popularity_score DESC
             LIMIT 10
         ),
         overlap AS (
             SELECT COUNT(*) AS overlap_count
             FROM top_recommended r
-            JOIN top_sold s ON s.sku = r.sku
+            JOIN top_popular p ON p.sku = r.sku
         )
         SELECT
             (SELECT COUNT(*) FROM top_recommended) AS top_recommended_count,
-            (SELECT COUNT(*) FROM top_sold) AS top_sold_count,
+            (SELECT COUNT(*) FROM top_popular) AS top_popular_count,
             overlap.overlap_count,
             CASE
                 WHEN (SELECT COUNT(*) FROM top_recommended) = 0 THEN 0
                 ELSE ROUND(
-                    (overlap.overlap_count::numeric / (SELECT COUNT(*) FROM top_recommended)::numeric) * 100,
+                    (
+                        overlap.overlap_count::numeric
+                        / (SELECT COUNT(*) FROM top_recommended)::numeric
+                    ) * 100,
                     2
                 )
             END AS popularity_overlap_percent
@@ -186,21 +212,44 @@ def fetch_popularity_amplification() -> dict:
         WHERE event_type = 'impression'
           AND recommended_sku IS NOT NULL
           AND recommended_sku <> ''
+          AND recommended_sku <> 'UNKNOWN'
         GROUP BY recommended_sku
         ORDER BY recommendation_count DESC
         LIMIT 10;
     """
 
-    top_sold_sql = """
+    top_popular_sql = """
+        WITH view_popularity AS (
+            SELECT
+                sku,
+                COUNT(*) AS view_count
+            FROM customer_product_view_log
+            WHERE sku IS NOT NULL
+              AND sku <> ''
+              AND sku <> 'UNKNOWN'
+            GROUP BY sku
+        ),
+        sales_popularity AS (
+            SELECT
+                sku,
+                SUM(quantity) AS sold_count
+            FROM order_items
+            WHERE sku IS NOT NULL
+              AND sku <> ''
+              AND sku <> 'UNKNOWN'
+            GROUP BY sku
+        )
         SELECT
-            sku,
-            SUM(quantity) AS sold_count
-        FROM order_items
-        WHERE sku IS NOT NULL
-          AND sku <> ''
-          AND sku <> 'UNKNOWN'
-        GROUP BY sku
-        ORDER BY sold_count DESC
+            COALESCE(v.sku, s.sku) AS sku,
+            COALESCE(v.view_count, 0) AS view_count,
+            COALESCE(s.sold_count, 0) AS sold_count,
+            (
+                COALESCE(v.view_count, 0)
+                + COALESCE(s.sold_count, 0) * 5
+            ) AS popularity_score
+        FROM view_popularity v
+        FULL OUTER JOIN sales_popularity s ON s.sku = v.sku
+        ORDER BY popularity_score DESC
         LIMIT 10;
     """
 
@@ -208,13 +257,12 @@ def fetch_popularity_amplification() -> dict:
 
     return {
         "top_recommended_count": int(row.get("top_recommended_count") or 0),
-        "top_sold_count": int(row.get("top_sold_count") or 0),
+        "top_popular_count": int(row.get("top_popular_count") or 0),
         "overlap_count": int(row.get("overlap_count") or 0),
         "popularity_overlap_percent": float(row.get("popularity_overlap_percent") or 0),
         "top_recommended": fetch_all(top_recommended_sql),
-        "top_sold": fetch_all(top_sold_sql),
+        "top_popular": fetch_all(top_popular_sql),
     }
-
 
 def fetch_recommendation_freshness() -> dict:
     sql = """
