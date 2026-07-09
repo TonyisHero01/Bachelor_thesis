@@ -27,6 +27,22 @@ SEARCH_METHODS = {
     },
 }
 
+def call_method_with_retry(method_name: str, query: str, max_attempts: int = 3):
+    last_status = 0
+    last_data = {}
+    last_elapsed = 0.0
+
+    for attempt in range(max_attempts):
+        status, data, elapsed = call_method(method_name, query)
+
+        last_status = status
+        last_data = data
+        last_elapsed = elapsed
+
+        if status == 200:
+            return status, data, elapsed
+
+    return last_status, last_data, last_elapsed
 
 def call_method(method_name: str, query: str):
     method_config = SEARCH_METHODS[method_name]
@@ -59,7 +75,11 @@ def run_benchmark():
     first_query = settings.queries[0]
 
     for method_name in ["lexical", "semantic_vector", "elasticsearch_bm25"]:
-        status, data, elapsed = call_method(method_name, first_query)
+        status, data, elapsed = call_method_with_retry(
+            method_name,
+            first_query,
+            max_attempts=3,
+        )
 
         rows.append({
             "type": f"{method_name}_cold",

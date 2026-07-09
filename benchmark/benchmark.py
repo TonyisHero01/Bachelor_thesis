@@ -61,16 +61,10 @@ def index():
 @app.get("/run", response_class=HTMLResponse)
 def run():
     global LAST_RESULTS
+
     LAST_RESULTS = run_benchmark()
 
-    return """
-    <html>
-    <head>
-        <meta http-equiv="refresh" content="0;url=/" />
-    </head>
-    <body>Redirecting...</body>
-    </html>
-    """
+    return render_benchmark_page(LAST_RESULTS)
 
 @app.get("/evaluation/recommendation-log/csv")
 def recommendation_log_csv(
