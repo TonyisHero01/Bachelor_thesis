@@ -21,7 +21,6 @@ DEFAULT_RELEVANCE_CONFIG = {
     "same_color_bonus": 0.10,
     "same_size_bonus": 0.10,
 
-    "lexical_recommendation_weight": 1.0,
     "semantic_vector_weight": 1.0,
     "elasticsearch_bm25_weight": 1.0,
 
@@ -55,7 +54,6 @@ def fetch_active_relevance_config() -> dict:
                     same_material_bonus,
                     same_color_bonus,
                     same_size_bonus,
-                    lexical_recommendation_weight,
                     same_category_recommendation_weight,
                     same_color_recommendation_weight,
                     same_size_recommendation_weight,
