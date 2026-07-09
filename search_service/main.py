@@ -15,7 +15,7 @@ from schemas import (
     SemanticSimilarRequest,
     SessionRecommendRequest,
 )
-from tfidf.search_service import (
+from lexical.search_service import (
     rebuild_search_index,
     partial_reindex_product,
     search_products,
@@ -23,7 +23,7 @@ from tfidf.search_service import (
     get_index_status,
 )
 
-from tfidf.search_index import search_index
+from lexical.search_index import search_index
 from semantic_search.semantic_search_service import SemanticSearchService
 
 from elastic_search.elastic_product_search_service import ElasticProductSearchService
@@ -34,7 +34,7 @@ import threading
 AUTO_REINDEX_LOCK = threading.Lock()
 
 SUPPORTED_SEARCH_METHODS = {
-    "tfidf",
+    "lexical",
     "semantic_vector",
     "elasticsearch_bm25",
 }
@@ -47,7 +47,7 @@ ACTIVE_METHOD_CACHE = {
 ACTIVE_METHOD_TTL_SECONDS = 30
 
 READY_CACHE = {
-    "tfidf": {
+    "lexical": {
         "ready": False,
         "checked_at": 0,
     },
@@ -97,10 +97,10 @@ app = FastAPI(
 )
 
 def normalize_search_method(method: str | None) -> str:
-    method = str(method or "tfidf").strip()
+    method = str(method or "lexical").strip()
 
     if method not in SUPPORTED_SEARCH_METHODS:
-        return "tfidf"
+        return "lexical"
 
     return method
 
@@ -233,17 +233,17 @@ def reindex_active_method_full(search_method: str):
 
         return result
 
-    logger.info("[REINDEX] active_method=tfidf full reindex started")
+    logger.info("[REINDEX] active_method=lexical full reindex started")
 
     updated = rebuild_search_index()
 
     result = {
-        "method": "tfidf",
+        "method": "lexical",
         "updated": updated,
     }
 
     logger.info(
-        "[REINDEX] active_method=tfidf full reindex finished result=%s",
+        "[REINDEX] active_method=lexical full reindex finished result=%s",
         result,
     )
 
@@ -326,14 +326,14 @@ def reindex_active_method_partial(search_method: str, sku: str):
         }
 
     logger.info(
-        "[REINDEX] active_method=tfidf partial reindex started sku=%s",
+        "[REINDEX] active_method=lexical partial reindex started sku=%s",
         sku,
     )
 
     updated = partial_reindex_product(sku)
 
     return {
-        "method": "tfidf",
+        "method": "lexical",
         "mode": "partial",
         "sku": sku,
         "updated": updated,
@@ -408,8 +408,8 @@ def semantic_reindex(request: Request):
             detail="Semantic reindex failed",
         )
 
-@app.post("/tfidf/search")
-def tfidf_search(payload: dict, request: Request):
+@app.post("/lexical/search")
+def lexical_search(payload: dict, request: Request):
     started = time.perf_counter()
 
     query = str(payload.get("query", "")).strip()
@@ -417,13 +417,13 @@ def tfidf_search(payload: dict, request: Request):
     limit = min(limit, settings.max_search_limit)
 
     if query == "":
-        logger.info("[SEARCH_API] method=tfidf endpoint=/tfidf/search empty_query=true")
+        logger.info("[SEARCH_API] method=lexical endpoint=/lexical/search empty_query=true")
         return {"results": []}
 
-    ensure_method_ready("tfidf")
+    ensure_method_ready("lexical")
 
     logger.info(
-        "[SEARCH_API] method=tfidf endpoint=/tfidf/search started query=%r limit=%s ip=%s",
+        "[SEARCH_API] method=lexical endpoint=/lexical/search started query=%r limit=%s ip=%s",
         query,
         limit,
         client_ip(request),
@@ -439,14 +439,14 @@ def tfidf_search(payload: dict, request: Request):
     elapsed_ms = (time.perf_counter() - started) * 1000
 
     logger.info(
-        "[SEARCH_API] method=tfidf endpoint=/tfidf/search finished query=%r results=%s elapsed_ms=%.2f",
+        "[SEARCH_API] method=lexical endpoint=/lexical/search finished query=%r results=%s elapsed_ms=%.2f",
         query,
         len(results),
         elapsed_ms,
     )
 
     return {
-        "method": "tfidf",
+        "method": "lexical",
         "query": query,
         "limit": limit,
         "results": results,
@@ -663,7 +663,7 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
                 "active_method": search_method,
                 "product_rows": status["product_rows"],
                 "distinct_skus": status["distinct_skus"],
-                "tfidf_vector_rows": status["vector_rows"],
+                "lexical_vector_rows": status["vector_rows"],
                 "semantic_vector_rows": semantic_vectors,
                 "elastic_index_rows": elastic_count,
                 "reason": req.reason,
@@ -825,7 +825,7 @@ def get_active_search_method() -> str:
 
     try:
         config = fetch_active_relevance_config()
-        method = normalize_search_method(config.get("search_method", "tfidf"))
+        method = normalize_search_method(config.get("search_method", "lexical"))
 
         ACTIVE_METHOD_CACHE["method"] = method
         ACTIVE_METHOD_CACHE["expires_at"] = now + ACTIVE_METHOD_TTL_SECONDS
@@ -834,7 +834,7 @@ def get_active_search_method() -> str:
 
     except Exception:
         logger.exception("[CONFIG] failed to load active search method")
-        return "tfidf"
+        return "lexical"
 
 def normalize_recommendation_rows(rows):
     normalized = []
@@ -946,7 +946,7 @@ def recommend_by_sku_with_active_method(
     results = normalize_recommendation_rows(rows)
 
     logger.info(
-        "[RECOMMEND] method=tfidf sku=%s results=%s",
+        "[RECOMMEND] method=lexical sku=%s results=%s",
         sku,
         len(results),
     )
@@ -1248,8 +1248,8 @@ def ensure_method_ready(search_method: str, sku: str | None = None):
     search_method = normalize_search_method(search_method)
 
     with AUTO_REINDEX_LOCK:
-        if search_method == "tfidf":
-            ensure_tfidf_ready_cached()
+        if search_method == "lexical":
+            ensure_lexical_ready_cached()
             return
 
         if search_method == "semantic_vector":
@@ -1264,9 +1264,9 @@ def ensure_method_ready(search_method: str, sku: str | None = None):
 def ensure_active_method_ready(search_method: str, sku: str | None = None):
     ensure_method_ready(search_method, sku)
 
-def ensure_tfidf_ready_cached():
+def ensure_lexical_ready_cached():
     now = time.time()
-    cache = READY_CACHE["tfidf"]
+    cache = READY_CACHE["lexical"]
 
     if cache["ready"] and now - cache["checked_at"] < READY_CACHE_TTL_SECONDS:
         return
@@ -1282,7 +1282,7 @@ def ensure_tfidf_ready_cached():
         return
 
     logger.warning(
-        "[AUTO_REINDEX] TF-IDF index not ready vector_rows=%s indexed_documents=%s",
+        "[AUTO_REINDEX] Lexical index not ready vector_rows=%s indexed_documents=%s",
         vector_rows,
         indexed_documents,
     )
@@ -1292,7 +1292,7 @@ def ensure_tfidf_ready_cached():
     cache["ready"] = True
     cache["checked_at"] = time.time()
 
-    logger.info("[AUTO_REINDEX] TF-IDF reindex finished")
+    logger.info("[AUTO_REINDEX] Lexical reindex finished")
 
 
 def ensure_semantic_ready_cached(sku: str | None = None):

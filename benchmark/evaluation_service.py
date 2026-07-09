@@ -134,7 +134,7 @@ def fetch_products_by_skus(skus: list[str]):
 
 
 def extract_sku(item: dict, method: str):
-    if method == "tfidf":
+    if method == "lexical":
         return str(item.get("product_sku", "")).strip()
 
     return str(item.get("sku", "")).strip()
@@ -142,7 +142,7 @@ def extract_sku(item: dict, method: str):
 
 def call_search_method(method: str, query: str, limit: int):
     endpoint = {
-        "tfidf": "/tfidf/search",
+        "lexical": "/lexical/search",
         "semantic_vector": "/semantic/search",
         "elasticsearch_bm25": "/elastic/search",
     }[method]
@@ -324,7 +324,7 @@ def build_result_preview(results, labels, limit=5):
 
 def evaluate_search(limit: int = 10):
     methods = [
-        "tfidf",
+        "lexical",
         "semantic_vector",
         "elasticsearch_bm25",
     ]

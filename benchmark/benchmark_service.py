@@ -7,9 +7,9 @@ from http_client import request_json
 
 
 SEARCH_METHODS = {
-    "tfidf": {
+    "lexical": {
         "method": "POST",
-        "url": lambda query: f"{settings.search_url}/tfidf/search",
+        "url": lambda query: f"{settings.search_url}/lexical/search",
         "json": lambda query: {"query": query, "limit": 10},
         "params": lambda query: None,
     },
@@ -58,7 +58,7 @@ def run_benchmark():
 
     first_query = settings.queries[0]
 
-    for method_name in ["tfidf", "semantic_vector", "elasticsearch_bm25"]:
+    for method_name in ["lexical", "semantic_vector", "elasticsearch_bm25"]:
         status, data, elapsed = call_method(method_name, first_query)
 
         rows.append({
@@ -70,7 +70,7 @@ def run_benchmark():
         })
 
     for query in settings.queries:
-        for method_name in ["tfidf", "semantic_vector", "elasticsearch_bm25"]:
+        for method_name in ["lexical", "semantic_vector", "elasticsearch_bm25"]:
             times = []
             result_count = 0
             final_status = 200

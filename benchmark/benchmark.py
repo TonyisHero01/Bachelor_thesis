@@ -185,7 +185,7 @@ def update_config(
     sizeWeight: int = Form(...),
     attributesWeight: int = Form(...),
 
-    tfidfRecommendationWeight: float = Form(...),
+    lexicalRecommendationWeight: float = Form(...),
     sameCategoryRecommendationWeight: float = Form(...),
     sameColorRecommendationWeight: float = Form(...),
     sameSizeRecommendationWeight: float = Form(...),
@@ -205,7 +205,7 @@ def update_config(
         "sizeWeight": sizeWeight,
         "attributesWeight": attributesWeight,
 
-        "tfidfRecommendationWeight": tfidfRecommendationWeight,
+        "lexicalRecommendationWeight": lexicalRecommendationWeight,
         "sameCategoryRecommendationWeight": sameCategoryRecommendationWeight,
         "sameColorRecommendationWeight": sameColorRecommendationWeight,
         "sameSizeRecommendationWeight": sameSizeRecommendationWeight,

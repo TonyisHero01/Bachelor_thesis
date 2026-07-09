@@ -43,10 +43,10 @@ async def submit_user_study(
     search_task: str = Form(""),
     tested_query: str = Form(""),
 
-    tfidf_relevance: str = Form(...),
-    tfidf_ranking_quality: str = Form(...),
-    tfidf_result_diversity: str = Form(...),
-    tfidf_overall_satisfaction: str = Form(...),
+    lexical_relevance: str = Form(...),
+    lexical_ranking_quality: str = Form(...),
+    lexical_result_diversity: str = Form(...),
+    lexical_overall_satisfaction: str = Form(...),
 
     semantic_relevance: str = Form(...),
     semantic_ranking_quality: str = Form(...),
@@ -66,11 +66,11 @@ async def submit_user_study(
         "search_task": search_task,
         "tested_query": tested_query,
 
-        "tfidf": {
-            "relevance": tfidf_relevance,
-            "ranking_quality": tfidf_ranking_quality,
-            "result_diversity": tfidf_result_diversity,
-            "overall_satisfaction": tfidf_overall_satisfaction,
+        "lexical": {
+            "relevance": lexical_relevance,
+            "ranking_quality": lexical_ranking_quality,
+            "result_diversity": lexical_result_diversity,
+            "overall_satisfaction": lexical_overall_satisfaction,
         },
 
         "semantic_vector": {

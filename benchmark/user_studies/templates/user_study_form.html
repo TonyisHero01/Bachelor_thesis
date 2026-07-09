@@ -44,11 +44,11 @@
                 >
             </div>
 
-            <h2>Vyhledávání pomocí TF-IDF</h2>
+            <h2>Vyhledávání pomocí Lexical</h2>
 
             <div class="question">
-                <label>Jak relevantní byly výsledky algoritmu TF-IDF?</label>
-                <select name="tfidf_relevance" required>
+                <label>Jak relevantní byly výsledky algoritmu Lexical?</label>
+                <select name="lexical_relevance" required>
                     <option value="">Vyberte možnost</option>
                     <option value="1">1 - Nerelevantní</option>
                     <option value="2">2 - Spíše nerelevantní</option>
@@ -59,8 +59,8 @@
             </div>
 
             <div class="question">
-                <label>Jak kvalitní bylo pořadí výsledků algoritmu TF-IDF?</label>
-                <select name="tfidf_ranking_quality" required>
+                <label>Jak kvalitní bylo pořadí výsledků algoritmu Lexical?</label>
+                <select name="lexical_ranking_quality" required>
                     <option value="">Vyberte možnost</option>
                     <option value="1">1 - Velmi špatné</option>
                     <option value="2">2 - Špatné</option>
@@ -71,8 +71,8 @@
             </div>
 
             <div class="question">
-                <label>Jak rozmanité byly výsledky algoritmu TF-IDF?</label>
-                <select name="tfidf_result_diversity" required>
+                <label>Jak rozmanité byly výsledky algoritmu Lexical?</label>
+                <select name="lexical_result_diversity" required>
                     <option value="">Vyberte možnost</option>
                     <option value="1">1 - Velmi opakující se</option>
                     <option value="2">2 - Málo rozmanité</option>
@@ -83,8 +83,8 @@
             </div>
 
             <div class="question">
-                <label>Celková spokojenost s výsledky algoritmu TF-IDF</label>
-                <select name="tfidf_overall_satisfaction" required>
+                <label>Celková spokojenost s výsledky algoritmu Lexical</label>
+                <select name="lexical_overall_satisfaction" required>
                     <option value="">Vyberte možnost</option>
                     <option value="1">1 - Velmi nespokojen/a</option>
                     <option value="2">2 - Nespokojen/a</option>
@@ -200,7 +200,7 @@
                 <label>Který algoritmus podle vás poskytl celkově nejlepší výsledky?</label>
                 <select name="preferred_algorithm" required>
                     <option value="">Vyberte možnost</option>
-                    <option value="tfidf">TF-IDF</option>
+                    <option value="lexical">Lexical</option>
                     <option value="semantic_vector">Sémantické vektorové vyhledávání</option>
                     <option value="elasticsearch_bm25">Elasticsearch BM25</option>
                     <option value="no_clear_difference">Nebyl patrný jasný rozdíl</option>
@@ -211,7 +211,7 @@
                 <label>Která sada výsledků byla nejsrozumitelnější?</label>
                 <select name="easiest_to_understand">
                     <option value="">Vyberte možnost</option>
-                    <option value="tfidf">TF-IDF</option>
+                    <option value="lexical">Lexical</option>
                     <option value="semantic_vector">Sémantické vektorové vyhledávání</option>
                     <option value="elasticsearch_bm25">Elasticsearch BM25</option>
                     <option value="no_clear_difference">Nebyl patrný jasný rozdíl</option>

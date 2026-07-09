@@ -10,7 +10,7 @@ def build_benchmark_chart_data(rows):
 
     for row in rows:
         if row["type"] in [
-            "tfidf_cold",
+            "lexical_cold",
             "semantic_vector_cold",
             "elasticsearch_bm25_cold",
         ]:
@@ -20,7 +20,7 @@ def build_benchmark_chart_data(rows):
 
         if query not in grouped:
             grouped[query] = {
-                "tfidf": 0,
+                "lexical": 0,
                 "semantic_vector": 0,
                 "elasticsearch_bm25": 0,
             }
@@ -30,7 +30,7 @@ def build_benchmark_chart_data(rows):
 
     return {
         "labels": list(grouped.keys()),
-        "tfidf": [item["tfidf"] for item in grouped.values()],
+        "lexical": [item["lexical"] for item in grouped.values()],
         "semantic_vector": [item["semantic_vector"] for item in grouped.values()],
         "elasticsearch_bm25": [item["elasticsearch_bm25"] for item in grouped.values()],
     }
@@ -40,7 +40,7 @@ def build_comparison_rows(rows):
 
     for row in rows:
         if row["type"] in [
-            "tfidf_cold",
+            "lexical_cold",
             "semantic_vector_cold",
             "elasticsearch_bm25_cold",
         ]:
@@ -50,21 +50,21 @@ def build_comparison_rows(rows):
 
         if query not in grouped:
             grouped[query] = {
-                "tfidf_ms": None,
+                "lexical_ms": None,
                 "semantic_ms": None,
                 "elastic_ms": None,
-                "tfidf_count": None,
+                "lexical_count": None,
                 "semantic_count": None,
                 "elastic_count": None,
-                "tfidf_status": None,
+                "lexical_status": None,
                 "semantic_status": None,
                 "elastic_status": None,
             }
 
-        if row["type"] == "tfidf":
-            grouped[query]["tfidf_ms"] = row["response_time_ms"]
-            grouped[query]["tfidf_count"] = row["result_count"]
-            grouped[query]["tfidf_status"] = row["status"]
+        if row["type"] == "lexical":
+            grouped[query]["lexical_ms"] = row["response_time_ms"]
+            grouped[query]["lexical_count"] = row["result_count"]
+            grouped[query]["lexical_status"] = row["status"]
 
         if row["type"] == "semantic_vector":
             grouped[query]["semantic_ms"] = row["response_time_ms"]
@@ -80,7 +80,7 @@ def build_comparison_rows(rows):
 
     for query, data in grouped.items():
         times = {
-            "TF-IDF": data["tfidf_ms"],
+            "Lexical": data["lexical_ms"],
             "Semantic Vector": data["semantic_ms"],
             "Elasticsearch BM25": data["elastic_ms"],
         }
@@ -96,14 +96,14 @@ def build_comparison_rows(rows):
         table_rows += f"""
         <tr>
             <td>{query}</td>
-            <td>{f'{data["tfidf_ms"]:.2f} ms' if data["tfidf_ms"] is not None else '-'}</td>
+            <td>{f'{data["lexical_ms"]:.2f} ms' if data["lexical_ms"] is not None else '-'}</td>
             <td>{f'{data["semantic_ms"]:.2f} ms' if data["semantic_ms"] is not None else '-'}</td>
             <td>{f'{data["elastic_ms"]:.2f} ms' if data["elastic_ms"] is not None else '-'}</td>
-            <td>{data["tfidf_count"]}</td>
+            <td>{data["lexical_count"]}</td>
             <td>{data["semantic_count"]}</td>
             <td>{data["elastic_count"]}</td>
             <td>{fastest}</td>
-            <td>{data["tfidf_status"]}</td>
+            <td>{data["lexical_status"]}</td>
             <td>{data["semantic_status"]}</td>
             <td>{data["elastic_status"]}</td>
         </tr>
@@ -112,9 +112,9 @@ def build_comparison_rows(rows):
     return table_rows
 
 def build_summary(rows):
-    tfidf_rows = [
+    lexical_rows = [
         row for row in rows
-        if row["type"] == "tfidf" and row["status"] == 200
+        if row["type"] == "lexical" and row["status"] == 200
     ]
 
     semantic_rows = [
@@ -127,9 +127,9 @@ def build_summary(rows):
         if row["type"] == "elasticsearch_bm25" and row["status"] == 200
     ]
 
-    tfidf_cold_rows = [
+    lexical_cold_rows = [
         row for row in rows
-        if row["type"] == "tfidf_cold" and row["status"] == 200
+        if row["type"] == "lexical_cold" and row["status"] == 200
     ]
 
     semantic_cold_rows = [
@@ -142,20 +142,20 @@ def build_summary(rows):
         if row["type"] == "elasticsearch_bm25_cold" and row["status"] == 200
     ]
 
-    if not tfidf_rows or not semantic_rows or not elastic_rows:
+    if not lexical_rows or not semantic_rows or not elastic_rows:
         return """
         <div class="summary">
             <div class="metric-card warning">No complete benchmark data available.</div>
         </div>
         """
 
-    tfidf_avg = statistics.mean(row["response_time_ms"] for row in tfidf_rows)
+    lexical_avg = statistics.mean(row["response_time_ms"] for row in lexical_rows)
     semantic_avg = statistics.mean(row["response_time_ms"] for row in semantic_rows)
     elastic_avg = statistics.mean(row["response_time_ms"] for row in elastic_rows)
 
-    tfidf_cold_avg = (
-        statistics.mean(row["response_time_ms"] for row in tfidf_cold_rows)
-        if tfidf_cold_rows else 0.0
+    lexical_cold_avg = (
+        statistics.mean(row["response_time_ms"] for row in lexical_cold_rows)
+        if lexical_cold_rows else 0.0
     )
 
     semantic_cold_avg = (
@@ -169,7 +169,7 @@ def build_summary(rows):
     )
 
     averages = {
-        "TF-IDF": tfidf_avg,
+        "Lexical": lexical_avg,
         "Semantic Vector": semantic_avg,
         "Elasticsearch BM25": elastic_avg,
     }
@@ -179,8 +179,8 @@ def build_summary(rows):
     return f"""
     <div class="summary">
         <div class="metric-card">
-            <span>TF-IDF avg</span>
-            <strong>{tfidf_avg:.2f} ms</strong>
+            <span>Lexical avg</span>
+            <strong>{lexical_avg:.2f} ms</strong>
         </div>
         <div class="metric-card">
             <span>Semantic vector avg</span>
@@ -191,8 +191,8 @@ def build_summary(rows):
             <strong>{elastic_avg:.2f} ms</strong>
         </div>
         <div class="metric-card">
-            <span>TF-IDF cold start</span>
-            <strong>{tfidf_cold_avg:.2f} ms</strong>
+            <span>Lexical cold start</span>
+            <strong>{lexical_cold_avg:.2f} ms</strong>
         </div>
         <div class="metric-card">
             <span>Semantic cold start</span>
@@ -227,7 +227,7 @@ def render_benchmark_page(rows):
 
     chart_data = build_benchmark_chart_data(rows) if rows else {
         "labels": [],
-        "tfidf": [],
+        "lexical": [],
         "semantic_vector": [],
         "elasticsearch_bm25": [],
     }
@@ -268,14 +268,14 @@ def render_benchmark_page(rows):
                     <thead>
                         <tr>
                             <th>Query</th>
-                            <th>TF-IDF avg time</th>
+                            <th>Lexical avg time</th>
                             <th>Semantic avg time</th>
                             <th>Elasticsearch BM25 avg time</th>
-                            <th>TF-IDF results</th>
+                            <th>Lexical results</th>
                             <th>Semantic results</th>
                             <th>Elasticsearch BM25 results</th>
                             <th>Fastest</th>
-                            <th>TF-IDF status</th>
+                            <th>Lexical status</th>
                             <th>Semantic status</th>
                             <th>Elasticsearch BM25 status</th>
                         </tr>
@@ -298,8 +298,8 @@ def render_benchmark_page(rows):
                         labels: benchmarkChartData.labels,
                         datasets: [
                             {{
-                                label: 'TF-IDF',
-                                data: benchmarkChartData.tfidf
+                                label: 'Lexical',
+                                data: benchmarkChartData.lexical
                             }},
                             {{
                                 label: 'Semantic Vector',

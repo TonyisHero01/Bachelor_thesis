@@ -81,8 +81,8 @@ def fetch_user_study_rows(limit: int = 500):
 
 def build_rating_summary(rows):
     methods = {
-        "tfidf": {
-            "label": "TF-IDF",
+        "lexical": {
+            "label": "Lexical",
             "relevance": [],
             "ranking_quality": [],
             "result_diversity": [],
@@ -107,7 +107,7 @@ def build_rating_summary(rows):
     for row in rows:
         answers = row.get("answers", {})
 
-        for method in ["tfidf", "semantic_vector", "elasticsearch_bm25"]:
+        for method in ["lexical", "semantic_vector", "elasticsearch_bm25"]:
             method_answers = answers.get(method, {})
 
             if not isinstance(method_answers, dict):

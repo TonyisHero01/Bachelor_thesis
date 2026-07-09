@@ -5,8 +5,8 @@ from html_recommendation_log_page import build_recommendation_log_section
 from html_user_study_evaluation_page import build_user_study_section
 
 def method_label(method):
-    if method == "tfidf":
-        return "TF-IDF"
+    if method == "lexical":
+        return "Lexical"
 
     if method == "semantic_vector":
         return "Semantic Vector"
@@ -26,7 +26,7 @@ def build_search_method_chart_data(details):
 
         if query not in grouped:
             grouped[query] = {
-                "tfidf": 0,
+                "lexical": 0,
                 "semantic_vector": 0,
                 "elasticsearch_bm25": 0,
             }
@@ -39,8 +39,8 @@ def build_search_method_chart_data(details):
 
     return {
         "labels": list(grouped.keys()),
-        "tfidf": [
-            item["tfidf"]
+        "lexical": [
+            item["lexical"]
             for item in grouped.values()
         ],
         "semantic_vector": [
@@ -56,7 +56,7 @@ def build_search_method_chart_data(details):
 
 def build_search_metric_matrix(search_summary, query_count):
     methods = [
-        "tfidf",
+        "lexical",
         "semantic_vector",
         "elasticsearch_bm25",
     ]
@@ -323,11 +323,11 @@ def build_config_form(config):
                     </tr>
 
                     <tr>
-                        <td>TF-IDF recommendation weight</td>
+                        <td>Lexical recommendation weight</td>
                         <td>
                             <input type="number" step="0.01"
-                                name="tfidfRecommendationWeight"
-                                value="{config.get('tfidf_recommendation_weight', config.get('tfidfRecommendationWeight', 1.0))}">
+                                name="lexicalRecommendationWeight"
+                                value="{config.get('lexical_recommendation_weight', config.get('lexicalRecommendationWeight', 1.0))}">
                         </td>
                     </tr>
 
@@ -405,7 +405,7 @@ def build_search_evaluation_body(report):
         </div>
         """, {
             "labels": [],
-            "tfidf": [],
+            "lexical": [],
             "semantic_vector": [],
             "elasticsearch_bm25": [],
         }
@@ -678,8 +678,8 @@ def render_evaluation_page(
                         labels: searchChartData.labels,
                         datasets: [
                             {{
-                                label: 'TF-IDF response time ms',
-                                data: searchChartData.tfidf
+                                label: 'Lexical response time ms',
+                                data: searchChartData.lexical
                             }},
                             {{
                                 label: 'Semantic vector response time ms',

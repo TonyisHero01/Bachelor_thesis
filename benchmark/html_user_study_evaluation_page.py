@@ -4,8 +4,8 @@ from html_common import h
 
 
 def method_label(value):
-    if value == "tfidf":
-        return "TF-IDF"
+    if value == "lexical":
+        return "Lexical"
 
     if value == "semantic_vector":
         return "Semantic Vector"

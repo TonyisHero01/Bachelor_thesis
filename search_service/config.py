@@ -11,7 +11,7 @@ class Settings:
     api_key: str | None
     elasticsearch_url: str
 
-    app_name: str = "TF-IDF Search API"
+    app_name: str = "E-shop Search API"
     app_version: str = "2.0.0"
 
     max_search_limit: int = 200

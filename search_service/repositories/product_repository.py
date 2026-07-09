@@ -6,7 +6,7 @@ from database import get_connection
 
 
 DEFAULT_RELEVANCE_CONFIG = {
-    "search_method": "tfidf",
+    "search_method": "lexical",
 
     "name_weight": 20,
     "description_weight": 5,
@@ -21,7 +21,7 @@ DEFAULT_RELEVANCE_CONFIG = {
     "same_color_bonus": 0.10,
     "same_size_bonus": 0.10,
 
-    "tfidf_recommendation_weight": 1.0,
+    "lexical_recommendation_weight": 1.0,
     "semantic_vector_weight": 1.0,
     "elasticsearch_bm25_weight": 1.0,
 
@@ -55,7 +55,7 @@ def fetch_active_relevance_config() -> dict:
                     same_material_bonus,
                     same_color_bonus,
                     same_size_bonus,
-                    tfidf_recommendation_weight,
+                    lexical_recommendation_weight,
                     same_category_recommendation_weight,
                     same_color_recommendation_weight,
                     same_size_recommendation_weight,
