@@ -125,7 +125,7 @@ class HomeController extends BaseController
             ->getArrayResult();
 
         $searchMethods = [
-            'tfidf' => 'TF-IDF Search',
+            'lexical' => 'Lexical Search',
             'semantic_vector' => 'Semantic Vector Search',
             'elasticsearch_bm25' => 'Elasticsearch BM25 Search',
         ];
@@ -614,12 +614,11 @@ class HomeController extends BaseController
             || (int) ($config['attributesWeight'] ?? 2) !== $searchConfig->getAttributesWeight();
 
         $runtimeConfigChanged =
-            (string) ($config['searchMethod'] ?? 'tfidf') !== $searchConfig->getSearchMethod()
+            (string) ($config['searchMethod'] ?? 'lexical') !== $searchConfig->getSearchMethod()
             || (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
             || (float) ($config['sameMaterialBonus'] ?? 0.15) !== $searchConfig->getSameMaterialBonus()
             || (float) ($config['sameColorBonus'] ?? 0.10) !== $searchConfig->getSameColorBonus()
             || (float) ($config['sameSizeBonus'] ?? 0.10) !== $searchConfig->getSameSizeBonus()
-            || (float) ($config['tfidfRecommendationWeight'] ?? 1.0) !== $searchConfig->getTfidfRecommendationWeight()
             || (float) ($config['sameCategoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getSameCategoryRecommendationWeight()
             || (float) ($config['sameColorRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameColorRecommendationWeight()
             || (float) ($config['sameSizeRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameSizeRecommendationWeight()
@@ -647,7 +646,6 @@ class HomeController extends BaseController
         $searchConfig->setSameColorBonus((float) ($config['sameColorBonus'] ?? 0.10));
         $searchConfig->setSameSizeBonus((float) ($config['sameSizeBonus'] ?? 0.10));
 
-        $searchConfig->setTfidfRecommendationWeight((float) ($config['tfidfRecommendationWeight'] ?? 1.0));
         $searchConfig->setSameCategoryRecommendationWeight((float) ($config['sameCategoryRecommendationWeight'] ?? 0.35));
         $searchConfig->setSameColorRecommendationWeight((float) ($config['sameColorRecommendationWeight'] ?? 0.10));
         $searchConfig->setSameSizeRecommendationWeight((float) ($config['sameSizeRecommendationWeight'] ?? 0.10));
@@ -658,7 +656,7 @@ class HomeController extends BaseController
         $searchConfig->setMaxRecommendationPerCategory((int) ($config['maxRecommendationPerCategory'] ?? 4));
         $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
 
-        $searchConfig->setSearchMethod((string) ($config['searchMethod'] ?? 'tfidf'));
+        $searchConfig->setSearchMethod((string) ($config['searchMethod'] ?? 'lexical'));
 
         $searchConfig->setRecommendationEnabled(
             (bool) ($config['recommendationEnabled'] ?? true)

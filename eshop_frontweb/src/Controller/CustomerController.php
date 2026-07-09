@@ -1185,7 +1185,7 @@ class CustomerController extends BaseController
             ->getRepository(SearchRelevanceConfig::class)
             ->findOneBy(['active' => true], ['id' => 'DESC']);
 
-        return $config?->getSearchMethod() ?? 'tfidf';
+        return $config?->getSearchMethod() ?? 'lexical';
     }
 
     private function getSearchEndpoint(string $searchMethod): string

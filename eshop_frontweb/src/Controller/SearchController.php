@@ -579,7 +579,7 @@ class SearchController extends BaseController
             ]);
         }
 
-        return 'tfidf';
+        return 'lexical';
     }
 
     private function saveCustomerSearchLog(Request $request, string $query, int $resultCount): void

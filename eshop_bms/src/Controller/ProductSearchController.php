@@ -61,12 +61,12 @@ final class ProductSearchController extends BaseController
             ->getRepository(SearchRelevanceConfig::class)
             ->findOneBy(['active' => true], ['id' => 'DESC']);
 
-        $method = $searchConfig?->getSearchMethod() ?? 'tfidf';
+        $method = $searchConfig?->getSearchMethod() ?? 'lexical';
 
         $label = match ($method) {
             'semantic_vector' => 'Semantic Vector',
             'elasticsearch_bm25' => 'Elasticsearch BM25',
-            default => 'TF-IDF',
+            default => 'Lexical',
         };
 
         $endpoint = match ($method) {

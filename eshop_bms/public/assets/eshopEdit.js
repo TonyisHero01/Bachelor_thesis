@@ -251,7 +251,7 @@ async function save_() {
             currencies,
             searchConfig: {
                 name: searchConfigNameElement?.value || 'Default relevance configuration',
-                searchMethod: document.getElementById('searchMethod')?.value || 'tfidf',
+                searchMethod: document.getElementById('searchMethod')?.value || 'lexical',
 
                 nameWeight: parseInt(nameWeightElement?.value || '18', 10),
                 descriptionWeight: parseInt(descriptionWeightElement?.value || '6', 10),
@@ -266,9 +266,6 @@ async function save_() {
                 sameColorBonus: parseFloat(sameColorBonusElement?.value || '0.05'),
                 sameSizeBonus: parseFloat(sameSizeBonusElement?.value || '0.20'),
 
-                tfidfRecommendationWeight: parseFloat(
-                    document.getElementById('tfidf_recommendation_weight')?.value || '0.45'
-                ),
                 sameCategoryRecommendationWeight: parseFloat(
                     document.getElementById('same_category_recommendation_weight')?.value || '0.20'
                 ),

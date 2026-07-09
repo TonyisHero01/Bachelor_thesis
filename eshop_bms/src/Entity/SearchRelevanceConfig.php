@@ -59,9 +59,6 @@ class SearchRelevanceConfig
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $updatedAt = null;
 
-    #[ORM\Column(type: 'float', options: ['default' => 1.0])]
-    private float $tfidfRecommendationWeight = 1.0;
-
     #[ORM\Column(type: 'float', options: ['default' => 0.35])]
     private float $sameCategoryRecommendationWeight = 0.35;
 
@@ -89,8 +86,8 @@ class SearchRelevanceConfig
     #[ORM\Column(type: 'float', options: ['default' => 0.10])]
     private float $recommendationDiversityPenalty = 0.10;
 
-    #[ORM\Column(type: 'string', length: 30, options: ['default' => 'tfidf'])]
-    private string $searchMethod = 'tfidf';
+    #[ORM\Column(type: 'string', length: 30, options: ['default' => 'lexical'])]
+    private string $searchMethod = 'lexical';
 
     #[ORM\Column(type: 'boolean', options: ['default' => true])]
     private bool $recommendationEnabled = true;
@@ -155,17 +152,6 @@ class SearchRelevanceConfig
     public function touch(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
-    }
-
-        public function getTfidfRecommendationWeight(): float
-    {
-        return $this->tfidfRecommendationWeight;
-    }
-
-    public function setTfidfRecommendationWeight(float $weight): static
-    {
-        $this->tfidfRecommendationWeight = $weight;
-        return $this;
     }
 
     public function getSameCategoryRecommendationWeight(): float
@@ -278,13 +264,13 @@ class SearchRelevanceConfig
     public function setSearchMethod(string $searchMethod): static
     {
         $allowed = [
-            'tfidf',
+            'lexical',
             'semantic_vector',
             'elasticsearch_bm25',
         ];
 
         if (!in_array($searchMethod, $allowed, true)) {
-            $searchMethod = 'tfidf';
+            $searchMethod = 'lexical';
         }
 
         $this->searchMethod = $searchMethod;
