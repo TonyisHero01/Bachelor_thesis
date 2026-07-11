@@ -265,30 +265,27 @@ def f1_at_k(precision, recall):
 
     return 2 * precision * recall / (precision + recall)
 
-def average_precision(results, labels):
+def average_precision(results, labels, limit=10):
+    relevant_total = sum(
+        1
+        for label in labels.values()
+        if label in RELEVANT_LABELS
+    )
+
+    if relevant_total == 0:
+        return 0.0
+
     relevant_found = 0
-    precision_sum = 0
+    precision_sum = 0.0
 
-    for index, result in enumerate(results, start=1):
-
-        label = labels.get(
-            result["sku"],
-            "I"
-        )
+    for index, result in enumerate(results[:limit], start=1):
+        label = labels.get(result["sku"], "I")
 
         if label in RELEVANT_LABELS:
             relevant_found += 1
+            precision_sum += relevant_found / index
 
-            precision = (
-                relevant_found / index
-            )
-
-            precision_sum += precision
-
-    if relevant_found == 0:
-        return 0.0
-
-    return precision_sum / relevant_found
+    return precision_sum / min(relevant_total, limit)
 
 def hit_rate_at_k(results, labels):
 
