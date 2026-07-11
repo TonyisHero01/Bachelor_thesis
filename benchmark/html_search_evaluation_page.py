@@ -67,7 +67,7 @@ def build_search_metric_matrix(search_summary, query_count):
         ("Precision@10", "avg_precision_at_k", "percent"),
         ("Recall@10", "avg_recall_at_k", "percent"),
         ("F1@10", "avg_f1_at_k", "percent"),
-        ("MAP", "avg_map", "percent"),
+        ("MAP@10", "avg_map", "percent"),
         ("NDCG@10", "avg_ndcg_at_k", "percent"),
         ("MRR", "avg_mrr", "percent"),
         ("Avg response", "avg_response_time_ms", "ms"),
