@@ -121,7 +121,11 @@ class EmbeddingService:
         )
 
         self.model = SentenceTransformer(
-            self.model_name
+            self.model_name,
+            device="cpu",
+            model_kwargs={
+                "low_cpu_mem_usage": False,
+            },
         )
 
         dimension = (

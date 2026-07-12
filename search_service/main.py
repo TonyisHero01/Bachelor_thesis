@@ -46,6 +46,7 @@ from semantic_search.semantic_vector_repository import SemanticVectorRepository
 
 AUTO_REINDEX_LOCK = threading.Lock()
 REINDEX_STATE_LOCK = threading.Lock()
+SEMANTIC_SERVICE_LOCK = threading.Lock()
 
 SUPPORTED_SEARCH_METHODS = {
     "lexical",
@@ -389,10 +390,22 @@ def clear_recommend_cache():
 def get_semantic_search_service() -> SemanticSearchService:
     global semantic_search_service
 
-    if semantic_search_service is None:
-        logger.info("[SEMANTIC] loading semantic search service")
-        semantic_search_service = SemanticSearchService()
-        logger.info("[SEMANTIC] semantic search service loaded")
+    if semantic_search_service is not None:
+        return semantic_search_service
+
+    with SEMANTIC_SERVICE_LOCK:
+        if semantic_search_service is None:
+            logger.info(
+                "[SEMANTIC] loading semantic search service"
+            )
+
+            semantic_search_service = (
+                SemanticSearchService()
+            )
+
+            logger.info(
+                "[SEMANTIC] semantic search service loaded"
+            )
 
     return semantic_search_service
 
