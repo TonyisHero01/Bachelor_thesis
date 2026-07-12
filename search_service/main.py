@@ -1,10 +1,25 @@
+import json
 import logging
+import threading
 import time
-from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from datetime import datetime
+from typing import Any
+
+from fastapi import (
+    BackgroundTasks,
+    FastAPI,
+    HTTPException,
+    Request,
+)
 
 from config import settings
+from repositories.product_repository import (
+    fetch_active_search_method as fetch_active_search_method_from_db,
+    fetch_active_relevance_config,
+    fetch_relevance_config_by_method,
+    fetch_all_relevance_configs,
+)
 from schemas import (
     SearchRequest,
     SearchResponse,
@@ -29,9 +44,8 @@ from semantic_search.semantic_search_service import SemanticSearchService
 from elastic_search.elastic_product_search_service import ElasticProductSearchService
 from semantic_search.semantic_vector_repository import SemanticVectorRepository
 
-import threading
-
 AUTO_REINDEX_LOCK = threading.Lock()
+REINDEX_STATE_LOCK = threading.Lock()
 
 SUPPORTED_SEARCH_METHODS = {
     "lexical",
@@ -66,10 +80,6 @@ READY_CACHE_TTL_SECONDS = 60
 RECOMMEND_CACHE = {}
 RECOMMEND_CACHE_TTL_SECONDS = 600
 
-MAX_VIEWED_SEEDS = 5
-MAX_CART_SEEDS = 5
-MAX_TOTAL_RECOMMENDATION_SEEDS = 8
-
 semantic_search_service: SemanticSearchService | None = None
 elastic_service = ElasticProductSearchService()
 semantic_repository = SemanticVectorRepository()
@@ -80,6 +90,7 @@ REINDEX_STATE = {
     "last_finished_at": None,
     "last_error": None,
     "last_updated": None,
+    "last_method": None,
 }
 
 logging.basicConfig(
@@ -104,6 +115,231 @@ def normalize_search_method(method: str | None) -> str:
 
     return method
 
+DEFAULT_SESSION_RECOMMENDATION_SETTINGS = {
+    "current_product_weight": 1.0,
+    "viewed_product_weight": 0.70,
+    "cart_product_weight": 0.90,
+
+    "max_viewed_seeds": 5,
+    "max_cart_seeds": 5,
+    "max_total_seeds": 8,
+
+    "candidate_multiplier": 2,
+    "minimum_candidates": 10,
+}
+
+
+def parse_positive_int(
+    value: Any,
+    default: int,
+) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+
+    return parsed if parsed > 0 else default
+
+
+def parse_non_negative_int(
+    value: Any,
+    default: int,
+) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+
+    return parsed if parsed >= 0 else default
+
+
+def parse_non_negative_float(
+    value: Any,
+    default: float,
+) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+
+    return parsed if parsed >= 0 else default
+
+
+def normalize_algorithm_settings(
+    value: Any,
+) -> dict:
+    if isinstance(value, dict):
+        return value
+
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            logger.warning(
+                "[CONFIG] invalid algorithm_settings JSON"
+            )
+
+    return {}
+
+
+def get_runtime_method_config(
+    search_method: str,
+) -> dict:
+    search_method = normalize_search_method(
+        search_method
+    )
+
+    if search_method == "lexical":
+        config = getattr(
+            search_index,
+            "config",
+            {},
+        )
+
+        if (
+            isinstance(config, dict)
+            and config.get("search_method") == "lexical"
+        ):
+            return config
+
+    if (
+        search_method == "semantic_vector"
+        and semantic_search_service is not None
+    ):
+        config = semantic_search_service.config
+
+        if (
+            isinstance(config, dict)
+            and config.get("search_method")
+            == "semantic_vector"
+        ):
+            return config
+
+    if search_method == "elasticsearch_bm25":
+        config = elastic_service.config
+
+        if (
+            isinstance(config, dict)
+            and config.get("search_method")
+            == "elasticsearch_bm25"
+        ):
+            return config
+
+    return fetch_relevance_config_by_method(
+        search_method
+    )
+
+
+def get_session_recommendation_settings(
+    search_method: str,
+) -> dict:
+    config = get_runtime_method_config(
+        search_method
+    )
+
+    algorithm_settings = (
+        normalize_algorithm_settings(
+            config.get(
+                "algorithm_settings",
+                {},
+            )
+        )
+    )
+
+    configured = algorithm_settings.get(
+        "session_recommendation",
+        {},
+    )
+
+    if not isinstance(configured, dict):
+        configured = {}
+
+    defaults = DEFAULT_SESSION_RECOMMENDATION_SETTINGS
+
+    return {
+        "current_product_weight":
+            parse_non_negative_float(
+                configured.get(
+                    "current_product_weight"
+                ),
+                defaults[
+                    "current_product_weight"
+                ],
+            ),
+
+        "viewed_product_weight":
+            parse_non_negative_float(
+                configured.get(
+                    "viewed_product_weight"
+                ),
+                defaults[
+                    "viewed_product_weight"
+                ],
+            ),
+
+        "cart_product_weight":
+            parse_non_negative_float(
+                configured.get(
+                    "cart_product_weight"
+                ),
+                defaults[
+                    "cart_product_weight"
+                ],
+            ),
+
+        "max_viewed_seeds":
+            parse_non_negative_int(
+                configured.get(
+                    "max_viewed_seeds"
+                ),
+                defaults[
+                    "max_viewed_seeds"
+                ],
+            ),
+
+        "max_cart_seeds":
+            parse_non_negative_int(
+                configured.get(
+                    "max_cart_seeds"
+                ),
+                defaults[
+                    "max_cart_seeds"
+                ],
+            ),
+
+        "max_total_seeds":
+            parse_positive_int(
+                configured.get(
+                    "max_total_seeds"
+                ),
+                defaults[
+                    "max_total_seeds"
+                ],
+            ),
+
+        "candidate_multiplier":
+            parse_positive_int(
+                configured.get(
+                    "candidate_multiplier"
+                ),
+                defaults[
+                    "candidate_multiplier"
+                ],
+            ),
+
+        "minimum_candidates":
+            parse_positive_int(
+                configured.get(
+                    "minimum_candidates"
+                ),
+                defaults[
+                    "minimum_candidates"
+                ],
+            ),
+    }
 
 def clear_active_method_cache():
     ACTIVE_METHOD_CACHE["method"] = None
@@ -160,51 +396,95 @@ def get_semantic_search_service() -> SemanticSearchService:
 
     return semantic_search_service
 
-def run_full_reindex_background(reason=None, context=None, search_method=None):
-    if REINDEX_STATE["running"]:
-        return
+def run_full_reindex_background(
+    reason=None,
+    context=None,
+    search_method=None,
+):
+    with REINDEX_STATE_LOCK:
+        if REINDEX_STATE["running"]:
+            logger.info(
+                "[REINDEX][BACKGROUND] skipped because "
+                "another reindex is already running"
+            )
+            return
 
-    if search_method is None:
-        search_method = get_active_search_method()
+        if search_method is None:
+            search_method = get_active_search_method()
 
-    REINDEX_STATE["running"] = True
-    REINDEX_STATE["last_started_at"] = datetime.utcnow().isoformat() + "Z"
-    REINDEX_STATE["last_error"] = None
-    REINDEX_STATE["last_method"] = search_method
+        search_method = normalize_search_method(
+            search_method
+        )
+
+        REINDEX_STATE["running"] = True
+        REINDEX_STATE["last_started_at"] = (
+            datetime.utcnow().isoformat() + "Z"
+        )
+        REINDEX_STATE["last_finished_at"] = None
+        REINDEX_STATE["last_error"] = None
+        REINDEX_STATE["last_updated"] = None
+        REINDEX_STATE["last_method"] = search_method
 
     try:
-        result = reindex_active_method_full(search_method)
-        clear_runtime_caches(search_method)
+        result = reindex_active_method_full(
+            search_method
+        )
 
-        REINDEX_STATE["last_updated"] = result
-        REINDEX_STATE["last_finished_at"] = datetime.utcnow().isoformat() + "Z"
+        clear_runtime_caches(
+            search_method
+        )
+
+        with REINDEX_STATE_LOCK:
+            REINDEX_STATE["last_updated"] = result
+            REINDEX_STATE["last_finished_at"] = (
+                datetime.utcnow().isoformat() + "Z"
+            )
 
         logger.info(
-            "[REINDEX][BACKGROUND] finished method=%s result=%s",
+            "[REINDEX][BACKGROUND] "
+            "finished method=%s result=%s",
             search_method,
             result,
         )
 
-    except Exception as e:
+    except Exception as exc:
         logger.exception(
-            "[REINDEX][BACKGROUND] failed method=%s",
+            "[REINDEX][BACKGROUND] "
+            "failed method=%s",
             search_method,
         )
-        REINDEX_STATE["last_error"] = str(e)
+
+        with REINDEX_STATE_LOCK:
+            REINDEX_STATE["last_error"] = str(exc)
+            REINDEX_STATE["last_finished_at"] = (
+                datetime.utcnow().isoformat() + "Z"
+            )
 
     finally:
-        REINDEX_STATE["running"] = False
+        with REINDEX_STATE_LOCK:
+            REINDEX_STATE["running"] = False
 
-def reindex_active_method_full(search_method: str):
-    search_method = normalize_search_method(search_method)
+def reindex_active_method_full(
+    search_method: str,
+):
+    search_method = normalize_search_method(
+        search_method
+    )
 
     if search_method == "semantic_vector":
-        logger.info("[REINDEX] active_method=semantic_vector full reindex started")
+        logger.info(
+            "[REINDEX] method=semantic_vector "
+            "full reindex started"
+        )
 
-        result = get_semantic_search_service().reindex()
+        service = get_semantic_search_service()
+        service.reload_config()
+
+        result = service.reindex()
 
         logger.info(
-            "[REINDEX] active_method=semantic_vector full reindex finished result=%s",
+            "[REINDEX] method=semantic_vector "
+            "full reindex finished result=%s",
             result,
         )
 
@@ -214,26 +494,43 @@ def reindex_active_method_full(search_method: str):
         }
 
     if search_method == "elasticsearch_bm25":
-        logger.info("[REINDEX] active_method=elasticsearch_bm25 full reindex started")
+        logger.info(
+            "[REINDEX] method=elasticsearch_bm25 "
+            "full reindex started"
+        )
 
-        products = semantic_repository.get_products_for_indexing()
+        elastic_service.reload_config()
+
+        products = (
+            semantic_repository
+            .get_products_for_indexing()
+        )
 
         elastic_service.create_index()
-        elastic_service.index_products(products)
+
+        indexed_count = (
+            elastic_service.index_products(
+                products
+            )
+        )
 
         result = {
             "method": "elasticsearch_bm25",
-            "indexed_products": len(products),
+            "indexed_products": indexed_count,
         }
 
         logger.info(
-            "[REINDEX] active_method=elasticsearch_bm25 full reindex finished result=%s",
+            "[REINDEX] method=elasticsearch_bm25 "
+            "full reindex finished result=%s",
             result,
         )
 
         return result
 
-    logger.info("[REINDEX] active_method=lexical full reindex started")
+    logger.info(
+        "[REINDEX] method=lexical "
+        "full reindex started"
+    )
 
     updated = rebuild_search_index()
 
@@ -243,94 +540,86 @@ def reindex_active_method_full(search_method: str):
     }
 
     logger.info(
-        "[REINDEX] active_method=lexical full reindex finished result=%s",
+        "[REINDEX] method=lexical "
+        "full reindex finished result=%s",
         result,
     )
 
     return result
 
+def reindex_active_method_partial(
+    search_method: str,
+    sku: str,
+):
+    search_method = normalize_search_method(
+        search_method
+    )
 
-def reindex_active_method_partial(search_method: str, sku: str):
-    search_method = normalize_search_method(search_method)
-    sku = str(sku or "").strip()
+    sku = str(
+        sku or ""
+    ).strip()
 
-    if sku == "":
+    if not sku:
         raise HTTPException(
             status_code=400,
-            detail="SKU is required for partial reindex",
+            detail=(
+                "SKU is required for partial reindex"
+            ),
         )
 
     if search_method == "semantic_vector":
         logger.info(
-            "[REINDEX] active_method=semantic_vector partial reindex requested sku=%s",
+            "[REINDEX] method=semantic_vector "
+            "partial reindex sku=%s",
             sku,
         )
 
         service = get_semantic_search_service()
+        service.reload_config()
 
-        if hasattr(service, "reindex_product_by_sku"):
-            result = service.reindex_product_by_sku(sku)
-
-            return {
-                "method": "semantic_vector",
-                "mode": "partial",
-                "sku": sku,
-                "result": result,
-            }
-
-        logger.warning(
-            "[REINDEX] semantic partial method missing, falling back to full semantic reindex sku=%s",
-            sku,
+        result = service.reindex_product_by_sku(
+            sku
         )
-
-        result = service.reindex()
 
         return {
             "method": "semantic_vector",
-            "mode": "full_fallback",
+            "mode": "partial",
             "sku": sku,
             "result": result,
         }
 
     if search_method == "elasticsearch_bm25":
         logger.info(
-            "[REINDEX] active_method=elasticsearch_bm25 partial reindex requested sku=%s",
+            "[REINDEX] method=elasticsearch_bm25 "
+            "partial reindex sku=%s",
             sku,
         )
 
-        if hasattr(elastic_service, "reindex_product_by_sku"):
-            result = elastic_service.reindex_product_by_sku(sku)
+        elastic_service.reload_config()
 
-            return {
-                "method": "elasticsearch_bm25",
-                "mode": "partial",
-                "sku": sku,
-                "result": result,
-            }
-
-        logger.warning(
-            "[REINDEX] elastic partial method missing, falling back to full elastic reindex sku=%s",
-            sku,
+        result = (
+            elastic_service
+            .reindex_product_by_sku(
+                sku
+            )
         )
-
-        products = semantic_repository.get_products_for_indexing()
-
-        elastic_service.create_index()
-        elastic_service.index_products(products)
 
         return {
             "method": "elasticsearch_bm25",
-            "mode": "full_fallback",
+            "mode": "partial",
             "sku": sku,
-            "indexed_products": len(products),
+            "result": result,
         }
 
     logger.info(
-        "[REINDEX] active_method=lexical partial reindex started sku=%s",
+        "[REINDEX] method=lexical "
+        "partial reindex sku=%s",
         sku,
     )
 
-    updated = partial_reindex_product(sku)
+    updated = partial_reindex_product(
+        sku
+    )
 
     return {
         "method": "lexical",
@@ -340,12 +629,17 @@ def reindex_active_method_partial(search_method: str, sku: str):
     }
 
 def client_ip(request: Request) -> str:
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",")[0].strip()
+    forwarded_for = request.headers.get(
+        "x-forwarded-for"
+    )
 
-    return request.client.host if request.client else "unknown"
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
 
+    if request.client:
+        return request.client.host
+
+    return "unknown"
 
 def verify_api_key(request: Request) -> None:
     if not settings.api_key:
@@ -366,7 +660,10 @@ def health():
     }
 
 @app.post("/semantic/reindex")
-def semantic_reindex(request: Request):
+def semantic_reindex(
+    request: Request,
+):
+    verify_api_key(request)
     started = time.perf_counter()
 
     logger.info(
@@ -378,8 +675,11 @@ def semantic_reindex(request: Request):
         logger.info("[SEMANTIC_REINDEX] loading semantic service if needed")
 
         service = get_semantic_search_service()
+        service.reload_config()
 
-        logger.info("[SEMANTIC_REINDEX] semantic service ready, starting reindex")
+        logger.info(
+            "[SEMANTIC_REINDEX] semantic service ready, starting reindex"
+        )
 
         result = service.reindex()
         clear_runtime_caches("semantic_vector")
@@ -413,8 +713,13 @@ def lexical_search(payload: dict, request: Request):
     started = time.perf_counter()
 
     query = str(payload.get("query", "")).strip()
-    limit = int(payload.get("limit", 10))
-    limit = min(limit, settings.max_search_limit)
+    limit = min(
+        parse_positive_int(
+            payload.get("limit"),
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
     if query == "":
         logger.info("[SEARCH_API] method=lexical endpoint=/lexical/search empty_query=true")
@@ -453,34 +758,70 @@ def lexical_search(payload: dict, request: Request):
     }
 
 @app.post("/semantic/search")
-def semantic_search(request: SemanticSearchRequest, http_request: Request):
+def semantic_search(
+    request: SemanticSearchRequest,
+    http_request: Request,
+):
     started = time.perf_counter()
 
-    query = request.query.strip()
+    query = str(
+        request.query or ""
+    ).strip()
 
-    if query == "":
-        logger.info("[SEARCH_API] method=semantic_vector endpoint=/semantic/search empty_query=true")
-        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    limit = min(
+        parse_positive_int(
+            request.limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
-    ensure_method_ready("semantic_vector")
+    if not query:
+        logger.info(
+            "[SEARCH_API] method=semantic_vector "
+            "endpoint=/semantic/search empty_query=true"
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail="Query cannot be empty",
+        )
+
+    ensure_method_ready(
+        "semantic_vector"
+    )
 
     logger.info(
-        "[SEARCH_API] method=semantic_vector endpoint=/semantic/search started query=%r limit=%s ip=%s",
+        "[SEARCH_API] method=semantic_vector "
+        "endpoint=/semantic/search started "
+        "query=%r limit=%s ip=%s",
         query,
-        request.limit,
+        limit,
         client_ip(http_request),
     )
 
-    result = get_semantic_search_service().search(
-        query=query,
-        limit=request.limit,
+    result = (
+        get_semantic_search_service()
+        .search(
+            query=query,
+            limit=limit,
+        )
     )
 
-    elapsed_ms = (time.perf_counter() - started) * 1000
-    result_count = len(result.get("results", [])) if isinstance(result, dict) else 0
+    elapsed_ms = (
+        time.perf_counter() - started
+    ) * 1000
+
+    result_count = (
+        len(result.get("results", []))
+        if isinstance(result, dict)
+        else 0
+    )
 
     logger.info(
-        "[SEARCH_API] method=semantic_vector endpoint=/semantic/search finished query=%r results=%s elapsed_ms=%.2f",
+        "[SEARCH_API] method=semantic_vector "
+        "endpoint=/semantic/search finished "
+        "query=%r results=%s elapsed_ms=%.2f",
         query,
         result_count,
         elapsed_ms,
@@ -489,44 +830,88 @@ def semantic_search(request: SemanticSearchRequest, http_request: Request):
     return result
 
 @app.post("/semantic/similar")
-def semantic_similar(request: SemanticSimilarRequest):
-    ensure_method_ready("semantic_vector")
+def semantic_similar(
+    request: SemanticSimilarRequest,
+):
+    limit = min(
+        parse_positive_int(
+            request.limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
-    return get_semantic_search_service().similar_products(
-        product_id=request.product_id,
-        limit=request.limit
+    ensure_method_ready(
+        "semantic_vector"
+    )
+
+    return (
+        get_semantic_search_service()
+        .similar_products(
+            product_id=request.product_id,
+            limit=limit,
+        )
     )
 
 @app.post("/config/reload")
-def reload_config_api(request: Request):
+def reload_config_api(
+    request: Request,
+):
     verify_api_key(request)
 
-    from repositories.product_repository import fetch_active_relevance_config
-
     try:
-        config = fetch_active_relevance_config()
-        search_index.config = config
+        configs = fetch_all_relevance_configs()
+
+        lexical_config = configs["lexical"]
+        semantic_config = configs["semantic_vector"]
+        elastic_config = configs["elasticsearch_bm25"]
+
+        search_index.config = lexical_config
+
         if semantic_search_service is not None:
-            semantic_search_service.config = config
-        elastic_service.config = config
+            semantic_search_service.reload_config(
+                semantic_config
+            )
+
+        elastic_service.reload_config(
+            elastic_config
+        )
 
         clear_active_method_cache()
         clear_ready_cache()
         clear_recommend_cache()
 
-        logger.info("[CONFIG] search config reloaded")
+        active_method = (
+            fetch_active_search_method_from_db()
+        )
+
+        logger.info(
+            "[CONFIG] all method configurations "
+            "reloaded active_method=%s",
+            active_method,
+        )
 
         return {
             "ok": True,
-            "config": config,
+            "active_method": active_method,
+            "configs": configs,
             "ip": client_ip(request),
-            "ts": datetime.utcnow().isoformat() + "Z",
+            "ts": (
+                datetime.utcnow().isoformat()
+                + "Z"
+            ),
         }
 
     except Exception:
-        logger.exception("[CONFIG] reload failed")
-        raise HTTPException(status_code=500, detail="Config reload failed")
+        logger.exception(
+            "[CONFIG] reload failed"
+        )
 
+        raise HTTPException(
+            status_code=500,
+            detail="Config reload failed",
+        )
+    
 def save_search_query_log(
     query: str,
     method: str,
@@ -588,7 +973,13 @@ def search_api(
         )
         return {"results": []}
 
-    limit = min(req.limit, settings.max_search_limit)
+    limit = min(
+        parse_positive_int(
+            req.limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
     skip_log = request.headers.get("X-BENCHMARK") == "1"
 
     logger.info(
@@ -628,12 +1019,49 @@ def search_api(
     return {"results": results}
 
 @app.get("/config")
-def get_config_api(request: Request):
+def get_config_api(
+    request: Request,
+):
     verify_api_key(request)
 
-    from repositories.product_repository import fetch_active_relevance_config
-
     return fetch_active_relevance_config()
+
+@app.get("/config/all")
+def get_all_configs_api(
+    request: Request,
+):
+    verify_api_key(request)
+
+    return {
+        "active_method":
+            fetch_active_search_method_from_db(),
+        "configs":
+            fetch_all_relevance_configs(),
+    }
+
+
+@app.get("/config/method/{search_method}")
+def get_method_config_api(
+    search_method: str,
+    request: Request,
+):
+    verify_api_key(request)
+
+    if (
+        search_method
+        not in SUPPORTED_SEARCH_METHODS
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Unsupported search method: "
+                f"{search_method}"
+            ),
+        )
+
+    return fetch_relevance_config_by_method(
+        search_method
+    )
 
 @app.post("/reindex", response_model=ReindexResponse)
 def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundTasks):
@@ -697,7 +1125,12 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
                 "ts": started.isoformat() + "Z",
             }
 
-        if REINDEX_STATE["running"]:
+        with REINDEX_STATE_LOCK:
+            reindex_running = bool(
+                REINDEX_STATE["running"]
+            )
+
+        if reindex_running:
             return {
                 "ok": True,
                 "mode": "full",
@@ -734,9 +1167,12 @@ def reindex(req: ReindexRequest, request: Request, background_tasks: BackgroundT
         raise HTTPException(status_code=500, detail="Reindex failed")
     
 @app.get("/reindex/status")
-def reindex_status(request: Request):
+def reindex_status(
+    request: Request,
+):
     verify_api_key(request)
-    return REINDEX_STATE
+    with REINDEX_STATE_LOCK:
+        return dict(REINDEX_STATE)
 
 @app.post("/train")
 def train_compat(
@@ -776,24 +1212,47 @@ def search_with_method(
     query: str,
     limit: int,
 ):
-    search_method = normalize_search_method(search_method)
-    query = str(query or "").strip()
-    limit = min(limit, settings.max_search_limit)
+    search_method = normalize_search_method(
+        search_method
+    )
 
-    if query == "":
+    query = str(
+        query or ""
+    ).strip()
+
+    limit = min(
+        parse_positive_int(
+            limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
+
+    if not query:
         return []
 
-    ensure_method_ready(search_method)
+    ensure_method_ready(
+        search_method
+    )
 
     if search_method == "semantic_vector":
-        result = get_semantic_search_service().search(
-            query=query,
-            limit=limit,
+        result = (
+            get_semantic_search_service()
+            .search(
+                query=query,
+                limit=limit,
+            )
         )
 
-        rows = result.get("results", []) if isinstance(result, dict) else []
+        rows = (
+            result.get("results", [])
+            if isinstance(result, dict)
+            else []
+        )
 
-        return normalize_search_rows(rows)
+        return normalize_search_rows(
+            rows
+        )
 
     if search_method == "elasticsearch_bm25":
         result = elastic_service.search(
@@ -801,39 +1260,63 @@ def search_with_method(
             limit=limit,
         )
 
-        rows = result.get("results", []) if isinstance(result, dict) else []
+        rows = (
+            result.get("results", [])
+            if isinstance(result, dict)
+            else []
+        )
 
-        return normalize_search_rows(rows)
+        return normalize_search_rows(
+            rows
+        )
 
     rows = search_products(
         query,
         limit,
     )
 
-    return normalize_search_rows(rows)
+    return normalize_search_rows(
+        rows
+    )
 
 def get_active_search_method() -> str:
     now = time.time()
 
-    if (
-        ACTIVE_METHOD_CACHE["method"] is not None
-        and now < ACTIVE_METHOD_CACHE["expires_at"]
-    ):
-        return ACTIVE_METHOD_CACHE["method"]
+    cached_method = ACTIVE_METHOD_CACHE.get(
+        "method"
+    )
 
-    from repositories.product_repository import fetch_active_relevance_config
+    cached_until = ACTIVE_METHOD_CACHE.get(
+        "expires_at",
+        0,
+    )
+
+    if (
+        cached_method is not None
+        and now < cached_until
+    ):
+        return normalize_search_method(
+            cached_method
+        )
 
     try:
-        config = fetch_active_relevance_config()
-        method = normalize_search_method(config.get("search_method", "lexical"))
+        method = normalize_search_method(
+            fetch_active_search_method_from_db()
+        )
 
         ACTIVE_METHOD_CACHE["method"] = method
-        ACTIVE_METHOD_CACHE["expires_at"] = now + ACTIVE_METHOD_TTL_SECONDS
+        ACTIVE_METHOD_CACHE["expires_at"] = (
+            now + ACTIVE_METHOD_TTL_SECONDS
+        )
 
         return method
 
     except Exception:
-        logger.exception("[CONFIG] failed to load active search method")
+        logger.exception(
+            "[CONFIG] failed to load "
+            "active search method"
+        )
+
         return "lexical"
 
 def normalize_recommendation_rows(rows):
@@ -867,12 +1350,20 @@ def recommend_by_sku_with_active_method(
     limit: int,
     search_method: str | None = None,
 ):
-    sku = sku.strip()
+    sku = str(
+        sku or ""
+    ).strip()
 
-    if sku == "":
+    if not sku:
         return []
 
-    limit = min(limit, settings.max_search_limit)
+    limit = min(
+        parse_positive_int(
+            limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
     if search_method is None:
         search_method = get_active_search_method()
@@ -986,52 +1477,105 @@ def build_recommendations_from_weighted_seeds(
     limit: int,
     search_method: str | None = None,
 ):
-    limit = min(limit, settings.max_search_limit)
+    limit = min(
+        parse_positive_int(
+            limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
     if search_method is None:
-        search_method = get_active_search_method()
+        search_method = (
+            get_active_search_method()
+        )
 
-    search_method = normalize_search_method(search_method)
+    search_method = normalize_search_method(
+        search_method
+    )
 
-    scores = {}
-    seed_skus = {}
+    session_settings = (
+        get_session_recommendation_settings(
+            search_method
+        )
+    )
+
+    max_total_seeds = session_settings[
+        "max_total_seeds"
+    ]
+
+    candidate_multiplier = (
+        session_settings[
+            "candidate_multiplier"
+        ]
+    )
+
+    minimum_candidates = (
+        session_settings[
+            "minimum_candidates"
+        ]
+    )
+
+    scores: dict[str, float] = {}
+    seed_skus: dict[str, float] = {}
 
     for item in weighted_seeds:
         if not isinstance(item, dict):
             continue
 
-        sku = str(item.get("sku", "")).strip()
+        sku = str(
+            item.get("sku", "")
+        ).strip()
 
-        if sku == "":
+        if not sku:
             continue
 
         try:
-            weight = float(item.get("weight", 1.0))
+            weight = float(
+                item.get(
+                    "weight",
+                    1.0,
+                )
+            )
         except (TypeError, ValueError):
             weight = 1.0
 
         if weight <= 0:
             continue
 
-        seed_skus[sku] = max(seed_skus.get(sku, 0.0), weight)
+        seed_skus[sku] = max(
+            seed_skus.get(
+                sku,
+                0.0,
+            ),
+            weight,
+        )
 
     seed_items = sorted(
         seed_skus.items(),
         key=lambda item: item[1],
         reverse=True,
-    )[:MAX_TOTAL_RECOMMENDATION_SEEDS]
+    )[:max_total_seeds]
+
+    candidate_limit = max(
+        limit * candidate_multiplier,
+        minimum_candidates,
+    )
 
     for seed_sku, seed_weight in seed_items:
         add_seed_recommendation_scores(
             scores=scores,
             seed_sku=seed_sku,
             seed_weight=seed_weight,
-            limit=max(limit * 2, 10),
+            limit=candidate_limit,
             search_method=search_method,
         )
 
-    for seed_sku in seed_skus.keys():
-        scores.pop(seed_sku, None)
+    for seed_sku in seed_skus:
+        scores.pop(
+            seed_sku,
+            None,
+        )
 
     sorted_items = sorted(
         scores.items(),
@@ -1045,14 +1589,18 @@ def build_recommendations_from_weighted_seeds(
             "sku": sku,
             "similarity": score,
         }
-        for sku, score in sorted_items[:limit]
+        for sku, score
+        in sorted_items[:limit]
     ]
 
     logger.info(
-        "[RECOMMEND_BATCH_BUILD] method=%s seeds=%s used_seeds=%s results=%s",
+        "[RECOMMEND_BATCH_BUILD] "
+        "method=%s seeds=%s used_seeds=%s "
+        "candidate_limit=%s results=%s",
         search_method,
         len(seed_skus),
         len(seed_items),
+        candidate_limit,
         len(results),
     )
 
@@ -1060,8 +1608,13 @@ def build_recommendations_from_weighted_seeds(
 
 @app.post("/recommend/batch", response_model=RecommendResponse)
 def recommend_batch_api(payload: dict):
-    limit = int(payload.get("limit", 10))
-    limit = min(limit, settings.max_search_limit)
+    limit = min(
+        parse_positive_int(
+            payload.get("limit"),
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
     seeds = payload.get("seeds", [])
 
@@ -1083,48 +1636,112 @@ def recommend_batch_api(payload: dict):
         "results": results,
     }
 
-@app.post("/recommend/session", response_model=RecommendResponse)
-def recommend_session_api(req: SessionRecommendRequest):
-    limit = min(req.limit, settings.max_search_limit)
+@app.post(
+    "/recommend/session",
+    response_model=RecommendResponse,
+)
+def recommend_session_api(
+    req: SessionRecommendRequest,
+):
+    limit = min(
+        parse_positive_int(
+            req.limit,
+            10,
+        ),
+        settings.max_search_limit,
+    )
+
+    search_method = (
+        get_active_search_method()
+    )
+
+    session_settings = (
+        get_session_recommendation_settings(
+            search_method
+        )
+    )
+
+    current_weight = session_settings[
+        "current_product_weight"
+    ]
+
+    viewed_weight = session_settings[
+        "viewed_product_weight"
+    ]
+
+    cart_weight = session_settings[
+        "cart_product_weight"
+    ]
+
+    max_viewed_seeds = session_settings[
+        "max_viewed_seeds"
+    ]
+
+    max_cart_seeds = session_settings[
+        "max_cart_seeds"
+    ]
 
     seeds = []
 
-    current_sku = str(req.current_sku or "").strip()
+    current_sku = str(
+        req.current_sku or ""
+    ).strip()
 
-    if current_sku:
+    if current_sku and current_weight > 0:
         seeds.append({
             "sku": current_sku,
-            "weight": 1.0,
+            "weight": current_weight,
         })
 
-    for sku in list(req.viewed_skus or [])[:MAX_VIEWED_SEEDS]:
-        sku = str(sku).strip()
+    viewed_skus = [
+        str(sku).strip()
+        for sku in (req.viewed_skus or [])
+        if str(sku).strip()
+    ]
 
-        if sku:
+    cart_skus = [
+        str(sku).strip()
+        for sku in (req.cart_skus or [])
+        if str(sku).strip()
+    ]
+
+    selected_viewed_skus = (
+        viewed_skus[-max_viewed_seeds:]
+        if max_viewed_seeds > 0
+        else []
+    )
+
+    selected_cart_skus = (
+        cart_skus[-max_cart_seeds:]
+        if max_cart_seeds > 0
+        else []
+    )
+
+    if viewed_weight > 0:
+        for sku in selected_viewed_skus:
             seeds.append({
                 "sku": sku,
-                "weight": 0.70,
+                "weight": viewed_weight,
             })
 
-    for sku in list(req.cart_skus or [])[:MAX_CART_SEEDS]:
-        sku = str(sku).strip()
-
-        if sku:
+    if cart_weight > 0:
+        for sku in selected_cart_skus:
             seeds.append({
                 "sku": sku,
-                "weight": 0.90,
+                "weight": cart_weight,
             })
 
-    search_method = get_active_search_method()
-
-    results = build_recommendations_from_weighted_seeds(
-        weighted_seeds=seeds,
-        limit=limit,
-        search_method=search_method,
+    results = (
+        build_recommendations_from_weighted_seeds(
+            weighted_seeds=seeds,
+            limit=limit,
+            search_method=search_method,
+        )
     )
 
     logger.info(
-        "[RECOMMEND_SESSION] method=%s input_seeds=%s results=%s",
+        "[RECOMMEND_SESSION] "
+        "method=%s input_seeds=%s results=%s",
         search_method,
         len(seeds),
         len(results),
@@ -1185,21 +1802,33 @@ def search_log_stats():
     }
 
 @app.post("/elastic/reindex")
-def elastic_reindex():
+def elastic_reindex(
+    request: Request,
+):
+    verify_api_key(request)
 
-    products = semantic_repository.get_products_for_indexing()
+    elastic_service.reload_config()
+
+    products = (
+        semantic_repository
+        .get_products_for_indexing()
+    )
 
     elastic_service.create_index()
 
-    elastic_service.index_products(products)
-    clear_runtime_caches("elasticsearch_bm25")
+    indexed_count = (
+        elastic_service.index_products(
+            products
+        )
+    )
+
+    clear_runtime_caches(
+        "elasticsearch_bm25"
+    )
 
     return {
-
         "status": "ok",
-
-        "indexed_products": len(products),
-
+        "indexed_products": indexed_count,
     }
 
 @app.post("/elastic/search")
@@ -1207,7 +1836,13 @@ def elastic_search(payload: dict, request: Request):
     started = time.perf_counter()
 
     query = str(payload.get("query", "")).strip()
-    limit = int(payload.get("limit", 10))
+    limit = min(
+        parse_positive_int(
+            payload.get("limit"),
+            10,
+        ),
+        settings.max_search_limit,
+    )
 
     if query == "":
         logger.info("[SEARCH_API] method=elasticsearch_bm25 endpoint=/elastic/search empty_query=true")
@@ -1314,14 +1949,14 @@ def ensure_semantic_ready_cached(sku: str | None = None):
         )
 
         service = get_semantic_search_service()
+        service.reload_config()
 
-        if hasattr(service, "reindex_product_by_sku"):
-            service.reindex_product_by_sku(sku)
-            clear_recommend_cache()
-            return
+        service.reindex_product_by_sku(
+            sku
+        )
 
-        service.reindex()
-        clear_runtime_caches("semantic_vector")
+        clear_recommend_cache()
+
         return
 
     if cache["ready"] and now - cache["checked_at"] < READY_CACHE_TTL_SECONDS:
@@ -1339,7 +1974,9 @@ def ensure_semantic_ready_cached(sku: str | None = None):
         count,
     )
 
-    get_semantic_search_service().reindex()
+    service = get_semantic_search_service()
+    service.reload_config()
+    service.reindex()
 
     cache["ready"] = True
     cache["checked_at"] = time.time()
@@ -1365,12 +2002,24 @@ def ensure_elastic_ready_cached():
                 cache["checked_at"] = now
                 return
 
-        logger.warning("[AUTO_REINDEX] Elasticsearch index not ready")
+        logger.warning(
+            "[AUTO_REINDEX] Elasticsearch "
+            "index not ready"
+        )
 
-        products = semantic_repository.get_products_for_indexing()
+        elastic_service.reload_config()
+
+        products = (
+            semantic_repository
+            .get_products_for_indexing()
+        )
 
         elastic_service.create_index()
-        elastic_service.index_products(products)
+        indexed_count = (
+            elastic_service.index_products(
+                products
+            )
+        )
 
         cache["ready"] = True
         cache["checked_at"] = time.time()
@@ -1379,7 +2028,7 @@ def ensure_elastic_ready_cached():
 
         logger.info(
             "[AUTO_REINDEX] Elasticsearch reindex finished indexed_products=%s",
-            len(products),
+            indexed_count,
         )
 
     except Exception:
