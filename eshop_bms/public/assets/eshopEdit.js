@@ -1,9 +1,3 @@
-const imageUploadInput = document.querySelector('.image_upload_input');
-
-if (imageUploadInput) {
-    imageUploadInput.addEventListener('change', previewImages);
-    imageUploadInput.addEventListener('change', handleImageUpload);
-}
 
 /**
  * Previews selected image files inside the image container.
@@ -93,6 +87,22 @@ const handleImageUpload = (event) => {
             console.error('Error uploading images:', error);
         });
 };
+
+const imageUploadInput = document.querySelector(
+    '.image_upload_input',
+);
+
+if (imageUploadInput) {
+    imageUploadInput.addEventListener(
+        'change',
+        previewImages,
+    );
+
+    imageUploadInput.addEventListener(
+        'change',
+        handleImageUpload,
+    );
+}
 
 /**
  * Deletes an image by name and removes it from the DOM.
