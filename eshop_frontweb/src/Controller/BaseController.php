@@ -173,6 +173,13 @@ class BaseController extends AbstractController
 
         $parameters['translations'] ??= $this->getTranslations($request);
 
+        if (!array_key_exists('bmsUrl', $parameters)) {
+            $parameters['bmsUrl'] = rtrim(
+                (string) $this->getParameter('bms_url'),
+                '/'
+            );
+        }
+
         if (!array_key_exists('shopInfo', $parameters)) {
             $parameters['shopInfo'] = $this->loadLatestShopInfo();
         }
