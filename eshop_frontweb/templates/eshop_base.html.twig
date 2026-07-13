@@ -9,11 +9,20 @@
   : ''
 %}
 
-{% set shopLogo = rawShopLogo starts with 'images/'
-  ? rawShopLogo|replace({'images/': ''})
-  : rawShopLogo
+{% set shopLogo = rawShopLogo
+  |replace({
+    '/images/': '',
+    'images/': ''
+  })
+  |trim('/')
 %}
-{% set bmsBaseUrl = (bms_url|default(''))|trim('/') %}
+
+{% set bmsBaseUrl = (bmsUrl|default(''))|trim('/') %}
+
+{% set shopLogoUrl = shopLogo and bmsBaseUrl
+  ? bmsBaseUrl ~ '/images/' ~ shopLogo
+  : ''
+%}
 <!DOCTYPE html>
 <html>
   <head>
@@ -64,9 +73,9 @@
             class="shop-brand"
             aria-label="{{ shopName }}"
           >
-            {% if shopLogo %}
+            {% if shopLogoUrl %}
               <img
-                src="{{ bmsBaseUrl ~ '/images/' ~ shopLogo }}"
+                src="{{ shopLogoUrl }}"
                 alt="{{ shopName }}"
                 class="shop-logo"
               >
