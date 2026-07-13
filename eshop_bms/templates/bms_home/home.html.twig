@@ -1234,6 +1234,11 @@
       <button type="button" id="addCurrencyButton" onclick="addCurrency()">{{ translations.add_currency ?? 'Add Currency' }}</button>
       
       <input type="hidden" id="csrf_token_eshop_save" value="{{ csrf_save_eshop }}">
+      <input
+        type="hidden"
+        id="csrf_token_logo_upload"
+        value="{{ csrf_logo_upload }}"
+      >
       
       <div class="buttons">
         <button type="button" id="saveButton" onclick="save_()">{{ translations.save ?? 'Save' }}</button>

@@ -38,24 +38,65 @@ function previewImages(event) {
  *
  * @param {Event} event - File input change event.
  */
-function handleLogoUpload(event) {
+async function handleLogoUpload(event) {
     const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('logo', file);
 
-    fetch('/logo_save', {
-        method: 'POST',
-        body: formData,
-    })
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.filePath) {
-                document.getElementById(
-                    'logo_preview',
-                ).src = `/images/${data.filePath}`;
-            }
-        })
-        .catch((error) => console.error('上传错误:', error));
+    if (!file) {
+        return;
+    }
+
+    const csrfToken = String(
+        document.getElementById(
+            'csrf_token_logo_upload',
+        )?.value || '',
+    ).trim();
+
+    if (!csrfToken) {
+        alert('Missing logo upload CSRF token.');
+        return;
+    }
+
+    const formData = new FormData();
+
+    formData.append('logo', file);
+    formData.append('_token', csrfToken);
+
+    try {
+        const response = await fetch('/logo_save', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.filePath) {
+            throw new Error(
+                data.error || 'Logo upload failed.',
+            );
+        }
+
+        const logoPath = String(data.filePath);
+
+        document.getElementById(
+            'logo_preview',
+        ).src = `/images/${logoPath}?t=${Date.now()}`;
+
+        const logoPathElement =
+            document.getElementById('logo_path');
+
+        if (logoPathElement) {
+            logoPathElement.value = logoPath;
+        }
+    } catch (error) {
+        console.error('Logo upload failed:', error);
+
+        alert(
+            error instanceof Error
+                ? error.message
+                : 'Logo upload failed.',
+        );
+    }
 }
 
 /**
@@ -1327,6 +1368,7 @@ async function save_() {
         const paymentElement = document.getElementById('payment');
         const refundElement = document.getElementById('refund');
         const logoUrlElement = document.getElementById('logo_url');
+        const logoPathElement = document.getElementById('logo_path');
         const companyNameElement = document.getElementById('company_name');
         const cinElement = document.getElementById('cin');
         const hidePricesElement = document.getElementById('hide_prices');
@@ -1421,11 +1463,12 @@ async function save_() {
             searchConfig: selectedSearchConfig,
         };
 
-        if (logoUrlElement && logoUrlElement.value) {
-            requestData.logo_url = logoUrlElement.value.replace(
-                'C:\\fakepath\\',
-                '',
-            );
+        const uploadedLogoPath = String(
+            logoPathElement?.value || '',
+        ).trim();
+
+        if (uploadedLogoPath) {
+            requestData.logo_url = uploadedLogoPath;
         }
 
         const response = await fetch('/eshop_save', {

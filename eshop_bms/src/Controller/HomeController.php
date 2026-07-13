@@ -387,7 +387,13 @@ class HomeController extends BaseController
                 if ($logoName !== '') {
                     $ext = strtolower(pathinfo($logoName, PATHINFO_EXTENSION));
                     if (\in_array($ext, ['png', 'jpg', 'jpeg', 'webp', 'svg'], true)) {
-                        $shopInfo->setLogo('images/logo.' . ($ext === 'jpeg' ? 'jpg' : $ext));
+                        $normalizedExt = $ext === 'jpeg'
+                            ? 'jpg'
+                            : $ext;
+
+                        $shopInfo->setLogo(
+                            'logo.' . $normalizedExt
+                        );
                     }
                 }
             }
