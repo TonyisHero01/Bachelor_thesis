@@ -3,7 +3,7 @@ parameters:
     MAX_ARTICLES_COUNT_PER_PAGE: '%env(MAX_ARTICLES_COUNT_PER_PAGE)%'
     NAME_MAX_LENGTH: '%env(NAME_MAX_LENGTH)%'
     CONTENT_MAX_LENGTH: '%env(CONTENT_MAX_LENGTH)%'
-    BMS_URL: '%env(BMS_URL)%'
+    bms_url: '%env(string:BMS_URL)%'
     search_service_base_url: '%env(SEARCH_SERVICE_BASE_URL)%'
 
 services:
