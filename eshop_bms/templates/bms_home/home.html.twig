@@ -71,61 +71,164 @@
 
       <hr>
 
+            {% set activeConfig = searchConfigData[activeSearchMethod] ?? {} %}
+
+      {% set lexicalConfig = searchConfigData['lexical'] ?? {} %}
+      {% set lexicalSettings = lexicalConfig.algorithmSettings ?? {} %}
+      {% set lexicalVectorizer = lexicalSettings.vectorizer ?? {} %}
+      {% set lexicalCandidateFilter = lexicalSettings.candidate_filter ?? {} %}
+      {% set lexicalPartialMatch = lexicalSettings.partial_match ?? {} %}
+      {% set lexicalSession = lexicalSettings.session_recommendation ?? {} %}
+
+      {% set semanticConfig = searchConfigData['semantic_vector'] ?? {} %}
+      {% set semanticSettings = semanticConfig.algorithmSettings ?? {} %}
+      {% set semanticDocumentFields = semanticSettings.document_fields ?? {} %}
+      {% set semanticEmbedding = semanticSettings.embedding ?? {} %}
+      {% set semanticReranking = semanticSettings.reranking ?? {} %}
+      {% set semanticCandidatePool = semanticSettings.candidate_pool ?? {} %}
+      {% set semanticVectorSearch = semanticSettings.vector_search ?? {} %}
+      {% set semanticSession = semanticSettings.session_recommendation ?? {} %}
+
+      {% set elasticConfig = searchConfigData['elasticsearch_bm25'] ?? {} %}
+      {% set elasticSettings = elasticConfig.algorithmSettings ?? {} %}
+      {% set elasticSearchQuery = elasticSettings.search_query ?? {} %}
+      {% set elasticSearchFieldWeights = elasticSearchQuery.field_weights ?? {} %}
+      {% set elasticRecommendationQuery = elasticSettings.recommendation_query ?? {} %}
+      {% set elasticRecommendationFieldWeights = elasticRecommendationQuery.field_weights ?? {} %}
+      {% set elasticSession = elasticSettings.session_recommendation ?? {} %}
+
+      <hr>
+
       <h2>Search Relevance Configuration</h2>
 
-      <label for="search_config_name">Configuration Name</label>
-      <input type="text"
-            id="search_config_name"
-            value="{{ searchConfig.name }}"
-            maxlength="100"><br>
+      <div
+        id="search_config_root"
+        data-active-method="{{ activeSearchMethod }}"
+        data-search-configs="{{ searchConfigData|json_encode|e('html_attr') }}"
+      ></div>
 
-      <label for="searchMethod">Search method</label>
+      <label for="search_config_name">Configuration Name</label>
+      <input
+        type="text"
+        id="search_config_name"
+        value="{{ activeConfig.name ?? '' }}"
+        maxlength="100"
+      ><br>
+
+      <label for="searchMethod">Search Method</label>
       <select id="searchMethod" name="searchMethod">
-          {% for value, label in searchMethods %}
-              <option value="{{ value }}"
-                  {% if searchConfig.searchMethod == value %}selected{% endif %}
-              >
-                  {{ label }}
-              </option>
-          {% endfor %}
+        {% for value, label in searchMethods %}
+          <option
+            value="{{ value }}"
+            {% if activeSearchMethod == value %}selected{% endif %}
+          >
+            {{ label }}
+          </option>
+        {% endfor %}
       </select>
 
       <h3>Field Weights</h3>
 
       <label for="name_weight">Name Weight</label>
-      <input type="number" id="name_weight" value="{{ searchConfig.nameWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="name_weight"
+        value="{{ activeConfig.nameWeight ?? 20 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <label for="description_weight">Description Weight</label>
-      <input type="number" id="description_weight" value="{{ searchConfig.descriptionWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="description_weight"
+        value="{{ activeConfig.descriptionWeight ?? 5 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <label for="category_weight">Category Weight</label>
-      <input type="number" id="category_weight" value="{{ searchConfig.categoryWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="category_weight"
+        value="{{ activeConfig.categoryWeight ?? 4 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <label for="material_weight">Material Weight</label>
-      <input type="number" id="material_weight" value="{{ searchConfig.materialWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="material_weight"
+        value="{{ activeConfig.materialWeight ?? 2 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <label for="color_weight">Color Weight</label>
-      <input type="number" id="color_weight" value="{{ searchConfig.colorWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="color_weight"
+        value="{{ activeConfig.colorWeight ?? 2 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <label for="size_weight">Size Weight</label>
-      <input type="number" id="size_weight" value="{{ searchConfig.sizeWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="size_weight"
+        value="{{ activeConfig.sizeWeight ?? 2 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <label for="attributes_weight">Attributes Weight</label>
-      <input type="number" id="attributes_weight" value="{{ searchConfig.attributesWeight }}" min="0" step="1"><br>
+      <input
+        type="number"
+        id="attributes_weight"
+        value="{{ activeConfig.attributesWeight ?? 2 }}"
+        min="0"
+        step="1"
+      ><br>
 
       <h3>Recommendation Bonuses</h3>
 
       <label for="same_category_bonus">Same Category Bonus</label>
-      <input type="number" id="same_category_bonus" value="{{ searchConfig.sameCategoryBonus }}" min="0" step="0.01"><br>
+      <input
+        type="number"
+        id="same_category_bonus"
+        value="{{ activeConfig.sameCategoryBonus ?? 0.35 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
       <label for="same_material_bonus">Same Material Bonus</label>
-      <input type="number" id="same_material_bonus" value="{{ searchConfig.sameMaterialBonus }}" min="0" step="0.01"><br>
+      <input
+        type="number"
+        id="same_material_bonus"
+        value="{{ activeConfig.sameMaterialBonus ?? 0.15 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
       <label for="same_color_bonus">Same Color Bonus</label>
-      <input type="number" id="same_color_bonus" value="{{ searchConfig.sameColorBonus }}" min="0" step="0.01"><br>
+      <input
+        type="number"
+        id="same_color_bonus"
+        value="{{ activeConfig.sameColorBonus ?? 0.10 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
       <label for="same_size_bonus">Same Size Bonus</label>
-      <input type="number" id="same_size_bonus" value="{{ searchConfig.sameSizeBonus }}" min="0" step="0.01"><br>
+      <input
+        type="number"
+        id="same_size_bonus"
+        value="{{ activeConfig.sameSizeBonus ?? 0.10 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
       <h3>Recommendation Runtime Settings</h3>
 
@@ -133,64 +236,965 @@
       <input
         type="checkbox"
         id="recommendation_enabled"
-        {% if searchConfig.recommendationEnabled %}checked{% endif %}
+        {% if activeConfig.recommendationEnabled ?? true %}checked{% endif %}
       ><br>
 
-      <label for="recommendation_logging_enabled">Enable Recommendation Logging</label>
+      <label for="recommendation_logging_enabled">
+        Enable Recommendation Logging
+      </label>
       <input
         type="checkbox"
         id="recommendation_logging_enabled"
-        {% if searchConfig.recommendationLoggingEnabled %}checked{% endif %}
+        {% if activeConfig.recommendationLoggingEnabled ?? true %}checked{% endif %}
       ><br>
 
       <h3>Recommendation Weights</h3>
 
-        <label for="same_category_recommendation_weight">Same Category Recommendation Weight</label>
-        <input type="number" id="same_category_recommendation_weight"
-              value="{{ searchConfig.sameCategoryRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="same_category_recommendation_weight">
+        Same Category Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="same_category_recommendation_weight"
+        value="{{ activeConfig.sameCategoryRecommendationWeight ?? 0.35 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <label for="same_color_recommendation_weight">Same Color Recommendation Weight</label>
-        <input type="number" id="same_color_recommendation_weight"
-              value="{{ searchConfig.sameColorRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="same_color_recommendation_weight">
+        Same Color Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="same_color_recommendation_weight"
+        value="{{ activeConfig.sameColorRecommendationWeight ?? 0.10 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <label for="same_size_recommendation_weight">Same Size Recommendation Weight</label>
-        <input type="number" id="same_size_recommendation_weight"
-              value="{{ searchConfig.sameSizeRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="same_size_recommendation_weight">
+        Same Size Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="same_size_recommendation_weight"
+        value="{{ activeConfig.sameSizeRecommendationWeight ?? 0.10 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <label for="wishlist_recommendation_weight">Wishlist Recommendation Weight</label>
-        <input type="number" id="wishlist_recommendation_weight"
-              value="{{ searchConfig.wishlistRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="wishlist_recommendation_weight">
+        Wishlist Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="wishlist_recommendation_weight"
+        value="{{ activeConfig.wishlistRecommendationWeight ?? 0.30 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <label for="order_history_recommendation_weight">Order History Recommendation Weight</label>
-        <input type="number" id="order_history_recommendation_weight"
-              value="{{ searchConfig.orderHistoryRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="order_history_recommendation_weight">
+        Order History Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="order_history_recommendation_weight"
+        value="{{ activeConfig.orderHistoryRecommendationWeight ?? 0.25 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <label for="search_history_recommendation_weight">Search History Recommendation Weight</label>
-        <input type="number" id="search_history_recommendation_weight"
-              value="{{ searchConfig.searchHistoryRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="search_history_recommendation_weight">
+        Search History Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="search_history_recommendation_weight"
+        value="{{ activeConfig.searchHistoryRecommendationWeight ?? 0.20 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <label for="view_history_recommendation_weight">View History Recommendation Weight</label>
-        <input type="number" id="view_history_recommendation_weight"
-              value="{{ searchConfig.viewHistoryRecommendationWeight }}"
-              min="0" step="0.01"><br>
+      <label for="view_history_recommendation_weight">
+        View History Recommendation Weight
+      </label>
+      <input
+        type="number"
+        id="view_history_recommendation_weight"
+        value="{{ activeConfig.viewHistoryRecommendationWeight ?? 0.35 }}"
+        min="0"
+        step="0.01"
+      ><br>
 
-        <h3>Recommendation Diversity</h3>
+      <h3>Recommendation Diversity</h3>
 
-        <label for="max_recommendation_per_category">Max Recommendation Per Category</label>
-        <input type="number" id="max_recommendation_per_category"
-              value="{{ searchConfig.maxRecommendationPerCategory }}"
-              min="1" step="1"><br>
+      <label for="max_recommendation_per_category">
+        Max Recommendation Per Category
+      </label>
+      <input
+        type="number"
+        id="max_recommendation_per_category"
+        value="{{ activeConfig.maxRecommendationPerCategory ?? 4 }}"
+        min="1"
+        step="1"
+      ><br>
 
-        <label for="recommendation_diversity_penalty">Recommendation Diversity Penalty</label>
-        <input type="number" id="recommendation_diversity_penalty"
-              value="{{ searchConfig.recommendationDiversityPenalty }}"
-              min="0" step="0.01"><br>
+      <label for="recommendation_diversity_penalty">
+        Recommendation Diversity Penalty
+      </label>
+      <input
+        type="number"
+        id="recommendation_diversity_penalty"
+        value="{{ activeConfig.recommendationDiversityPenalty ?? 0.10 }}"
+        min="0"
+        step="0.01"
+      ><br>
+
+      {# ========================================================= #}
+      {# Lexical settings                                          #}
+      {# ========================================================= #}
+
+      <div
+        id="lexical_settings"
+        class="search-method-settings"
+        data-search-method="lexical"
+        {% if activeSearchMethod != 'lexical' %}hidden{% endif %}
+      >
+        <hr>
+        <h2>Lexical Algorithm Settings</h2>
+
+        <h3>Vectorizer</h3>
+
+        <label for="lexical_lowercase">Lowercase Input</label>
+        <input
+          type="checkbox"
+          id="lexical_lowercase"
+          {% if lexicalVectorizer.lowercase ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="lexical_ngram_min">Minimum N-gram Size</label>
+        <input
+          type="number"
+          id="lexical_ngram_min"
+          value="{{ lexicalVectorizer.ngram_range[0] ?? 1 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="lexical_ngram_max">Maximum N-gram Size</label>
+        <input
+          type="number"
+          id="lexical_ngram_max"
+          value="{{ lexicalVectorizer.ngram_range[1] ?? 2 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="lexical_n_features">Hashing Features</label>
+        <input
+          type="number"
+          id="lexical_n_features"
+          value="{{ lexicalVectorizer.n_features ?? 262144 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="lexical_alternate_sign">Alternate Sign</label>
+        <input
+          type="checkbox"
+          id="lexical_alternate_sign"
+          {% if lexicalVectorizer.alternate_sign ?? false %}checked{% endif %}
+        ><br>
+
+        <label for="lexical_normalization">Vector Normalization</label>
+        <select id="lexical_normalization">
+          {% set lexicalNormalization = lexicalVectorizer.normalization ?? 'l2' %}
+
+          <option value="l2" {% if lexicalNormalization == 'l2' %}selected{% endif %}>
+            L2
+          </option>
+
+          <option value="l1" {% if lexicalNormalization == 'l1' %}selected{% endif %}>
+            L1
+          </option>
+
+          <option value="none" {% if lexicalNormalization == 'none' %}selected{% endif %}>
+            None
+          </option>
+        </select><br>
+
+        <label for="lexical_token_pattern">Token Pattern</label>
+        <input
+          type="text"
+          id="lexical_token_pattern"
+          value="{{ lexicalVectorizer.token_pattern ?? '\\b\\w+\\b' }}"
+        ><br>
+
+        <h3>Candidate Filter</h3>
+
+        <label for="lexical_candidate_minimum_query_token_matches">
+          Minimum Query Token Matches
+        </label>
+        <input
+          type="number"
+          id="lexical_candidate_minimum_query_token_matches"
+          value="{{ lexicalCandidateFilter.minimum_query_token_matches ?? 1 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="lexical_fallback_to_all_documents">
+          Fallback to All Documents
+        </label>
+        <input
+          type="checkbox"
+          id="lexical_fallback_to_all_documents"
+          {% if lexicalCandidateFilter.fallback_to_all_documents ?? true %}checked{% endif %}
+        ><br>
+
+        <h3>Partial Match</h3>
+
+        <label for="lexical_require_all_query_tokens">
+          Require All Query Tokens
+        </label>
+        <input
+          type="checkbox"
+          id="lexical_require_all_query_tokens"
+          {% if lexicalPartialMatch.require_all_query_tokens ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="lexical_partial_minimum_query_token_matches">
+          Partial Match Minimum Query Token Matches
+        </label>
+        <input
+          type="number"
+          id="lexical_partial_minimum_query_token_matches"
+          value="{{ lexicalPartialMatch.minimum_query_token_matches ?? 1 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="lexical_partial_base_score">Partial Match Base Score</label>
+        <input
+          type="number"
+          id="lexical_partial_base_score"
+          value="{{ lexicalPartialMatch.base_score ?? 1.0 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="lexical_partial_merge_bonus_weight">
+          Partial Match Merge Bonus Weight
+        </label>
+        <input
+          type="number"
+          id="lexical_partial_merge_bonus_weight"
+          value="{{ lexicalPartialMatch.merge_bonus_weight ?? 0.20 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <h3>Session Recommendation</h3>
+
+        <label for="lexical_session_current_product_weight">
+          Current Product Weight
+        </label>
+        <input
+          type="number"
+          id="lexical_session_current_product_weight"
+          value="{{ lexicalSession.current_product_weight ?? 1.0 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="lexical_session_viewed_product_weight">
+          Viewed Product Weight
+        </label>
+        <input
+          type="number"
+          id="lexical_session_viewed_product_weight"
+          value="{{ lexicalSession.viewed_product_weight ?? 0.70 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="lexical_session_cart_product_weight">
+          Cart Product Weight
+        </label>
+        <input
+          type="number"
+          id="lexical_session_cart_product_weight"
+          value="{{ lexicalSession.cart_product_weight ?? 0.90 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="lexical_session_max_viewed_seeds">
+          Maximum Viewed Seeds
+        </label>
+        <input
+          type="number"
+          id="lexical_session_max_viewed_seeds"
+          value="{{ lexicalSession.max_viewed_seeds ?? 5 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="lexical_session_max_cart_seeds">
+          Maximum Cart Seeds
+        </label>
+        <input
+          type="number"
+          id="lexical_session_max_cart_seeds"
+          value="{{ lexicalSession.max_cart_seeds ?? 5 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="lexical_session_max_total_seeds">
+          Maximum Total Seeds
+        </label>
+        <input
+          type="number"
+          id="lexical_session_max_total_seeds"
+          value="{{ lexicalSession.max_total_seeds ?? 8 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="lexical_session_candidate_multiplier">
+          Candidate Multiplier
+        </label>
+        <input
+          type="number"
+          id="lexical_session_candidate_multiplier"
+          value="{{ lexicalSession.candidate_multiplier ?? 3 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="lexical_session_minimum_candidates">
+          Minimum Candidates
+        </label>
+        <input
+          type="number"
+          id="lexical_session_minimum_candidates"
+          value="{{ lexicalSession.minimum_candidates ?? 10 }}"
+          min="1"
+          step="1"
+        ><br>
+      </div>
+
+      {# ========================================================= #}
+      {# Semantic settings                                         #}
+      {# ========================================================= #}
+
+      <div
+        id="semantic_vector_settings"
+        class="search-method-settings"
+        data-search-method="semantic_vector"
+        {% if activeSearchMethod != 'semantic_vector' %}hidden{% endif %}
+      >
+        <hr>
+        <h2>Semantic Vector Algorithm Settings</h2>
+
+        <h3>Document Fields</h3>
+
+        <label for="semantic_document_name">Include Name</label>
+        <input
+          type="checkbox"
+          id="semantic_document_name"
+          {% if semanticDocumentFields.name ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="semantic_document_category">Include Category</label>
+        <input
+          type="checkbox"
+          id="semantic_document_category"
+          {% if semanticDocumentFields.category ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="semantic_document_description">Include Description</label>
+        <input
+          type="checkbox"
+          id="semantic_document_description"
+          {% if semanticDocumentFields.description ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="semantic_document_material">Include Material</label>
+        <input
+          type="checkbox"
+          id="semantic_document_material"
+          {% if semanticDocumentFields.material ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="semantic_document_color">Include Color</label>
+        <input
+          type="checkbox"
+          id="semantic_document_color"
+          {% if semanticDocumentFields.color ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="semantic_document_size">Include Size</label>
+        <input
+          type="checkbox"
+          id="semantic_document_size"
+          {% if semanticDocumentFields.size ?? true %}checked{% endif %}
+        ><br>
+
+        <label for="semantic_document_attributes">Include Attributes</label>
+        <input
+          type="checkbox"
+          id="semantic_document_attributes"
+          {% if semanticDocumentFields.attributes ?? false %}checked{% endif %}
+        ><br>
+
+        <h3>Embedding</h3>
+
+        <label for="semantic_embedding_batch_size">Embedding Batch Size</label>
+        <input
+          type="number"
+          id="semantic_embedding_batch_size"
+          value="{{ semanticEmbedding.batch_size ?? 32 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="semantic_normalize_embeddings">
+          Normalize Embeddings
+        </label>
+        <input
+          type="checkbox"
+          id="semantic_normalize_embeddings"
+          {% if semanticEmbedding.normalize_embeddings ?? true %}checked{% endif %}
+        ><br>
+
+        <h3>Reranking</h3>
+
+        <label for="semantic_similarity_weight">
+          Semantic Similarity Weight
+        </label>
+        <input
+          type="number"
+          id="semantic_similarity_weight"
+          value="{{ semanticReranking.semantic_similarity_weight ?? 0.75 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="semantic_lexical_overlap_weight">
+          Lexical Overlap Weight
+        </label>
+        <input
+          type="number"
+          id="semantic_lexical_overlap_weight"
+          value="{{ semanticReranking.lexical_overlap_weight ?? 0.25 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="semantic_minimum_token_length">
+          Minimum Token Length
+        </label>
+        <input
+          type="number"
+          id="semantic_minimum_token_length"
+          value="{{ semanticReranking.minimum_token_length ?? 2 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <h3>Candidate Pool</h3>
+
+        <label for="semantic_candidate_multiplier">
+          Candidate Multiplier
+        </label>
+        <input
+          type="number"
+          id="semantic_candidate_multiplier"
+          value="{{ semanticCandidatePool.multiplier ?? 5 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="semantic_minimum_candidates">
+          Minimum Candidates
+        </label>
+        <input
+          type="number"
+          id="semantic_minimum_candidates"
+          value="{{ semanticCandidatePool.minimum_candidates ?? 50 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <h3>Vector Search</h3>
+
+        <label for="semantic_ivfflat_probes">IVFFlat Probes</label>
+        <input
+          type="number"
+          id="semantic_ivfflat_probes"
+          value="{{ semanticVectorSearch.ivfflat_probes ?? 10 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <h3>Session Recommendation</h3>
+
+        <label for="semantic_session_current_product_weight">
+          Current Product Weight
+        </label>
+        <input
+          type="number"
+          id="semantic_session_current_product_weight"
+          value="{{ semanticSession.current_product_weight ?? 1.0 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="semantic_session_viewed_product_weight">
+          Viewed Product Weight
+        </label>
+        <input
+          type="number"
+          id="semantic_session_viewed_product_weight"
+          value="{{ semanticSession.viewed_product_weight ?? 0.70 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="semantic_session_cart_product_weight">
+          Cart Product Weight
+        </label>
+        <input
+          type="number"
+          id="semantic_session_cart_product_weight"
+          value="{{ semanticSession.cart_product_weight ?? 0.90 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="semantic_session_max_viewed_seeds">
+          Maximum Viewed Seeds
+        </label>
+        <input
+          type="number"
+          id="semantic_session_max_viewed_seeds"
+          value="{{ semanticSession.max_viewed_seeds ?? 5 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="semantic_session_max_cart_seeds">
+          Maximum Cart Seeds
+        </label>
+        <input
+          type="number"
+          id="semantic_session_max_cart_seeds"
+          value="{{ semanticSession.max_cart_seeds ?? 5 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="semantic_session_max_total_seeds">
+          Maximum Total Seeds
+        </label>
+        <input
+          type="number"
+          id="semantic_session_max_total_seeds"
+          value="{{ semanticSession.max_total_seeds ?? 8 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="semantic_session_candidate_multiplier">
+          Session Candidate Multiplier
+        </label>
+        <input
+          type="number"
+          id="semantic_session_candidate_multiplier"
+          value="{{ semanticSession.candidate_multiplier ?? 2 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="semantic_session_minimum_candidates">
+          Session Minimum Candidates
+        </label>
+        <input
+          type="number"
+          id="semantic_session_minimum_candidates"
+          value="{{ semanticSession.minimum_candidates ?? 10 }}"
+          min="1"
+          step="1"
+        ><br>
+      </div>
+
+      {# ========================================================= #}
+      {# Elasticsearch settings                                    #}
+      {# ========================================================= #}
+
+      <div
+        id="elasticsearch_bm25_settings"
+        class="search-method-settings"
+        data-search-method="elasticsearch_bm25"
+        {% if activeSearchMethod != 'elasticsearch_bm25' %}hidden{% endif %}
+      >
+        <hr>
+        <h2>Elasticsearch BM25 Algorithm Settings</h2>
+
+        <h3>Search Query</h3>
+
+        <label for="elastic_search_query_type">Query Type</label>
+        <select id="elastic_search_query_type">
+          {% set elasticSearchType = elasticSearchQuery.type ?? 'best_fields' %}
+
+          <option
+            value="best_fields"
+            {% if elasticSearchType == 'best_fields' %}selected{% endif %}
+          >
+            Best Fields
+          </option>
+
+          <option
+            value="most_fields"
+            {% if elasticSearchType == 'most_fields' %}selected{% endif %}
+          >
+            Most Fields
+          </option>
+
+          <option
+            value="cross_fields"
+            {% if elasticSearchType == 'cross_fields' %}selected{% endif %}
+          >
+            Cross Fields
+          </option>
+        </select><br>
+
+        <label for="elastic_search_operator">Search Operator</label>
+        <select id="elastic_search_operator">
+          {% set elasticSearchOperator = elasticSearchQuery.operator ?? 'or' %}
+
+          <option value="or" {% if elasticSearchOperator == 'or' %}selected{% endif %}>
+            OR
+          </option>
+
+          <option value="and" {% if elasticSearchOperator == 'and' %}selected{% endif %}>
+            AND
+          </option>
+        </select><br>
+
+        <h3>Search Field Weights</h3>
+
+        <label for="elastic_search_name_weight">Name Weight</label>
+        <input
+          type="number"
+          id="elastic_search_name_weight"
+          value="{{ elasticSearchFieldWeights.name ?? 5 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_search_category_weight">Category Weight</label>
+        <input
+          type="number"
+          id="elastic_search_category_weight"
+          value="{{ elasticSearchFieldWeights.category ?? 3 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_search_description_weight">
+          Description Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_search_description_weight"
+          value="{{ elasticSearchFieldWeights.description ?? 2 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_search_material_weight">Material Weight</label>
+        <input
+          type="number"
+          id="elastic_search_material_weight"
+          value="{{ elasticSearchFieldWeights.material ?? 1 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_search_color_weight">Color Weight</label>
+        <input
+          type="number"
+          id="elastic_search_color_weight"
+          value="{{ elasticSearchFieldWeights.color ?? 1 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_search_size_weight">Size Weight</label>
+        <input
+          type="number"
+          id="elastic_search_size_weight"
+          value="{{ elasticSearchFieldWeights.size ?? 1 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_search_sku_weight">SKU Weight</label>
+        <input
+          type="number"
+          id="elastic_search_sku_weight"
+          value="{{ elasticSearchFieldWeights.sku ?? 2 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <h3>Recommendation Query</h3>
+
+        <label for="elastic_recommendation_query_type">
+          Recommendation Query Type
+        </label>
+        <select id="elastic_recommendation_query_type">
+          {% set elasticRecommendationType = elasticRecommendationQuery.type ?? 'best_fields' %}
+
+          <option
+            value="best_fields"
+            {% if elasticRecommendationType == 'best_fields' %}selected{% endif %}
+          >
+            Best Fields
+          </option>
+
+          <option
+            value="most_fields"
+            {% if elasticRecommendationType == 'most_fields' %}selected{% endif %}
+          >
+            Most Fields
+          </option>
+
+          <option
+            value="cross_fields"
+            {% if elasticRecommendationType == 'cross_fields' %}selected{% endif %}
+          >
+            Cross Fields
+          </option>
+        </select><br>
+
+        <label for="elastic_recommendation_operator">
+          Recommendation Operator
+        </label>
+        <select id="elastic_recommendation_operator">
+          {% set elasticRecommendationOperator = elasticRecommendationQuery.operator ?? 'or' %}
+
+          <option
+            value="or"
+            {% if elasticRecommendationOperator == 'or' %}selected{% endif %}
+          >
+            OR
+          </option>
+
+          <option
+            value="and"
+            {% if elasticRecommendationOperator == 'and' %}selected{% endif %}
+          >
+            AND
+          </option>
+        </select><br>
+
+        <h3>Recommendation Field Weights</h3>
+
+        <label for="elastic_recommendation_name_weight">Name Weight</label>
+        <input
+          type="number"
+          id="elastic_recommendation_name_weight"
+          value="{{ elasticRecommendationFieldWeights.name ?? 5 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_category_weight">
+          Category Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_recommendation_category_weight"
+          value="{{ elasticRecommendationFieldWeights.category ?? 4 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_description_weight">
+          Description Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_recommendation_description_weight"
+          value="{{ elasticRecommendationFieldWeights.description ?? 2 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_material_weight">
+          Material Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_recommendation_material_weight"
+          value="{{ elasticRecommendationFieldWeights.material ?? 2 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_color_weight">Color Weight</label>
+        <input
+          type="number"
+          id="elastic_recommendation_color_weight"
+          value="{{ elasticRecommendationFieldWeights.color ?? 1 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_size_weight">Size Weight</label>
+        <input
+          type="number"
+          id="elastic_recommendation_size_weight"
+          value="{{ elasticRecommendationFieldWeights.size ?? 1 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_sku_weight">SKU Weight</label>
+        <input
+          type="number"
+          id="elastic_recommendation_sku_weight"
+          value="{{ elasticRecommendationFieldWeights.sku ?? 2 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_recommendation_candidate_multiplier">
+          Recommendation Candidate Multiplier
+        </label>
+        <input
+          type="number"
+          id="elastic_recommendation_candidate_multiplier"
+          value="{{ elasticRecommendationQuery.candidate_multiplier ?? 3 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="elastic_recommendation_minimum_candidates">
+          Recommendation Minimum Candidates
+        </label>
+        <input
+          type="number"
+          id="elastic_recommendation_minimum_candidates"
+          value="{{ elasticRecommendationQuery.minimum_candidates ?? 20 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="elastic_recommendation_exclude_source_sku">
+          Exclude Source SKU
+        </label>
+        <input
+          type="checkbox"
+          id="elastic_recommendation_exclude_source_sku"
+          {% if elasticRecommendationQuery.exclude_source_sku ?? true %}checked{% endif %}
+        ><br>
+
+        <h3>Session Recommendation</h3>
+
+        <label for="elastic_session_current_product_weight">
+          Current Product Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_session_current_product_weight"
+          value="{{ elasticSession.current_product_weight ?? 1.0 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_session_viewed_product_weight">
+          Viewed Product Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_session_viewed_product_weight"
+          value="{{ elasticSession.viewed_product_weight ?? 0.70 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_session_cart_product_weight">
+          Cart Product Weight
+        </label>
+        <input
+          type="number"
+          id="elastic_session_cart_product_weight"
+          value="{{ elasticSession.cart_product_weight ?? 0.90 }}"
+          min="0"
+          step="0.01"
+        ><br>
+
+        <label for="elastic_session_max_viewed_seeds">
+          Maximum Viewed Seeds
+        </label>
+        <input
+          type="number"
+          id="elastic_session_max_viewed_seeds"
+          value="{{ elasticSession.max_viewed_seeds ?? 5 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="elastic_session_max_cart_seeds">
+          Maximum Cart Seeds
+        </label>
+        <input
+          type="number"
+          id="elastic_session_max_cart_seeds"
+          value="{{ elasticSession.max_cart_seeds ?? 5 }}"
+          min="0"
+          step="1"
+        ><br>
+
+        <label for="elastic_session_max_total_seeds">
+          Maximum Total Seeds
+        </label>
+        <input
+          type="number"
+          id="elastic_session_max_total_seeds"
+          value="{{ elasticSession.max_total_seeds ?? 8 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="elastic_session_candidate_multiplier">
+          Session Candidate Multiplier
+        </label>
+        <input
+          type="number"
+          id="elastic_session_candidate_multiplier"
+          value="{{ elasticSession.candidate_multiplier ?? 2 }}"
+          min="1"
+          step="1"
+        ><br>
+
+        <label for="elastic_session_minimum_candidates">
+          Session Minimum Candidates
+        </label>
+        <input
+          type="number"
+          id="elastic_session_minimum_candidates"
+          value="{{ elasticSession.minimum_candidates ?? 10 }}"
+          min="1"
+          step="1"
+        ><br>
+      </div>
 
       <label for="logo_url">LOGO</label><br>
       <img id="logo_preview" src="{{ shopInfo.logo ? asset('images/' ~ shopInfo.logo) : '' }}" alt="Logo" width="304" height="228"><br>

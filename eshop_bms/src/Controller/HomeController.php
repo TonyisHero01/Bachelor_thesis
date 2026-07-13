@@ -27,6 +27,17 @@ class HomeController extends BaseController
     private const CSRF_CAROUSEL_UPLOAD = 'save_eshop_image';
     private const CSRF_DELETE_CAROUSEL = 'delete_cimage';
     private const CSRF_SAVE_ESHOP = 'save_eshop';
+    private const SEARCH_METHODS = [
+        'lexical' => 'Lexical Search',
+        'semantic_vector' => 'Semantic Vector Search',
+        'elasticsearch_bm25' => 'Elasticsearch BM25 Search',
+    ];
+
+    private const SEARCH_CONFIG_NAMES = [
+        'lexical' => 'Lexical configuration',
+        'semantic_vector' => 'Semantic vector configuration',
+        'elasticsearch_bm25' => 'Elasticsearch BM25 configuration',
+    ];
 
     #[Route('/', name: 'app_root', methods: ['GET'])]
     public function root(): RedirectResponse
@@ -55,15 +66,53 @@ class HomeController extends BaseController
         $roles = \is_object($user) && method_exists($user, 'getRoles') ? $user->getRoles() : [];
         $currencies = $entityManager->getRepository(Currency::class)->findAll();
 
-        $searchConfig = $entityManager
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
+        $searchConfigRepository = $entityManager
+            ->getRepository(SearchRelevanceConfig::class);
+
+        $searchConfigs = [];
+
+        foreach (self::SEARCH_METHODS as $method => $label) {
+            $configRow = $searchConfigRepository->findOneBy([
+                'searchMethod' => $method,
+            ]);
+
+            if ($configRow === null) {
+                $configRow = new SearchRelevanceConfig();
+                $configRow->setName(self::SEARCH_CONFIG_NAMES[$method]);
+                $configRow->setSearchMethod($method);
+                $configRow->setActive(false);
+                $configRow->setAlgorithmSettings(
+                    $this->getDefaultAlgorithmSettings($method)
+                );
+                $configRow->touch();
+
+                $entityManager->persist($configRow);
+            }
+
+            $searchConfigs[$method] = $configRow;
+        }
+
+        $searchConfig = null;
+
+        foreach ($searchConfigs as $configRow) {
+            if ($configRow->isActive()) {
+                $searchConfig = $configRow;
+                break;
+            }
+        }
 
         if ($searchConfig === null) {
-            $searchConfig = new SearchRelevanceConfig();
+            $searchConfig = $searchConfigs['lexical'];
             $searchConfig->setActive(true);
-            $entityManager->persist($searchConfig);
-            $entityManager->flush();
+        }
+
+        $entityManager->flush();
+
+        $searchConfigData = [];
+
+        foreach ($searchConfigs as $method => $configRow) {
+            $searchConfigData[$method] =
+                $this->serializeSearchConfig($configRow);
         }
 
         $orderRows = $entityManager->createQueryBuilder()
@@ -124,18 +173,16 @@ class HomeController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
-        $searchMethods = [
-            'lexical' => 'Lexical Search',
-            'semantic_vector' => 'Semantic Vector Search',
-            'elasticsearch_bm25' => 'Elasticsearch BM25 Search',
-        ];
 
         return $this->renderLocalized('bms_home/home.html.twig', [
             'shopInfo' => $shopInfo,
             'roles' => $roles,
             'currencies' => $currencies,
             'searchConfig' => $searchConfig,
-            'searchMethods' => $searchMethods,
+            'searchConfigs' => $searchConfigs,
+            'searchConfigData' => $searchConfigData,
+            'activeSearchMethod' => $searchConfig->getSearchMethod(),
+            'searchMethods' => self::SEARCH_METHODS,
             'sales' => $sales,
             'topProducts' => $topProducts,
             'topCustomers' => $topCustomers,
@@ -235,6 +282,7 @@ class HomeController extends BaseController
         $csrfId = self::CSRF_SAVE_ESHOP;
 
         try {
+            $searchConfigResult = null;
             $raw = (string) $request->getContent();
             $input = \json_decode($raw, true);
 
@@ -277,8 +325,11 @@ class HomeController extends BaseController
             $shopInfo->setPayment(isset($input['payment']) ? (string) $input['payment'] : null);
             $shopInfo->setRefund(isset($input['refund']) ? (string) $input['refund'] : null);
 
-            if (isset($input['searchConfig']) && is_array($input['searchConfig'])) {
-                $this->saveSearchConfigFromArray(
+            if (
+                isset($input['searchConfig'])
+                && is_array($input['searchConfig'])
+            ) {
+                $searchConfigResult = $this->saveSearchConfigFromArray(
                     $input['searchConfig'],
                     $entityManager,
                     $logger
@@ -343,6 +394,13 @@ class HomeController extends BaseController
 
             $entityManager->persist($shopInfo);
             $entityManager->flush();
+
+            if ($searchConfigResult !== null) {
+                $this->notifySearchServiceAfterSave(
+                    $searchConfigResult,
+                    $logger
+                );
+            }
 
             return new JsonResponse(['status' => 'Success']);
         } catch (\Throwable $e) {
@@ -511,15 +569,24 @@ class HomeController extends BaseController
             $result = $this->saveSearchConfigFromArray(
                 $input,
                 $entityManager,
-                $logger,
-                true
+                $logger
             );
+
             $entityManager->flush();
+
+            $this->notifySearchServiceAfterSave(
+                $result,
+                $logger
+            );
 
             return new JsonResponse([
                 'status' => 'Success',
+                'searchMethod' => $result['searchMethod'],
+                'activeMethodChanged' => $result['activeMethodChanged'],
                 'fieldWeightsChanged' => $result['fieldWeightsChanged'],
+                'algorithmSettingsChanged' => $result['algorithmSettingsChanged'],
                 'runtimeConfigChanged' => $result['runtimeConfigChanged'],
+                'requiresFullReindex' => $result['requiresFullReindex'],
             ]);
         } catch (\Throwable $e) {
             $logger->error('[HomeController] updateSearchConfigApi error: ' . $e->getMessage());
@@ -580,7 +647,7 @@ class HomeController extends BaseController
             '/reindex',
             [
                 'mode' => 'full',
-                'reason' => 'search relevance field weights changed',
+                'reason' => 'search configuration requiring reindex changed',
                 'context' => [
                     'source' => 'bms_settings',
                 ],
@@ -591,102 +658,606 @@ class HomeController extends BaseController
     private function saveSearchConfigFromArray(
         array $config,
         EntityManagerInterface $entityManager,
-        LoggerInterface $logger,
-        bool $notifySearchService = true
+        LoggerInterface $logger
     ): array {
-        $searchConfig = $entityManager
-            ->getRepository(SearchRelevanceConfig::class)
-            ->findOneBy(['active' => true], ['id' => 'DESC']);
+        $searchMethod = trim(
+            (string) ($config['searchMethod'] ?? 'lexical')
+        );
+
+        if (!array_key_exists($searchMethod, self::SEARCH_METHODS)) {
+            throw new \InvalidArgumentException(
+                'Unsupported search method: ' . $searchMethod
+            );
+        }
+
+        $repository = $entityManager
+            ->getRepository(SearchRelevanceConfig::class);
+
+        $searchConfig = $repository->findOneBy([
+            'searchMethod' => $searchMethod,
+        ]);
 
         if ($searchConfig === null) {
             $searchConfig = new SearchRelevanceConfig();
-            $searchConfig->setActive(true);
+            $searchConfig->setSearchMethod($searchMethod);
+            $searchConfig->setName(
+                self::SEARCH_CONFIG_NAMES[$searchMethod]
+            );
+            $searchConfig->setActive(false);
+            $searchConfig->setAlgorithmSettings(
+                $this->getDefaultAlgorithmSettings($searchMethod)
+            );
+
             $entityManager->persist($searchConfig);
         }
 
+        $oldAlgorithmSettings =
+            $searchConfig->getAlgorithmSettings() ?? [];
+
+        $submittedAlgorithmSettings =
+            $config['algorithmSettings'] ?? [];
+
+        if (is_string($submittedAlgorithmSettings)) {
+            $decoded = json_decode(
+                $submittedAlgorithmSettings,
+                true
+            );
+
+            $submittedAlgorithmSettings =
+                is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($submittedAlgorithmSettings)) {
+            $submittedAlgorithmSettings = [];
+        }
+
+        $newAlgorithmSettings = $this->mergeConfigArrays(
+            $oldAlgorithmSettings,
+            $submittedAlgorithmSettings
+        );
+
+        $newNameWeight = (int) (
+            $config['nameWeight']
+            ?? $searchConfig->getNameWeight()
+        );
+
+        $newDescriptionWeight = (int) (
+            $config['descriptionWeight']
+            ?? $searchConfig->getDescriptionWeight()
+        );
+
+        $newCategoryWeight = (int) (
+            $config['categoryWeight']
+            ?? $searchConfig->getCategoryWeight()
+        );
+
+        $newMaterialWeight = (int) (
+            $config['materialWeight']
+            ?? $searchConfig->getMaterialWeight()
+        );
+
+        $newColorWeight = (int) (
+            $config['colorWeight']
+            ?? $searchConfig->getColorWeight()
+        );
+
+        $newSizeWeight = (int) (
+            $config['sizeWeight']
+            ?? $searchConfig->getSizeWeight()
+        );
+
+        $newAttributesWeight = (int) (
+            $config['attributesWeight']
+            ?? $searchConfig->getAttributesWeight()
+        );
+
         $fieldWeightsChanged =
-            (int) ($config['nameWeight'] ?? 20) !== $searchConfig->getNameWeight()
-            || (int) ($config['descriptionWeight'] ?? 5) !== $searchConfig->getDescriptionWeight()
-            || (int) ($config['categoryWeight'] ?? 4) !== $searchConfig->getCategoryWeight()
-            || (int) ($config['materialWeight'] ?? 2) !== $searchConfig->getMaterialWeight()
-            || (int) ($config['colorWeight'] ?? 2) !== $searchConfig->getColorWeight()
-            || (int) ($config['sizeWeight'] ?? 2) !== $searchConfig->getSizeWeight()
-            || (int) ($config['attributesWeight'] ?? 2) !== $searchConfig->getAttributesWeight();
+            $newNameWeight !== $searchConfig->getNameWeight()
+            || $newDescriptionWeight !== $searchConfig->getDescriptionWeight()
+            || $newCategoryWeight !== $searchConfig->getCategoryWeight()
+            || $newMaterialWeight !== $searchConfig->getMaterialWeight()
+            || $newColorWeight !== $searchConfig->getColorWeight()
+            || $newSizeWeight !== $searchConfig->getSizeWeight()
+            || $newAttributesWeight !== $searchConfig->getAttributesWeight();
+
+        $algorithmSettingsChanged =
+            $newAlgorithmSettings !== $oldAlgorithmSettings;
+
+        $activeMethodChanged = !$searchConfig->isActive();
+
+        $newSameCategoryBonus = (float) (
+            $config['sameCategoryBonus']
+            ?? $searchConfig->getSameCategoryBonus()
+        );
+
+        $newSameMaterialBonus = (float) (
+            $config['sameMaterialBonus']
+            ?? $searchConfig->getSameMaterialBonus()
+        );
+
+        $newSameColorBonus = (float) (
+            $config['sameColorBonus']
+            ?? $searchConfig->getSameColorBonus()
+        );
+
+        $newSameSizeBonus = (float) (
+            $config['sameSizeBonus']
+            ?? $searchConfig->getSameSizeBonus()
+        );
+
+        $newSameCategoryRecommendationWeight = (float) (
+            $config['sameCategoryRecommendationWeight']
+            ?? $searchConfig->getSameCategoryRecommendationWeight()
+        );
+
+        $newSameColorRecommendationWeight = (float) (
+            $config['sameColorRecommendationWeight']
+            ?? $searchConfig->getSameColorRecommendationWeight()
+        );
+
+        $newSameSizeRecommendationWeight = (float) (
+            $config['sameSizeRecommendationWeight']
+            ?? $searchConfig->getSameSizeRecommendationWeight()
+        );
+
+        $newWishlistRecommendationWeight = (float) (
+            $config['wishlistRecommendationWeight']
+            ?? $searchConfig->getWishlistRecommendationWeight()
+        );
+
+        $newOrderHistoryRecommendationWeight = (float) (
+            $config['orderHistoryRecommendationWeight']
+            ?? $searchConfig->getOrderHistoryRecommendationWeight()
+        );
+
+        $newSearchHistoryRecommendationWeight = (float) (
+            $config['searchHistoryRecommendationWeight']
+            ?? $searchConfig->getSearchHistoryRecommendationWeight()
+        );
+
+        $newViewHistoryRecommendationWeight = (float) (
+            $config['viewHistoryRecommendationWeight']
+            ?? $searchConfig->getViewHistoryRecommendationWeight()
+        );
+
+        $newMaxRecommendationPerCategory = (int) (
+            $config['maxRecommendationPerCategory']
+            ?? $searchConfig->getMaxRecommendationPerCategory()
+        );
+
+        $newRecommendationDiversityPenalty = (float) (
+            $config['recommendationDiversityPenalty']
+            ?? $searchConfig->getRecommendationDiversityPenalty()
+        );
+
+        $newRecommendationEnabled = $this->readBoolean(
+            $config,
+            'recommendationEnabled',
+            $searchConfig->isRecommendationEnabled()
+        );
+
+        $newRecommendationLoggingEnabled = $this->readBoolean(
+            $config,
+            'recommendationLoggingEnabled',
+            $searchConfig->isRecommendationLoggingEnabled()
+        );
 
         $runtimeConfigChanged =
-            (string) ($config['searchMethod'] ?? 'lexical') !== $searchConfig->getSearchMethod()
-            || (float) ($config['sameCategoryBonus'] ?? 0.35) !== $searchConfig->getSameCategoryBonus()
-            || (float) ($config['sameMaterialBonus'] ?? 0.15) !== $searchConfig->getSameMaterialBonus()
-            || (float) ($config['sameColorBonus'] ?? 0.10) !== $searchConfig->getSameColorBonus()
-            || (float) ($config['sameSizeBonus'] ?? 0.10) !== $searchConfig->getSameSizeBonus()
-            || (float) ($config['sameCategoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getSameCategoryRecommendationWeight()
-            || (float) ($config['sameColorRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameColorRecommendationWeight()
-            || (float) ($config['sameSizeRecommendationWeight'] ?? 0.10) !== $searchConfig->getSameSizeRecommendationWeight()
-            || (float) ($config['wishlistRecommendationWeight'] ?? 0.30) !== $searchConfig->getWishlistRecommendationWeight()
-            || (float) ($config['orderHistoryRecommendationWeight'] ?? 0.25) !== $searchConfig->getOrderHistoryRecommendationWeight()
-            || (float) ($config['searchHistoryRecommendationWeight'] ?? 0.20) !== $searchConfig->getSearchHistoryRecommendationWeight()
-            || (float) ($config['viewHistoryRecommendationWeight'] ?? 0.35) !== $searchConfig->getViewHistoryRecommendationWeight()
-            || (int) ($config['maxRecommendationPerCategory'] ?? 4) !== $searchConfig->getMaxRecommendationPerCategory()
-            || (float) ($config['recommendationDiversityPenalty'] ?? 0.10) !== $searchConfig->getRecommendationDiversityPenalty()
-            || (bool) ($config['recommendationEnabled'] ?? true) !== $searchConfig->isRecommendationEnabled()
-            || (bool) ($config['recommendationLoggingEnabled'] ?? true) !== $searchConfig->isRecommendationLoggingEnabled();
+            $activeMethodChanged
+            || $algorithmSettingsChanged
+            || $newSameCategoryBonus
+                !== $searchConfig->getSameCategoryBonus()
+            || $newSameMaterialBonus
+                !== $searchConfig->getSameMaterialBonus()
+            || $newSameColorBonus
+                !== $searchConfig->getSameColorBonus()
+            || $newSameSizeBonus
+                !== $searchConfig->getSameSizeBonus()
+            || $newSameCategoryRecommendationWeight
+                !== $searchConfig->getSameCategoryRecommendationWeight()
+            || $newSameColorRecommendationWeight
+                !== $searchConfig->getSameColorRecommendationWeight()
+            || $newSameSizeRecommendationWeight
+                !== $searchConfig->getSameSizeRecommendationWeight()
+            || $newWishlistRecommendationWeight
+                !== $searchConfig->getWishlistRecommendationWeight()
+            || $newOrderHistoryRecommendationWeight
+                !== $searchConfig->getOrderHistoryRecommendationWeight()
+            || $newSearchHistoryRecommendationWeight
+                !== $searchConfig->getSearchHistoryRecommendationWeight()
+            || $newViewHistoryRecommendationWeight
+                !== $searchConfig->getViewHistoryRecommendationWeight()
+            || $newMaxRecommendationPerCategory
+                !== $searchConfig->getMaxRecommendationPerCategory()
+            || $newRecommendationDiversityPenalty
+                !== $searchConfig->getRecommendationDiversityPenalty()
+            || $newRecommendationEnabled
+                !== $searchConfig->isRecommendationEnabled()
+            || $newRecommendationLoggingEnabled
+                !== $searchConfig->isRecommendationLoggingEnabled();
 
-        $searchConfig->setName((string) ($config['name'] ?? 'Default relevance configuration'));
+        $requiresFullReindex =
+            $this->requiresFullReindex(
+                $searchMethod,
+                $fieldWeightsChanged,
+                $oldAlgorithmSettings,
+                $newAlgorithmSettings
+            );
 
-        $searchConfig->setNameWeight((int) ($config['nameWeight'] ?? 20));
-        $searchConfig->setDescriptionWeight((int) ($config['descriptionWeight'] ?? 5));
-        $searchConfig->setCategoryWeight((int) ($config['categoryWeight'] ?? 4));
-        $searchConfig->setMaterialWeight((int) ($config['materialWeight'] ?? 2));
-        $searchConfig->setColorWeight((int) ($config['colorWeight'] ?? 2));
-        $searchConfig->setSizeWeight((int) ($config['sizeWeight'] ?? 2));
-        $searchConfig->setAttributesWeight((int) ($config['attributesWeight'] ?? 2));
+        /*
+        * The partial unique index only permits one active row.
+        * First deactivate the old active row and flush, then activate
+        * the selected row.
+        */
+        if ($activeMethodChanged) {
+            $activeConfigs = $repository->findBy([
+                'active' => true,
+            ]);
 
-        $searchConfig->setSameCategoryBonus((float) ($config['sameCategoryBonus'] ?? 0.35));
-        $searchConfig->setSameMaterialBonus((float) ($config['sameMaterialBonus'] ?? 0.15));
-        $searchConfig->setSameColorBonus((float) ($config['sameColorBonus'] ?? 0.10));
-        $searchConfig->setSameSizeBonus((float) ($config['sameSizeBonus'] ?? 0.10));
+            foreach ($activeConfigs as $activeConfig) {
+                $activeConfig->setActive(false);
+            }
 
-        $searchConfig->setSameCategoryRecommendationWeight((float) ($config['sameCategoryRecommendationWeight'] ?? 0.35));
-        $searchConfig->setSameColorRecommendationWeight((float) ($config['sameColorRecommendationWeight'] ?? 0.10));
-        $searchConfig->setSameSizeRecommendationWeight((float) ($config['sameSizeRecommendationWeight'] ?? 0.10));
-        $searchConfig->setWishlistRecommendationWeight((float) ($config['wishlistRecommendationWeight'] ?? 0.30));
-        $searchConfig->setOrderHistoryRecommendationWeight((float) ($config['orderHistoryRecommendationWeight'] ?? 0.25));
-        $searchConfig->setSearchHistoryRecommendationWeight((float) ($config['searchHistoryRecommendationWeight'] ?? 0.20));
-        $searchConfig->setViewHistoryRecommendationWeight((float) ($config['viewHistoryRecommendationWeight'] ?? 0.35));
-        $searchConfig->setMaxRecommendationPerCategory((int) ($config['maxRecommendationPerCategory'] ?? 4));
-        $searchConfig->setRecommendationDiversityPenalty((float) ($config['recommendationDiversityPenalty'] ?? 0.10));
+            $entityManager->flush();
 
-        $searchConfig->setSearchMethod((string) ($config['searchMethod'] ?? 'lexical'));
+            $searchConfig->setActive(true);
+        }
+
+        $searchConfig->setName(
+            trim((string) (
+                $config['name']
+                ?? $searchConfig->getName()
+                ?? self::SEARCH_CONFIG_NAMES[$searchMethod]
+            ))
+        );
+
+        $searchConfig->setSearchMethod($searchMethod);
+
+        $searchConfig->setNameWeight($newNameWeight);
+        $searchConfig->setDescriptionWeight($newDescriptionWeight);
+        $searchConfig->setCategoryWeight($newCategoryWeight);
+        $searchConfig->setMaterialWeight($newMaterialWeight);
+        $searchConfig->setColorWeight($newColorWeight);
+        $searchConfig->setSizeWeight($newSizeWeight);
+        $searchConfig->setAttributesWeight($newAttributesWeight);
+
+        $searchConfig->setSameCategoryBonus(
+            $newSameCategoryBonus
+        );
+        $searchConfig->setSameMaterialBonus(
+            $newSameMaterialBonus
+        );
+        $searchConfig->setSameColorBonus(
+            $newSameColorBonus
+        );
+        $searchConfig->setSameSizeBonus(
+            $newSameSizeBonus
+        );
+
+        $searchConfig->setSameCategoryRecommendationWeight(
+            $newSameCategoryRecommendationWeight
+        );
+        $searchConfig->setSameColorRecommendationWeight(
+            $newSameColorRecommendationWeight
+        );
+        $searchConfig->setSameSizeRecommendationWeight(
+            $newSameSizeRecommendationWeight
+        );
+        $searchConfig->setWishlistRecommendationWeight(
+            $newWishlistRecommendationWeight
+        );
+        $searchConfig->setOrderHistoryRecommendationWeight(
+            $newOrderHistoryRecommendationWeight
+        );
+        $searchConfig->setSearchHistoryRecommendationWeight(
+            $newSearchHistoryRecommendationWeight
+        );
+        $searchConfig->setViewHistoryRecommendationWeight(
+            $newViewHistoryRecommendationWeight
+        );
+        $searchConfig->setMaxRecommendationPerCategory(
+            $newMaxRecommendationPerCategory
+        );
+        $searchConfig->setRecommendationDiversityPenalty(
+            $newRecommendationDiversityPenalty
+        );
 
         $searchConfig->setRecommendationEnabled(
-            (bool) ($config['recommendationEnabled'] ?? true)
+            $newRecommendationEnabled
         );
 
         $searchConfig->setRecommendationLoggingEnabled(
-            (bool) ($config['recommendationLoggingEnabled'] ?? true)
+            $newRecommendationLoggingEnabled
+        );
+
+        $searchConfig->setAlgorithmSettings(
+            $newAlgorithmSettings
         );
 
         $searchConfig->touch();
 
+        $entityManager->persist($searchConfig);
+
         $logger->info('[SearchConfig] change detection', [
+            'searchMethod' => $searchMethod,
+            'activeMethodChanged' => $activeMethodChanged,
             'fieldWeightsChanged' => $fieldWeightsChanged,
+            'algorithmSettingsChanged' => $algorithmSettingsChanged,
             'runtimeConfigChanged' => $runtimeConfigChanged,
+            'requiresFullReindex' => $requiresFullReindex,
         ]);
 
-        if ($notifySearchService) {
-            if ($fieldWeightsChanged) {
-                $this->notifySearchFullReindex($logger);
+        return [
+            'searchMethod' => $searchMethod,
+            'activeMethodChanged' => $activeMethodChanged,
+            'fieldWeightsChanged' => $fieldWeightsChanged,
+            'algorithmSettingsChanged' => $algorithmSettingsChanged,
+            'runtimeConfigChanged' => $runtimeConfigChanged,
+            'requiresFullReindex' => $requiresFullReindex,
+        ];
+    }
+
+    private function notifySearchServiceAfterSave(
+        array $result,
+        LoggerInterface $logger
+    ): void {
+        if ($result['requiresFullReindex'] ?? false) {
+            $this->notifySearchFullReindex($logger);
+            return;
+        }
+
+        if (
+            ($result['runtimeConfigChanged'] ?? false)
+            || ($result['fieldWeightsChanged'] ?? false)
+        ) {
+            $this->notifySearchConfigReload($logger);
+        }
+    }
+
+    private function readBoolean(
+        array $input,
+        string $key,
+        bool $default
+    ): bool {
+        if (!array_key_exists($key, $input)) {
+            return $default;
+        }
+
+        $value = filter_var(
+            $input[$key],
+            FILTER_VALIDATE_BOOLEAN,
+            FILTER_NULL_ON_FAILURE
+        );
+
+        return $value ?? $default;
+    }
+
+    private function mergeConfigArrays(
+        array $base,
+        array $updates
+    ): array {
+        foreach ($updates as $key => $value) {
+            if (
+                is_array($value)
+                && isset($base[$key])
+                && is_array($base[$key])
+                && !array_is_list($value)
+                && !array_is_list($base[$key])
+            ) {
+                $base[$key] = $this->mergeConfigArrays(
+                    $base[$key],
+                    $value
+                );
+
+                continue;
             }
 
-            if (!$fieldWeightsChanged && $runtimeConfigChanged) {
-                $this->notifySearchConfigReload($logger);
-            }
+            $base[$key] = $value;
+        }
+
+        return $base;
+    }
+
+    private function serializeSearchConfig(
+        SearchRelevanceConfig $config
+    ): array {
+        return [
+            'id' => $config->getId(),
+            'name' => $config->getName(),
+            'searchMethod' => $config->getSearchMethod(),
+            'active' => $config->isActive(),
+
+            'nameWeight' => $config->getNameWeight(),
+            'descriptionWeight' => $config->getDescriptionWeight(),
+            'categoryWeight' => $config->getCategoryWeight(),
+            'materialWeight' => $config->getMaterialWeight(),
+            'colorWeight' => $config->getColorWeight(),
+            'sizeWeight' => $config->getSizeWeight(),
+            'attributesWeight' => $config->getAttributesWeight(),
+
+            'sameCategoryBonus' =>
+                $config->getSameCategoryBonus(),
+            'sameMaterialBonus' =>
+                $config->getSameMaterialBonus(),
+            'sameColorBonus' =>
+                $config->getSameColorBonus(),
+            'sameSizeBonus' =>
+                $config->getSameSizeBonus(),
+
+            'sameCategoryRecommendationWeight' =>
+                $config->getSameCategoryRecommendationWeight(),
+            'sameColorRecommendationWeight' =>
+                $config->getSameColorRecommendationWeight(),
+            'sameSizeRecommendationWeight' =>
+                $config->getSameSizeRecommendationWeight(),
+
+            'wishlistRecommendationWeight' =>
+                $config->getWishlistRecommendationWeight(),
+            'orderHistoryRecommendationWeight' =>
+                $config->getOrderHistoryRecommendationWeight(),
+            'searchHistoryRecommendationWeight' =>
+                $config->getSearchHistoryRecommendationWeight(),
+            'viewHistoryRecommendationWeight' =>
+                $config->getViewHistoryRecommendationWeight(),
+
+            'maxRecommendationPerCategory' =>
+                $config->getMaxRecommendationPerCategory(),
+            'recommendationDiversityPenalty' =>
+                $config->getRecommendationDiversityPenalty(),
+
+            'recommendationEnabled' =>
+                $config->isRecommendationEnabled(),
+            'recommendationLoggingEnabled' =>
+                $config->isRecommendationLoggingEnabled(),
+
+            'algorithmSettings' =>
+                $config->getAlgorithmSettings() ?? [],
+        ];
+    }
+
+    private function getDefaultAlgorithmSettings(
+        string $searchMethod
+    ): array {
+        if ($searchMethod === 'semantic_vector') {
+            return [
+                'document_fields' => [
+                    'name' => true,
+                    'category' => true,
+                    'description' => true,
+                    'material' => true,
+                    'color' => true,
+                    'size' => true,
+                    'attributes' => false,
+                ],
+                'embedding' => [
+                    'batch_size' => 32,
+                    'normalize_embeddings' => true,
+                ],
+                'reranking' => [
+                    'semantic_similarity_weight' => 0.75,
+                    'lexical_overlap_weight' => 0.25,
+                    'minimum_token_length' => 2,
+                ],
+                'candidate_pool' => [
+                    'multiplier' => 5,
+                    'minimum_candidates' => 50,
+                ],
+                'vector_search' => [
+                    'ivfflat_probes' => 10,
+                ],
+                'session_recommendation' => [
+                    'current_product_weight' => 1.0,
+                    'viewed_product_weight' => 0.70,
+                    'cart_product_weight' => 0.90,
+                    'max_viewed_seeds' => 5,
+                    'max_cart_seeds' => 5,
+                    'max_total_seeds' => 8,
+                    'candidate_multiplier' => 2,
+                    'minimum_candidates' => 10,
+                ],
+            ];
+        }
+
+        if ($searchMethod === 'elasticsearch_bm25') {
+            return [
+                'search_query' => [
+                    'type' => 'best_fields',
+                    'operator' => 'or',
+                    'field_weights' => [
+                        'name' => 5,
+                        'category' => 3,
+                        'description' => 2,
+                        'material' => 1,
+                        'color' => 1,
+                        'size' => 1,
+                        'sku' => 2,
+                    ],
+                ],
+                'recommendation_query' => [
+                    'type' => 'best_fields',
+                    'operator' => 'or',
+                    'field_weights' => [
+                        'name' => 5,
+                        'category' => 4,
+                        'description' => 2,
+                        'material' => 2,
+                        'color' => 1,
+                        'size' => 1,
+                        'sku' => 2,
+                    ],
+                    'candidate_multiplier' => 3,
+                    'minimum_candidates' => 20,
+                    'exclude_source_sku' => true,
+                ],
+                'session_recommendation' => [
+                    'current_product_weight' => 1.0,
+                    'viewed_product_weight' => 0.70,
+                    'cart_product_weight' => 0.90,
+                    'max_viewed_seeds' => 5,
+                    'max_cart_seeds' => 5,
+                    'max_total_seeds' => 8,
+                    'candidate_multiplier' => 2,
+                    'minimum_candidates' => 10,
+                ],
+            ];
         }
 
         return [
-            'fieldWeightsChanged' => $fieldWeightsChanged,
-            'runtimeConfigChanged' => $runtimeConfigChanged,
+            'vectorizer' => [
+                'lowercase' => true,
+                'ngram_range' => [1, 2],
+                'n_features' => 262144,
+                'alternate_sign' => false,
+                'normalization' => 'l2',
+                'token_pattern' => '\\b\\w+\\b',
+            ],
+            'candidate_filter' => [
+                'minimum_query_token_matches' => 1,
+                'fallback_to_all_documents' => true,
+            ],
+            'partial_match' => [
+                'require_all_query_tokens' => true,
+                'minimum_query_token_matches' => 1,
+                'base_score' => 1.0,
+                'merge_bonus_weight' => 0.20,
+            ],
+            'session_recommendation' => [
+                'current_product_weight' => 1.0,
+                'viewed_product_weight' => 0.70,
+                'cart_product_weight' => 0.90,
+                'max_viewed_seeds' => 5,
+                'max_cart_seeds' => 5,
+                'max_total_seeds' => 8,
+                'candidate_multiplier' => 3,
+                'minimum_candidates' => 10,
+            ],
         ];
+    }
+
+    private function requiresFullReindex(
+        string $searchMethod,
+        bool $fieldWeightsChanged,
+        array $oldSettings,
+        array $newSettings
+    ): bool {
+        if ($searchMethod === 'lexical') {
+            return $fieldWeightsChanged
+                || ($oldSettings['vectorizer'] ?? [])
+                    !== ($newSettings['vectorizer'] ?? []);
+        }
+
+        if ($searchMethod === 'semantic_vector') {
+            return ($oldSettings['document_fields'] ?? [])
+                    !== ($newSettings['document_fields'] ?? [])
+                || ($oldSettings['embedding'] ?? [])
+                    !== ($newSettings['embedding'] ?? []);
+        }
+
+        /*
+        * BM25 field weights and query options are applied at request
+        * time, so changing them only requires config reload.
+        */
+        return false;
     }
 
     private function notifySearchService(
