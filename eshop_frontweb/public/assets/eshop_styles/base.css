@@ -631,3 +631,39 @@ body.eshop-root > .page-container{
 @media (max-width: 768px){
   .eshop-root .picker-select{ padding: .4rem .8rem; min-width: 80px; }
 }
+.shop-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.shop-logo {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 180px;
+    max-height: 64px;
+    object-fit: contain;
+}
+
+.shop-brand-name {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .shop-brand {
+        gap: 8px;
+    }
+
+    .shop-logo {
+        max-width: 120px;
+        max-height: 46px;
+    }
+
+    .shop-brand-name {
+        font-size: 1.25rem;
+    }
+}

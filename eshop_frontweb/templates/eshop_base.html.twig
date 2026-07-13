@@ -4,6 +4,15 @@
 {% set shopEmail = shopInfo is defined and shopInfo and shopInfo.email ? shopInfo.email : 'info@example.com' %}
 {% set shopAddress = shopInfo is defined and shopInfo and shopInfo.address ? shopInfo.address : 'Address not available' %}
 {% set hidePrices = shopInfo is defined and shopInfo and shopInfo.getHidePrices() ? shopInfo.getHidePrices() : false %}
+{% set rawShopLogo = shopInfo is defined and shopInfo and shopInfo.logo
+  ? shopInfo.logo
+  : ''
+%}
+
+{% set shopLogo = rawShopLogo starts with 'images/'
+  ? rawShopLogo|replace({'images/': ''})
+  : rawShopLogo
+%}
 <!DOCTYPE html>
 <html>
   <head>
@@ -49,7 +58,21 @@
         </div>
 
         <div class="header_center">
-          <a href="{{ path('app_eshop_home', {'_locale': currentLocale}) }}"><h1>{{ shopName }}</h1></a>
+          <a
+            href="{{ path('app_eshop_home', {'_locale': currentLocale}) }}"
+            class="shop-brand"
+            aria-label="{{ shopName }}"
+          >
+            {% if shopLogo %}
+              <img
+                src="{{ asset('images/' ~ shopLogo) }}"
+                alt="{{ shopName }}"
+                class="shop-logo"
+              >
+            {% endif %}
+
+            <h1 class="shop-brand-name">{{ shopName }}</h1>
+          </a>
         </div>
 
         <div class="header_right">
