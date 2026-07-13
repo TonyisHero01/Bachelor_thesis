@@ -134,8 +134,11 @@ function deleteImage(imageName) {
         .catch((error) => console.error('Error:', error));
 }
 
-const searchConfigRoot = document.getElementById('search_config_root');
-const searchMethodSelect = document.getElementById('searchMethod');
+const searchConfigRoot = document.getElementById(
+    'search_config_root',
+);
+
+let searchMethodSelect = null;
 
 let searchConfigs = {};
 let currentSearchMethod = 'lexical';
@@ -225,12 +228,25 @@ function readCheckbox(id, fallback = false) {
 }
 
 function showSearchMethodSettings(method) {
-    document
-        .querySelectorAll('.search-method-settings')
-        .forEach((section) => {
-            section.hidden =
-                section.dataset.searchMethod !== method;
-        });
+    const sections = document.querySelectorAll(
+        '.search-method-settings',
+    );
+
+    sections.forEach((section) => {
+        const sectionMethod = String(
+            section.dataset.searchMethod || '',
+        );
+
+        const shouldShow = sectionMethod === method;
+
+        section.hidden = !shouldShow;
+
+        section.style.setProperty(
+            'display',
+            shouldShow ? 'block' : 'none',
+            'important',
+        );
+    });
 }
 
 function loadCommonSearchConfig(config, method) {
@@ -754,16 +770,28 @@ function loadSessionRecommendationSettings(
 }
 
 function applySearchConfig(method) {
+    const supportedMethods = [
+        'lexical',
+        'semantic_vector',
+        'elasticsearch_bm25',
+    ];
+
+    if (!supportedMethods.includes(method)) {
+        method = 'lexical';
+    }
+
     const config = getObject(
         searchConfigs[method],
     );
+
+    if (searchMethodSelect) {
+        searchMethodSelect.value = method;
+    }
 
     loadCommonSearchConfig(
         config,
         method,
     );
-
-    showSearchMethodSettings(method);
 
     if (method === 'semantic_vector') {
         loadSemanticSettings(config);
@@ -772,6 +800,8 @@ function applySearchConfig(method) {
     } else {
         loadLexicalSettings(config);
     }
+
+    showSearchMethodSettings(method);
 
     currentSearchMethod = method;
 
@@ -1222,24 +1252,52 @@ function cacheCurrentSearchConfig() {
         );
 }
 
-if (searchMethodSelect) {
+function initializeSearchMethodSwitcher() {
+    searchMethodSelect = document.getElementById(
+        'searchMethod',
+    );
+
+    if (!searchMethodSelect) {
+        console.error(
+            'Search method select element was not found.',
+        );
+        return;
+    }
+
     searchMethodSelect.addEventListener(
         'change',
         () => {
-            cacheCurrentSearchConfig();
+            const newMethod = String(
+                searchMethodSelect.value || 'lexical',
+            );
 
-            const newMethod =
-                searchMethodSelect.value
-                || 'lexical';
+            if (
+                currentSearchMethod
+                && currentSearchMethod !== newMethod
+            ) {
+                cacheCurrentSearchConfig();
+            }
 
             applySearchConfig(newMethod);
         },
     );
 
-    applySearchConfig(
+    const initialMethod = String(
         searchMethodSelect.value
-        || currentSearchMethod,
+        || currentSearchMethod
+        || 'lexical',
     );
+
+    applySearchConfig(initialMethod);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener(
+        'DOMContentLoaded',
+        initializeSearchMethodSwitcher,
+    );
+} else {
+    initializeSearchMethodSwitcher();
 }
 
 /**
