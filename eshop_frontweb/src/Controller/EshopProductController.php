@@ -352,12 +352,6 @@ class EshopProductController extends BaseController
         $viewWeight =
             (float) ($config?->getViewHistoryRecommendationWeight() ?? 0.35);
 
-        //$this->addTfidfScores(
-            //$scores,
-            //$currentProduct,
-            //$httpClient
-        //);
-
         $this->addSessionRecommendationScores(
             $scores,
             $request,
@@ -524,65 +518,6 @@ class EshopProductController extends BaseController
         }
     }
 
-    private function addTfidfScores(
-        array &$scores,
-        Product $product,
-        HttpClientInterface $httpClient
-    ): void {
-        $sku = trim((string) $product->getSku());
-
-        if ($sku === '') {
-            return;
-        }
-
-        try {
-            $baseUrl = rtrim((string) $this->getParameter('search_service_base_url'), '/');
-
-            $response = $httpClient->request(
-                'GET',
-                $baseUrl . '/recommend/' . rawurlencode($sku),
-                [
-                    'query' => [
-                        'limit' => 20,
-                    ],
-                    'timeout' => 5,
-                ]
-            );
-
-            if ($response->getStatusCode() >= 400) {
-                return;
-            }
-
-            $data = $response->toArray(false);
-
-            foreach (($data['results'] ?? []) as $row) {
-                if (!is_array($row)) {
-                    continue;
-                }
-
-                $recommendedSku = $this->getRecommendedSkuFromRow($row);
-                $similarity = (float) ($row['similarity'] ?? 0);
-
-                if ($recommendedSku === '' || $similarity <= 0) {
-                    continue;
-                }
-
-                $scores[$recommendedSku]
-                    = ($scores[$recommendedSku] ?? 0)
-                    + $similarity;
-            }
-
-        } catch (\Throwable $e) {
-            $this->logger->warning(
-                '[Recommendation] Failed to fetch product recommendations',
-                [
-                    'sku' => $sku,
-                    'message' => $e->getMessage(),
-                ]
-            );
-        }
-    }
-
     private function addWishlistScores(
         array &$scores,
         Request $request,
@@ -652,30 +587,27 @@ class EshopProductController extends BaseController
             ->getQuery()
             ->getArrayResult();
 
+        $seedWeights = [];
+
         foreach ($rows as $row) {
             $sku = trim((string) ($row['sku'] ?? ''));
 
-            if ($sku !== '') {
-                $seedWeights = [];
-
-                foreach ($rows as $row) {
-                    $sku = trim((string) ($row['sku'] ?? ''));
-
-                    if ($sku === '') {
-                        continue;
-                    }
-
-                    $seedWeights[$sku] = max($seedWeights[$sku] ?? 0.0, $weight);
-                }
-
-                $this->addRecommendedBatchSkuScores(
-                    $scores,
-                    $seedWeights,
-                    $httpClient,
-                    20
-                );
+            if ($sku === '') {
+                continue;
             }
+
+            $seedWeights[$sku] = max(
+                $seedWeights[$sku] ?? 0.0,
+                $weight
+            );
         }
+
+        $this->addRecommendedBatchSkuScores(
+            $scores,
+            $seedWeights,
+            $httpClient,
+            20
+        );
     }
 
     private function addSearchHistoryScores(

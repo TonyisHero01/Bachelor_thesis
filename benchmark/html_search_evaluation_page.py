@@ -1,6 +1,6 @@
 import json
 
-from html_common import percentage, status_label, page_style
+from html_common import h, percentage, status_label, page_style
 from html_recommendation_log_page import build_recommendation_log_section
 from html_user_study_evaluation_page import build_user_study_section
 
@@ -215,187 +215,1529 @@ def build_top_results_preview(details):
 
     return html
 
+SEARCH_METHODS = {
+    "lexical": "Lexical",
+    "semantic_vector": "Semantic Vector",
+    "elasticsearch_bm25": "Elasticsearch BM25",
+}
+
+
+def first_value(data, *keys, default=None):
+    if not isinstance(data, dict):
+        return default
+
+    for key in keys:
+        if key in data and data[key] is not None:
+            return data[key]
+
+    return default
+
+
+def nested_value(data, path, default=None):
+    current = data
+
+    for key in path:
+        if isinstance(key, int):
+            if not isinstance(current, list):
+                return default
+
+            if key < 0 or key >= len(current):
+                return default
+
+            current = current[key]
+            continue
+
+        if not isinstance(current, dict) or key not in current:
+            return default
+
+        current = current[key]
+
+    return default if current is None else current
+
+
+def normalize_method_configs(config):
+    if not isinstance(config, dict):
+        return {}, "lexical"
+
+    possible_containers = [
+        config.get("configs"),
+        config.get("search_configs"),
+        config.get("searchConfigs"),
+    ]
+
+    for container in possible_containers:
+        if isinstance(container, dict):
+            method_configs = {
+                method: value
+                for method, value in container.items()
+                if method in SEARCH_METHODS
+                and isinstance(value, dict)
+            }
+
+            if method_configs:
+                active_method = first_value(
+                    config,
+                    "active_search_method",
+                    "activeSearchMethod",
+                    "search_method",
+                    "searchMethod",
+                    default="lexical",
+                )
+
+                if active_method not in SEARCH_METHODS:
+                    active_method = "lexical"
+
+                return method_configs, active_method
+
+    direct_configs = {
+        method: config[method]
+        for method in SEARCH_METHODS
+        if isinstance(config.get(method), dict)
+    }
+
+    if direct_configs:
+        active_method = first_value(
+            config,
+            "active_search_method",
+            "activeSearchMethod",
+            default="lexical",
+        )
+
+        if active_method not in SEARCH_METHODS:
+            active_method = next(iter(direct_configs))
+
+        return direct_configs, active_method
+
+    method = first_value(
+        config,
+        "search_method",
+        "searchMethod",
+        default="lexical",
+    )
+
+    if method not in SEARCH_METHODS:
+        method = "lexical"
+
+    return {
+        method: config,
+    }, method
+
+
+def get_algorithm_settings(config):
+    settings = first_value(
+        config,
+        "algorithmSettings",
+        "algorithm_settings",
+        default={},
+    )
+
+    return settings if isinstance(settings, dict) else {}
+
+
+def input_row(
+    label,
+    name,
+    value,
+    input_type="number",
+    step=None,
+    minimum=None,
+):
+    attributes = [
+        f'type="{h(input_type)}"',
+        f'name="{h(name)}"',
+        f'id="{h(name)}"',
+        f'value="{h(value)}"',
+    ]
+
+    if step is not None:
+        attributes.append(f'step="{h(step)}"')
+
+    if minimum is not None:
+        attributes.append(f'min="{h(minimum)}"')
+
+    return f"""
+    <tr>
+        <td><label for="{h(name)}">{h(label)}</label></td>
+        <td><input {' '.join(attributes)}></td>
+    </tr>
+    """
+
+
+def checkbox_row(label, name, checked):
+    checked_attribute = " checked" if bool(checked) else ""
+
+    return f"""
+    <tr>
+        <td><label for="{h(name)}">{h(label)}</label></td>
+        <td>
+            <input
+                type="checkbox"
+                name="{h(name)}"
+                id="{h(name)}"
+                value="1"
+                {checked_attribute}
+            >
+        </td>
+    </tr>
+    """
+
+
+def select_row(label, name, value, options):
+    option_html = ""
+
+    for option_value, option_label in options:
+        selected = (
+            " selected"
+            if str(value) == str(option_value)
+            else ""
+        )
+
+        option_html += f"""
+        <option value="{h(option_value)}"{selected}>
+            {h(option_label)}
+        </option>
+        """
+
+    return f"""
+    <tr>
+        <td><label for="{h(name)}">{h(label)}</label></td>
+        <td>
+            <select name="{h(name)}" id="{h(name)}">
+                {option_html}
+            </select>
+        </td>
+    </tr>
+    """
+
+
+def section_table(title, rows, method=None):
+    method_attributes = ""
+
+    if method:
+        method_attributes = (
+            ' class="search-method-settings"'
+            f' data-search-method="{h(method)}"'
+        )
+
+    return f"""
+    <div{method_attributes}>
+        <h3>{h(title)}</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows}
+            </tbody>
+        </table>
+    </div>
+    """
 
 def build_config_form(config):
+    method_configs, active_method = normalize_method_configs(
+        config,
+    )
+
+    active_config = method_configs.get(
+        active_method,
+        {},
+    )
+
+    lexical_config = method_configs.get(
+        "lexical",
+        {},
+    )
+    lexical_settings = get_algorithm_settings(
+        lexical_config,
+    )
+
+    semantic_config = method_configs.get(
+        "semantic_vector",
+        {},
+    )
+    semantic_settings = get_algorithm_settings(
+        semantic_config,
+    )
+
+    elastic_config = method_configs.get(
+        "elasticsearch_bm25",
+        {},
+    )
+    elastic_settings = get_algorithm_settings(
+        elastic_config,
+    )
+
+    common_rows = ""
+
+    common_rows += input_row(
+        "Configuration name",
+        "name",
+        first_value(
+            active_config,
+            "name",
+            default="Search configuration",
+        ),
+        input_type="text",
+    )
+
+    method_options = ""
+
+    for method, label in SEARCH_METHODS.items():
+        selected = (
+            " selected"
+            if method == active_method
+            else ""
+        )
+
+        method_options += f"""
+        <option value="{h(method)}"{selected}>
+            {h(label)}
+        </option>
+        """
+
+    common_rows += f"""
+    <tr>
+        <td><label for="searchMethod">Search method</label></td>
+        <td>
+            <select name="searchMethod" id="searchMethod">
+                {method_options}
+            </select>
+        </td>
+    </tr>
+    """
+
+    common_number_fields = [
+        (
+            "Name weight",
+            "nameWeight",
+            ("nameWeight", "name_weight"),
+            20,
+            "1",
+        ),
+        (
+            "Description weight",
+            "descriptionWeight",
+            ("descriptionWeight", "description_weight"),
+            5,
+            "1",
+        ),
+        (
+            "Category weight",
+            "categoryWeight",
+            ("categoryWeight", "category_weight"),
+            4,
+            "1",
+        ),
+        (
+            "Material weight",
+            "materialWeight",
+            ("materialWeight", "material_weight"),
+            2,
+            "1",
+        ),
+        (
+            "Color weight",
+            "colorWeight",
+            ("colorWeight", "color_weight"),
+            2,
+            "1",
+        ),
+        (
+            "Size weight",
+            "sizeWeight",
+            ("sizeWeight", "size_weight"),
+            2,
+            "1",
+        ),
+        (
+            "Attributes weight",
+            "attributesWeight",
+            ("attributesWeight", "attributes_weight"),
+            2,
+            "1",
+        ),
+        (
+            "Same category bonus",
+            "sameCategoryBonus",
+            ("sameCategoryBonus", "same_category_bonus"),
+            0.35,
+            "0.01",
+        ),
+        (
+            "Same material bonus",
+            "sameMaterialBonus",
+            ("sameMaterialBonus", "same_material_bonus"),
+            0.15,
+            "0.01",
+        ),
+        (
+            "Same color bonus",
+            "sameColorBonus",
+            ("sameColorBonus", "same_color_bonus"),
+            0.10,
+            "0.01",
+        ),
+        (
+            "Same size bonus",
+            "sameSizeBonus",
+            ("sameSizeBonus", "same_size_bonus"),
+            0.10,
+            "0.01",
+        ),
+        (
+            "Same category recommendation weight",
+            "sameCategoryRecommendationWeight",
+            (
+                "sameCategoryRecommendationWeight",
+                "same_category_recommendation_weight",
+            ),
+            0.35,
+            "0.01",
+        ),
+        (
+            "Same color recommendation weight",
+            "sameColorRecommendationWeight",
+            (
+                "sameColorRecommendationWeight",
+                "same_color_recommendation_weight",
+            ),
+            0.10,
+            "0.01",
+        ),
+        (
+            "Same size recommendation weight",
+            "sameSizeRecommendationWeight",
+            (
+                "sameSizeRecommendationWeight",
+                "same_size_recommendation_weight",
+            ),
+            0.10,
+            "0.01",
+        ),
+        (
+            "Wishlist recommendation weight",
+            "wishlistRecommendationWeight",
+            (
+                "wishlistRecommendationWeight",
+                "wishlist_recommendation_weight",
+            ),
+            0.30,
+            "0.01",
+        ),
+        (
+            "Order history recommendation weight",
+            "orderHistoryRecommendationWeight",
+            (
+                "orderHistoryRecommendationWeight",
+                "order_history_recommendation_weight",
+            ),
+            0.25,
+            "0.01",
+        ),
+        (
+            "Search history recommendation weight",
+            "searchHistoryRecommendationWeight",
+            (
+                "searchHistoryRecommendationWeight",
+                "search_history_recommendation_weight",
+            ),
+            0.20,
+            "0.01",
+        ),
+        (
+            "View history recommendation weight",
+            "viewHistoryRecommendationWeight",
+            (
+                "viewHistoryRecommendationWeight",
+                "view_history_recommendation_weight",
+            ),
+            0.35,
+            "0.01",
+        ),
+        (
+            "Max recommendation per category",
+            "maxRecommendationPerCategory",
+            (
+                "maxRecommendationPerCategory",
+                "max_recommendation_per_category",
+            ),
+            4,
+            "1",
+        ),
+        (
+            "Recommendation diversity penalty",
+            "recommendationDiversityPenalty",
+            (
+                "recommendationDiversityPenalty",
+                "recommendation_diversity_penalty",
+            ),
+            0.10,
+            "0.01",
+        ),
+    ]
+
+    for (
+        label,
+        name,
+        keys,
+        default,
+        step,
+    ) in common_number_fields:
+        common_rows += input_row(
+            label,
+            name,
+            first_value(
+                active_config,
+                *keys,
+                default=default,
+            ),
+            step=step,
+            minimum=0,
+        )
+
+    common_rows += checkbox_row(
+        "Enable recommendations",
+        "recommendationEnabled",
+        first_value(
+            active_config,
+            "recommendationEnabled",
+            "recommendation_enabled",
+            default=True,
+        ),
+    )
+
+    common_rows += checkbox_row(
+        "Enable recommendation logging",
+        "recommendationLoggingEnabled",
+        first_value(
+            active_config,
+            "recommendationLoggingEnabled",
+            "recommendation_logging_enabled",
+            default=True,
+        ),
+    )
+
+    lexical_rows = ""
+
+    lexical_rows += checkbox_row(
+        "Lowercase input",
+        "lexical_lowercase",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "lowercase"),
+            True,
+        ),
+    )
+
+    lexical_rows += input_row(
+        "Minimum N-gram size",
+        "lexical_ngram_min",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "ngram_range", 0),
+            1,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    lexical_rows += input_row(
+        "Maximum N-gram size",
+        "lexical_ngram_max",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "ngram_range", 1),
+            2,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    lexical_rows += input_row(
+        "Hashing features",
+        "lexical_n_features",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "n_features"),
+            262144,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    lexical_rows += checkbox_row(
+        "Alternate sign",
+        "lexical_alternate_sign",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "alternate_sign"),
+            False,
+        ),
+    )
+
+    lexical_rows += select_row(
+        "Vector normalization",
+        "lexical_normalization",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "normalization"),
+            "l2",
+        ),
+        [
+            ("l2", "L2"),
+            ("l1", "L1"),
+            ("none", "None"),
+        ],
+    )
+
+    lexical_rows += input_row(
+        "Token pattern",
+        "lexical_token_pattern",
+        nested_value(
+            lexical_settings,
+            ("vectorizer", "token_pattern"),
+            r"\b\w+\b",
+        ),
+        input_type="text",
+    )
+
+    lexical_rows += input_row(
+        "Minimum query token matches",
+        "lexical_candidate_minimum_query_token_matches",
+        nested_value(
+            lexical_settings,
+            (
+                "candidate_filter",
+                "minimum_query_token_matches",
+            ),
+            1,
+        ),
+        step="1",
+        minimum=0,
+    )
+
+    lexical_rows += checkbox_row(
+        "Fallback to all documents",
+        "lexical_fallback_to_all_documents",
+        nested_value(
+            lexical_settings,
+            (
+                "candidate_filter",
+                "fallback_to_all_documents",
+            ),
+            True,
+        ),
+    )
+
+    lexical_rows += checkbox_row(
+        "Require all query tokens",
+        "lexical_require_all_query_tokens",
+        nested_value(
+            lexical_settings,
+            (
+                "partial_match",
+                "require_all_query_tokens",
+            ),
+            True,
+        ),
+    )
+
+    lexical_rows += input_row(
+        "Partial match minimum query token matches",
+        "lexical_partial_minimum_query_token_matches",
+        nested_value(
+            lexical_settings,
+            (
+                "partial_match",
+                "minimum_query_token_matches",
+            ),
+            1,
+        ),
+        step="1",
+        minimum=0,
+    )
+
+    lexical_rows += input_row(
+        "Partial match base score",
+        "lexical_partial_base_score",
+        nested_value(
+            lexical_settings,
+            ("partial_match", "base_score"),
+            1.0,
+        ),
+        step="0.01",
+        minimum=0,
+    )
+
+    lexical_rows += input_row(
+        "Partial match merge bonus weight",
+        "lexical_partial_merge_bonus_weight",
+        nested_value(
+            lexical_settings,
+            (
+                "partial_match",
+                "merge_bonus_weight",
+            ),
+            0.20,
+        ),
+        step="0.01",
+        minimum=0,
+    )
+
+    lexical_session_fields = [
+        (
+            "Current product weight",
+            "lexical_session_current_product_weight",
+            "current_product_weight",
+            1.0,
+            "0.01",
+        ),
+        (
+            "Viewed product weight",
+            "lexical_session_viewed_product_weight",
+            "viewed_product_weight",
+            0.70,
+            "0.01",
+        ),
+        (
+            "Cart product weight",
+            "lexical_session_cart_product_weight",
+            "cart_product_weight",
+            0.90,
+            "0.01",
+        ),
+        (
+            "Maximum viewed seeds",
+            "lexical_session_max_viewed_seeds",
+            "max_viewed_seeds",
+            5,
+            "1",
+        ),
+        (
+            "Maximum cart seeds",
+            "lexical_session_max_cart_seeds",
+            "max_cart_seeds",
+            5,
+            "1",
+        ),
+        (
+            "Maximum total seeds",
+            "lexical_session_max_total_seeds",
+            "max_total_seeds",
+            8,
+            "1",
+        ),
+        (
+            "Candidate multiplier",
+            "lexical_session_candidate_multiplier",
+            "candidate_multiplier",
+            3,
+            "1",
+        ),
+        (
+            "Minimum candidates",
+            "lexical_session_minimum_candidates",
+            "minimum_candidates",
+            10,
+            "1",
+        ),
+    ]
+
+    for label, name, key, default, step in lexical_session_fields:
+        lexical_rows += input_row(
+            label,
+            name,
+            nested_value(
+                lexical_settings,
+                ("session_recommendation", key),
+                default,
+            ),
+            step=step,
+            minimum=0,
+        )
+
+    semantic_rows = ""
+
+    semantic_document_fields = [
+        ("Include name", "semantic_document_name", "name", True),
+        (
+            "Include category",
+            "semantic_document_category",
+            "category",
+            True,
+        ),
+        (
+            "Include description",
+            "semantic_document_description",
+            "description",
+            True,
+        ),
+        (
+            "Include material",
+            "semantic_document_material",
+            "material",
+            True,
+        ),
+        (
+            "Include color",
+            "semantic_document_color",
+            "color",
+            True,
+        ),
+        (
+            "Include size",
+            "semantic_document_size",
+            "size",
+            True,
+        ),
+        (
+            "Include attributes",
+            "semantic_document_attributes",
+            "attributes",
+            False,
+        ),
+    ]
+
+    for label, name, key, default in semantic_document_fields:
+        semantic_rows += checkbox_row(
+            label,
+            name,
+            nested_value(
+                semantic_settings,
+                ("document_fields", key),
+                default,
+            ),
+        )
+
+    semantic_rows += input_row(
+        "Embedding batch size",
+        "semantic_embedding_batch_size",
+        nested_value(
+            semantic_settings,
+            ("embedding", "batch_size"),
+            32,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    semantic_rows += checkbox_row(
+        "Normalize embeddings",
+        "semantic_normalize_embeddings",
+        nested_value(
+            semantic_settings,
+            (
+                "embedding",
+                "normalize_embeddings",
+            ),
+            True,
+        ),
+    )
+
+    semantic_rows += input_row(
+        "Semantic similarity weight",
+        "semantic_similarity_weight",
+        nested_value(
+            semantic_settings,
+            (
+                "reranking",
+                "semantic_similarity_weight",
+            ),
+            0.75,
+        ),
+        step="0.01",
+        minimum=0,
+    )
+
+    semantic_rows += input_row(
+        "Lexical overlap weight",
+        "semantic_lexical_overlap_weight",
+        nested_value(
+            semantic_settings,
+            (
+                "reranking",
+                "lexical_overlap_weight",
+            ),
+            0.25,
+        ),
+        step="0.01",
+        minimum=0,
+    )
+
+    semantic_rows += input_row(
+        "Minimum token length",
+        "semantic_minimum_token_length",
+        nested_value(
+            semantic_settings,
+            (
+                "reranking",
+                "minimum_token_length",
+            ),
+            2,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    semantic_rows += input_row(
+        "Candidate multiplier",
+        "semantic_candidate_multiplier",
+        nested_value(
+            semantic_settings,
+            ("candidate_pool", "multiplier"),
+            5,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    semantic_rows += input_row(
+        "Minimum candidates",
+        "semantic_minimum_candidates",
+        nested_value(
+            semantic_settings,
+            (
+                "candidate_pool",
+                "minimum_candidates",
+            ),
+            50,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    semantic_rows += input_row(
+        "IVFFlat probes",
+        "semantic_ivfflat_probes",
+        nested_value(
+            semantic_settings,
+            (
+                "vector_search",
+                "ivfflat_probes",
+            ),
+            10,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    semantic_session_fields = [
+        (
+            "Current product weight",
+            "semantic_session_current_product_weight",
+            "current_product_weight",
+            1.0,
+            "0.01",
+        ),
+        (
+            "Viewed product weight",
+            "semantic_session_viewed_product_weight",
+            "viewed_product_weight",
+            0.70,
+            "0.01",
+        ),
+        (
+            "Cart product weight",
+            "semantic_session_cart_product_weight",
+            "cart_product_weight",
+            0.90,
+            "0.01",
+        ),
+        (
+            "Maximum viewed seeds",
+            "semantic_session_max_viewed_seeds",
+            "max_viewed_seeds",
+            5,
+            "1",
+        ),
+        (
+            "Maximum cart seeds",
+            "semantic_session_max_cart_seeds",
+            "max_cart_seeds",
+            5,
+            "1",
+        ),
+        (
+            "Maximum total seeds",
+            "semantic_session_max_total_seeds",
+            "max_total_seeds",
+            8,
+            "1",
+        ),
+        (
+            "Candidate multiplier",
+            "semantic_session_candidate_multiplier",
+            "candidate_multiplier",
+            2,
+            "1",
+        ),
+        (
+            "Minimum candidates",
+            "semantic_session_minimum_candidates",
+            "minimum_candidates",
+            10,
+            "1",
+        ),
+    ]
+
+    for label, name, key, default, step in semantic_session_fields:
+        semantic_rows += input_row(
+            label,
+            name,
+            nested_value(
+                semantic_settings,
+                ("session_recommendation", key),
+                default,
+            ),
+            step=step,
+            minimum=0,
+        )
+
+    elastic_rows = ""
+
+    elastic_search_query = nested_value(
+        elastic_settings,
+        ("search_query",),
+        {},
+    )
+
+    elastic_recommendation_query = nested_value(
+        elastic_settings,
+        ("recommendation_query",),
+        {},
+    )
+
+    elastic_rows += select_row(
+        "Search query type",
+        "elastic_search_query_type",
+        first_value(
+            elastic_search_query,
+            "type",
+            default="best_fields",
+        ),
+        [
+            ("best_fields", "Best Fields"),
+            ("most_fields", "Most Fields"),
+            ("cross_fields", "Cross Fields"),
+        ],
+    )
+
+    elastic_rows += select_row(
+        "Search operator",
+        "elastic_search_operator",
+        first_value(
+            elastic_search_query,
+            "operator",
+            default="or",
+        ),
+        [
+            ("or", "OR"),
+            ("and", "AND"),
+        ],
+    )
+
+    elastic_search_weight_fields = [
+        ("Name weight", "elastic_search_name_weight", "name", 5),
+        (
+            "Category weight",
+            "elastic_search_category_weight",
+            "category",
+            3,
+        ),
+        (
+            "Description weight",
+            "elastic_search_description_weight",
+            "description",
+            2,
+        ),
+        (
+            "Material weight",
+            "elastic_search_material_weight",
+            "material",
+            1,
+        ),
+        (
+            "Color weight",
+            "elastic_search_color_weight",
+            "color",
+            1,
+        ),
+        (
+            "Size weight",
+            "elastic_search_size_weight",
+            "size",
+            1,
+        ),
+        (
+            "SKU weight",
+            "elastic_search_sku_weight",
+            "sku",
+            2,
+        ),
+    ]
+
+    for label, name, key, default in elastic_search_weight_fields:
+        elastic_rows += input_row(
+            label,
+            name,
+            nested_value(
+                elastic_settings,
+                (
+                    "search_query",
+                    "field_weights",
+                    key,
+                ),
+                default,
+            ),
+            step="0.01",
+            minimum=0,
+        )
+
+    elastic_rows += select_row(
+        "Recommendation query type",
+        "elastic_recommendation_query_type",
+        first_value(
+            elastic_recommendation_query,
+            "type",
+            default="best_fields",
+        ),
+        [
+            ("best_fields", "Best Fields"),
+            ("most_fields", "Most Fields"),
+            ("cross_fields", "Cross Fields"),
+        ],
+    )
+
+    elastic_rows += select_row(
+        "Recommendation operator",
+        "elastic_recommendation_operator",
+        first_value(
+            elastic_recommendation_query,
+            "operator",
+            default="or",
+        ),
+        [
+            ("or", "OR"),
+            ("and", "AND"),
+        ],
+    )
+
+    elastic_recommendation_weight_fields = [
+        (
+            "Name weight",
+            "elastic_recommendation_name_weight",
+            "name",
+            5,
+        ),
+        (
+            "Category weight",
+            "elastic_recommendation_category_weight",
+            "category",
+            4,
+        ),
+        (
+            "Description weight",
+            "elastic_recommendation_description_weight",
+            "description",
+            2,
+        ),
+        (
+            "Material weight",
+            "elastic_recommendation_material_weight",
+            "material",
+            2,
+        ),
+        (
+            "Color weight",
+            "elastic_recommendation_color_weight",
+            "color",
+            1,
+        ),
+        (
+            "Size weight",
+            "elastic_recommendation_size_weight",
+            "size",
+            1,
+        ),
+        (
+            "SKU weight",
+            "elastic_recommendation_sku_weight",
+            "sku",
+            2,
+        ),
+    ]
+
+    for (
+        label,
+        name,
+        key,
+        default,
+    ) in elastic_recommendation_weight_fields:
+        elastic_rows += input_row(
+            label,
+            name,
+            nested_value(
+                elastic_settings,
+                (
+                    "recommendation_query",
+                    "field_weights",
+                    key,
+                ),
+                default,
+            ),
+            step="0.01",
+            minimum=0,
+        )
+
+    elastic_rows += input_row(
+        "Recommendation candidate multiplier",
+        "elastic_recommendation_candidate_multiplier",
+        nested_value(
+            elastic_settings,
+            (
+                "recommendation_query",
+                "candidate_multiplier",
+            ),
+            3,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    elastic_rows += input_row(
+        "Recommendation minimum candidates",
+        "elastic_recommendation_minimum_candidates",
+        nested_value(
+            elastic_settings,
+            (
+                "recommendation_query",
+                "minimum_candidates",
+            ),
+            20,
+        ),
+        step="1",
+        minimum=1,
+    )
+
+    elastic_rows += checkbox_row(
+        "Exclude source SKU",
+        "elastic_recommendation_exclude_source_sku",
+        nested_value(
+            elastic_settings,
+            (
+                "recommendation_query",
+                "exclude_source_sku",
+            ),
+            True,
+        ),
+    )
+
+    elastic_session_fields = [
+        (
+            "Current product weight",
+            "elastic_session_current_product_weight",
+            "current_product_weight",
+            1.0,
+            "0.01",
+        ),
+        (
+            "Viewed product weight",
+            "elastic_session_viewed_product_weight",
+            "viewed_product_weight",
+            0.70,
+            "0.01",
+        ),
+        (
+            "Cart product weight",
+            "elastic_session_cart_product_weight",
+            "cart_product_weight",
+            0.90,
+            "0.01",
+        ),
+        (
+            "Maximum viewed seeds",
+            "elastic_session_max_viewed_seeds",
+            "max_viewed_seeds",
+            5,
+            "1",
+        ),
+        (
+            "Maximum cart seeds",
+            "elastic_session_max_cart_seeds",
+            "max_cart_seeds",
+            5,
+            "1",
+        ),
+        (
+            "Maximum total seeds",
+            "elastic_session_max_total_seeds",
+            "max_total_seeds",
+            8,
+            "1",
+        ),
+        (
+            "Candidate multiplier",
+            "elastic_session_candidate_multiplier",
+            "candidate_multiplier",
+            2,
+            "1",
+        ),
+        (
+            "Minimum candidates",
+            "elastic_session_minimum_candidates",
+            "minimum_candidates",
+            10,
+            "1",
+        ),
+    ]
+
+    for label, name, key, default, step in elastic_session_fields:
+        elastic_rows += input_row(
+            label,
+            name,
+            nested_value(
+                elastic_settings,
+                ("session_recommendation", key),
+                default,
+            ),
+            step=step,
+            minimum=0,
+        )
+
+    config_json = json.dumps(
+        method_configs,
+        ensure_ascii=False,
+    ).replace("</", "<\\/")
+
     return f"""
     <div class="chart-card">
         <h2>Current Search Configuration</h2>
 
-        <form method="post" action="/evaluation/update-config">
+        <div class="notice" style="margin-bottom:20px;">
+            Select a search method to edit its common and
+            method-specific configuration. Saving activates
+            the selected method.
+        </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Setting</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
+        <form
+            method="post"
+            action="/evaluation/update-config"
+            id="evaluationConfigForm"
+        >
+            {section_table(
+                "Common Search and Recommendation Settings",
+                common_rows,
+            )}
 
-                <tbody>
-                    <tr>
-                        <td>Name weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="nameWeight"
-                                value="{config.get('name_weight', 20)}">
-                        </td>
-                    </tr>
+            {section_table(
+                "Lexical Algorithm Settings",
+                lexical_rows,
+                "lexical",
+            )}
 
-                    <tr>
-                        <td>Description weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="descriptionWeight"
-                                value="{config.get('description_weight', 5)}">
-                        </td>
-                    </tr>
+            {section_table(
+                "Semantic Vector Algorithm Settings",
+                semantic_rows,
+                "semantic_vector",
+            )}
 
-                    <tr>
-                        <td>Category weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="categoryWeight"
-                                value="{config.get('category_weight', 4)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Material weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="materialWeight"
-                                value="{config.get('material_weight', 2)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Color weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="colorWeight"
-                                value="{config.get('color_weight', 2)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Size weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="sizeWeight"
-                                value="{config.get('size_weight', 2)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Same category recommendation</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="sameCategoryRecommendationWeight"
-                                value="{config.get('same_category_recommendation_weight', 0.35)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Same color recommendation</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="sameColorRecommendationWeight"
-                                value="{config.get('same_color_recommendation_weight', 0.10)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Same size recommendation</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="sameSizeRecommendationWeight"
-                                value="{config.get('same_size_recommendation_weight', 0.10)}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Attributes weight</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="attributesWeight"
-                                value="{config.get('attributes_weight', config.get('attributesWeight', 2))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Lexical recommendation weight</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="lexicalRecommendationWeight"
-                                value="{config.get('lexical_recommendation_weight', config.get('lexicalRecommendationWeight', 1.0))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Wishlist recommendation weight</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="wishlistRecommendationWeight"
-                                value="{config.get('wishlist_recommendation_weight', config.get('wishlistRecommendationWeight', 0.30))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Order history recommendation weight</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="orderHistoryRecommendationWeight"
-                                value="{config.get('order_history_recommendation_weight', config.get('orderHistoryRecommendationWeight', 0.25))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Search history recommendation weight</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="searchHistoryRecommendationWeight"
-                                value="{config.get('search_history_recommendation_weight', config.get('searchHistoryRecommendationWeight', 0.20))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>View history recommendation weight</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="viewHistoryRecommendationWeight"
-                                value="{config.get('view_history_recommendation_weight', config.get('viewHistoryRecommendationWeight', 0.35))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Max recommendation per category</td>
-                        <td>
-                            <input type="number" step="1"
-                                name="maxRecommendationPerCategory"
-                                value="{config.get('max_recommendation_per_category', config.get('maxRecommendationPerCategory', 4))}">
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Recommendation diversity penalty</td>
-                        <td>
-                            <input type="number" step="0.01"
-                                name="recommendationDiversityPenalty"
-                                value="{config.get('recommendation_diversity_penalty', config.get('recommendationDiversityPenalty', 0.10))}">
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            {section_table(
+                "Elasticsearch BM25 Algorithm Settings",
+                elastic_rows,
+                "elasticsearch_bm25",
+            )}
 
             <div style="margin-top:20px;">
                 <button type="submit">
-                    Save configuration to BMS
+                    Save selected configuration to BMS
                 </button>
             </div>
         </form>
+
+        <script>
+            (function () {{
+                const methodSelect =
+                    document.getElementById('searchMethod');
+
+                if (!methodSelect) {{
+                    return;
+                }}
+
+                const configs = {config_json};
+
+                const commonFields = {{
+                    name: ['name'],
+                    nameWeight: ['nameWeight', 'name_weight'],
+                    descriptionWeight: [
+                        'descriptionWeight',
+                        'description_weight'
+                    ],
+                    categoryWeight: [
+                        'categoryWeight',
+                        'category_weight'
+                    ],
+                    materialWeight: [
+                        'materialWeight',
+                        'material_weight'
+                    ],
+                    colorWeight: [
+                        'colorWeight',
+                        'color_weight'
+                    ],
+                    sizeWeight: [
+                        'sizeWeight',
+                        'size_weight'
+                    ],
+                    attributesWeight: [
+                        'attributesWeight',
+                        'attributes_weight'
+                    ],
+                    sameCategoryBonus: [
+                        'sameCategoryBonus',
+                        'same_category_bonus'
+                    ],
+                    sameMaterialBonus: [
+                        'sameMaterialBonus',
+                        'same_material_bonus'
+                    ],
+                    sameColorBonus: [
+                        'sameColorBonus',
+                        'same_color_bonus'
+                    ],
+                    sameSizeBonus: [
+                        'sameSizeBonus',
+                        'same_size_bonus'
+                    ],
+                    sameCategoryRecommendationWeight: [
+                        'sameCategoryRecommendationWeight',
+                        'same_category_recommendation_weight'
+                    ],
+                    sameColorRecommendationWeight: [
+                        'sameColorRecommendationWeight',
+                        'same_color_recommendation_weight'
+                    ],
+                    sameSizeRecommendationWeight: [
+                        'sameSizeRecommendationWeight',
+                        'same_size_recommendation_weight'
+                    ],
+                    wishlistRecommendationWeight: [
+                        'wishlistRecommendationWeight',
+                        'wishlist_recommendation_weight'
+                    ],
+                    orderHistoryRecommendationWeight: [
+                        'orderHistoryRecommendationWeight',
+                        'order_history_recommendation_weight'
+                    ],
+                    searchHistoryRecommendationWeight: [
+                        'searchHistoryRecommendationWeight',
+                        'search_history_recommendation_weight'
+                    ],
+                    viewHistoryRecommendationWeight: [
+                        'viewHistoryRecommendationWeight',
+                        'view_history_recommendation_weight'
+                    ],
+                    maxRecommendationPerCategory: [
+                        'maxRecommendationPerCategory',
+                        'max_recommendation_per_category'
+                    ],
+                    recommendationDiversityPenalty: [
+                        'recommendationDiversityPenalty',
+                        'recommendation_diversity_penalty'
+                    ],
+                    recommendationEnabled: [
+                        'recommendationEnabled',
+                        'recommendation_enabled'
+                    ],
+                    recommendationLoggingEnabled: [
+                        'recommendationLoggingEnabled',
+                        'recommendation_logging_enabled'
+                    ]
+                }};
+
+                function getConfigValue(config, keys) {{
+                    for (const key of keys) {{
+                        if (
+                            Object.prototype.hasOwnProperty.call(
+                                config,
+                                key
+                            )
+                            && config[key] !== null
+                            && config[key] !== undefined
+                        ) {{
+                            return config[key];
+                        }}
+                    }}
+
+                    return undefined;
+                }}
+
+                function loadCommonConfig(method) {{
+                    const config = configs[method] || {{}};
+
+                    for (
+                        const [elementId, keys]
+                        of Object.entries(commonFields)
+                    ) {{
+                        const element =
+                            document.getElementById(elementId);
+
+                        if (!element) {{
+                            continue;
+                        }}
+
+                        const value =
+                            getConfigValue(config, keys);
+
+                        if (value === undefined) {{
+                            continue;
+                        }}
+
+                        if (element.type === 'checkbox') {{
+                            element.checked = Boolean(value);
+                        }} else {{
+                            element.value = String(value);
+                        }}
+                    }}
+                }}
+
+                function showMethodSettings(method) {{
+                    document
+                        .querySelectorAll(
+                            '.search-method-settings'
+                        )
+                        .forEach((section) => {{
+                            const visible =
+                                section.dataset.searchMethod
+                                === method;
+
+                            section.hidden = !visible;
+                            section.style.display =
+                                visible ? 'block' : 'none';
+                        }});
+                }}
+
+                function updateMethod() {{
+                    const method =
+                        methodSelect.value || 'lexical';
+
+                    loadCommonConfig(method);
+                    showMethodSettings(method);
+                }}
+
+                methodSelect.addEventListener(
+                    'change',
+                    updateMethod
+                );
+
+                updateMethod();
+            }})();
+        </script>
     </div>
     """
-
 
 def build_search_evaluation_body(report):
     if "error" in report:
