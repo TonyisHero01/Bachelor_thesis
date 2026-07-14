@@ -657,9 +657,22 @@ class SemanticSearchService:
 
                 indexed_count += 1
 
+        active_product_ids = [
+            int(item["product_id"])
+            for item in items
+        ]
+
+        deleted_count = (
+            self.repository
+            .delete_embeddings_except_product_ids(
+                active_product_ids
+            )
+        )
+
         return {
             "status": "ok",
             "indexed_products": indexed_count,
+            "deleted_vectors": deleted_count,
             "batch_size": batch_size,
         }
 

@@ -2,6 +2,18 @@ from database import get_connection
 
 
 class SemanticVectorRepository:
+    LATEST_INDEXABLE_PRODUCT_SUBQUERY = """
+        SELECT
+            sku,
+            MAX(id) AS max_id
+        FROM product
+        WHERE sku IS NOT NULL
+          AND sku <> ''
+        GROUP BY sku
+        HAVING COUNT(*) FILTER (
+            WHERE hidden = true
+        ) = 0
+    """
 
     @staticmethod
     def apply_ivfflat_probes(
@@ -115,10 +127,11 @@ class SemanticVectorRepository:
         self,
     ) -> list[dict]:
         """
-        Returns the newest visible product row for every SKU.
+        Returns the newest product row for every SKU
+        that has no hidden version.
         """
 
-        sql = """
+        sql = f"""
             SELECT
                 p.id,
                 p.name,
@@ -139,14 +152,7 @@ class SemanticVectorRepository:
             FROM product p
 
             INNER JOIN (
-                SELECT
-                    sku,
-                    MAX(id) AS max_id
-                FROM product
-                WHERE hidden = false
-                  AND sku IS NOT NULL
-                  AND sku <> ''
-                GROUP BY sku
+                {self.LATEST_INDEXABLE_PRODUCT_SUBQUERY}
             ) latest
                 ON latest.max_id = p.id
 
@@ -158,8 +164,6 @@ class SemanticVectorRepository:
 
             LEFT JOIN size s
                 ON s.id = p.size_id
-
-            WHERE p.hidden = false
 
             ORDER BY p.id DESC
         """
@@ -211,7 +215,13 @@ class SemanticVectorRepository:
                 ON s.id = p.size_id
 
             WHERE p.sku = %s
-              AND p.hidden = false
+
+            AND NOT EXISTS (
+                SELECT 1
+                FROM product hidden_version
+                WHERE hidden_version.sku = p.sku
+                    AND hidden_version.hidden = true
+            )
 
             ORDER BY p.id DESC
             LIMIT 1
@@ -350,7 +360,7 @@ class SemanticVectorRepository:
             int(limit),
         )
 
-        sql = """
+        sql = f"""
             SELECT
                 p.id,
                 p.name,
@@ -375,14 +385,7 @@ class SemanticVectorRepository:
                 ON p.id = vector_row.product_id
 
             INNER JOIN (
-                SELECT
-                    sku,
-                    MAX(id) AS max_id
-                FROM product
-                WHERE hidden = false
-                  AND sku IS NOT NULL
-                  AND sku <> ''
-                GROUP BY sku
+                {self.LATEST_INDEXABLE_PRODUCT_SUBQUERY}
             ) latest
                 ON latest.max_id = p.id
 
@@ -394,8 +397,6 @@ class SemanticVectorRepository:
 
             LEFT JOIN size s
                 ON s.id = p.size_id
-
-            WHERE p.hidden = false
 
             ORDER BY
                 vector_row.embedding
@@ -426,11 +427,23 @@ class SemanticVectorRepository:
         self,
         product_id: int,
     ) -> str | None:
-        sql = """
+        sql = f"""
             SELECT
-                embedding::text AS embedding
-            FROM product_semantic_vector
-            WHERE product_id = %s
+                vector_row.embedding::text AS embedding
+
+            FROM product_semantic_vector vector_row
+
+            JOIN product product_row
+                ON product_row.id =
+                vector_row.product_id
+
+            INNER JOIN (
+                {self.LATEST_INDEXABLE_PRODUCT_SUBQUERY}
+            ) latest
+                ON latest.max_id =
+                product_row.id
+
+            WHERE vector_row.product_id = %s
         """
 
         with get_connection() as conn:
@@ -462,7 +475,7 @@ class SemanticVectorRepository:
             int(limit),
         )
 
-        sql = """
+        sql = f"""
             SELECT
                 p.id,
                 p.name,
@@ -487,14 +500,7 @@ class SemanticVectorRepository:
                 ON p.id = vector_row.product_id
 
             INNER JOIN (
-                SELECT
-                    sku,
-                    MAX(id) AS max_id
-                FROM product
-                WHERE hidden = false
-                AND sku IS NOT NULL
-                AND sku <> ''
-                GROUP BY sku
+                {self.LATEST_INDEXABLE_PRODUCT_SUBQUERY}
             ) latest
                 ON latest.max_id = p.id
 
@@ -507,8 +513,7 @@ class SemanticVectorRepository:
             LEFT JOIN size s
                 ON s.id = p.size_id
 
-            WHERE p.hidden = false
-            AND p.id <> %s
+            WHERE p.id <> %s
 
             ORDER BY
                 vector_row.embedding
@@ -548,11 +553,20 @@ class SemanticVectorRepository:
             return None
 
         sql = """
-            SELECT id
-            FROM product
-            WHERE sku = %s
-              AND hidden = false
-            ORDER BY id DESC
+            SELECT p.id
+
+            FROM product p
+
+            WHERE p.sku = %s
+
+            AND NOT EXISTS (
+                SELECT 1
+                FROM product hidden_version
+                WHERE hidden_version.sku = p.sku
+                    AND hidden_version.hidden = true
+            )
+
+            ORDER BY p.id DESC
             LIMIT 1
         """
 
@@ -638,7 +652,7 @@ class SemanticVectorRepository:
         if not sku:
             return False
 
-        sql = """
+        sql = f"""
             SELECT EXISTS (
                 SELECT 1
 
@@ -646,10 +660,15 @@ class SemanticVectorRepository:
 
                 JOIN product product_row
                     ON product_row.id =
-                       vector_row.product_id
+                    vector_row.product_id
+
+                INNER JOIN (
+                    {self.LATEST_INDEXABLE_PRODUCT_SUBQUERY}
+                ) latest
+                    ON latest.max_id =
+                    product_row.id
 
                 WHERE product_row.sku = %s
-                  AND product_row.hidden = false
             ) AS vector_exists
         """
 
@@ -672,3 +691,36 @@ class SemanticVectorRepository:
 
         except Exception:
             return False
+        
+    def delete_embeddings_except_product_ids(
+        self,
+        product_ids: list[int],
+    ) -> int:
+        normalized_ids = [
+            int(product_id)
+            for product_id in product_ids
+            if product_id is not None
+        ]
+
+        if not normalized_ids:
+            return self.delete_all_embeddings()
+
+        sql = """
+            DELETE FROM product_semantic_vector
+            WHERE NOT (
+                product_id = ANY(%s)
+            )
+        """
+
+        with get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    sql,
+                    (normalized_ids,),
+                )
+
+                deleted = cursor.rowcount
+
+            conn.commit()
+
+        return int(deleted)
