@@ -2,6 +2,30 @@ from database import get_connection
 
 
 class SemanticVectorRepository:
+
+    @staticmethod
+    def apply_ivfflat_probes(
+        cursor,
+        ivfflat_probes: int,
+    ) -> None:
+        try:
+            probes = int(ivfflat_probes)
+        except (TypeError, ValueError):
+            probes = 10
+
+        if probes < 1:
+            probes = 10
+
+        cursor.execute(
+            """
+            SELECT set_config(
+                'ivfflat.probes',
+                %s,
+                true
+            )
+            """,
+            (str(probes),),
+        )
     def ensure_table(
         self,
         embedding_dimension: int,
@@ -319,6 +343,7 @@ class SemanticVectorRepository:
         self,
         query_vector: str,
         limit: int,
+        ivfflat_probes: int = 10,
     ) -> list[dict]:
         limit = max(
             1,
@@ -381,6 +406,11 @@ class SemanticVectorRepository:
 
         with get_connection() as conn:
             with conn.cursor() as cursor:
+                self.apply_ivfflat_probes(
+                    cursor,
+                    ivfflat_probes,
+                )
+
                 cursor.execute(
                     sql,
                     (
@@ -425,6 +455,7 @@ class SemanticVectorRepository:
         product_id: int,
         product_vector: str,
         limit: int,
+        ivfflat_probes: int = 10,
     ) -> list[dict]:
         limit = max(
             1,
@@ -461,8 +492,8 @@ class SemanticVectorRepository:
                     MAX(id) AS max_id
                 FROM product
                 WHERE hidden = false
-                  AND sku IS NOT NULL
-                  AND sku <> ''
+                AND sku IS NOT NULL
+                AND sku <> ''
                 GROUP BY sku
             ) latest
                 ON latest.max_id = p.id
@@ -477,7 +508,7 @@ class SemanticVectorRepository:
                 ON s.id = p.size_id
 
             WHERE p.hidden = false
-              AND p.id <> %s
+            AND p.id <> %s
 
             ORDER BY
                 vector_row.embedding
@@ -488,6 +519,11 @@ class SemanticVectorRepository:
 
         with get_connection() as conn:
             with conn.cursor() as cursor:
+                self.apply_ivfflat_probes(
+                    cursor,
+                    ivfflat_probes,
+                )
+
                 cursor.execute(
                     sql,
                     (

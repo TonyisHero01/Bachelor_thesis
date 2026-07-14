@@ -48,6 +48,7 @@ DEFAULT_REINDEX_SETTINGS = {
 }
 
 
+
 def parse_boolean(
     value: Any,
     default: bool,
@@ -110,6 +111,11 @@ def parse_non_negative_float(
     return parsed
 
 
+DEFAULT_VECTOR_SEARCH_SETTINGS = {
+    "ivfflat_probes": 10,
+}
+
+
 class SemanticSearchService:
     def __init__(self):
         self.config = fetch_relevance_config_by_method(
@@ -158,6 +164,19 @@ class SemanticSearchService:
             result.update(value)
 
         return result
+
+    def get_ivfflat_probes(self) -> int:
+        settings = self.get_settings_section(
+            "vector_search",
+            DEFAULT_VECTOR_SEARCH_SETTINGS,
+        )
+
+        return parse_positive_int(
+            settings.get("ivfflat_probes"),
+            DEFAULT_VECTOR_SEARCH_SETTINGS[
+                "ivfflat_probes"
+            ],
+        )
 
     def reload_config(
         self,
@@ -822,10 +841,13 @@ class SemanticSearchService:
             minimum_candidates,
         )
 
+        ivfflat_probes = self.get_ivfflat_probes()
+
         results = (
             self.repository.search_by_vector(
                 pgvector,
                 candidate_limit,
+                ivfflat_probes,
             )
         )
 
@@ -843,6 +865,7 @@ class SemanticSearchService:
             "normalized_query": normalized_query,
             "limit": limit,
             "candidate_limit": candidate_limit,
+            "ivfflat_probes": ivfflat_probes,
             "results": results,
         }
 
@@ -852,6 +875,7 @@ class SemanticSearchService:
         limit: int = 10,
     ) -> dict:
         self.ensure_storage()
+        ivfflat_probes = self.get_ivfflat_probes()
 
         if not parse_boolean(
             self.config.get(
@@ -899,6 +923,7 @@ class SemanticSearchService:
                 product_id,
                 product_vector,
                 limit,
+                ivfflat_probes,
             )
         )
 
@@ -908,5 +933,6 @@ class SemanticSearchService:
             ),
             "product_id": product_id,
             "limit": limit,
+            "ivfflat_probes": ivfflat_probes,
             "results": results,
         }

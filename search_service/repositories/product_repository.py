@@ -132,6 +132,13 @@ METHOD_DEFAULT_RELEVANCE_CONFIGS = {
                 "multiplier": 5,
                 "minimum_candidates": 50,
             },
+            "embedding": {
+                "batch_size": 32,
+                "normalize_embeddings": True,
+            },
+            "vector_search": {
+                "ivfflat_probes": 10,
+            },
             "session_recommendation": {
                 "current_product_weight": 1.0,
                 "viewed_product_weight": 0.70,
@@ -200,9 +207,6 @@ METHOD_DEFAULT_RELEVANCE_CONFIGS = {
     },
 }
 
-
-# 保留这个名称，避免其他旧代码导入时报错。
-# 它表示 Lexical 的默认配置。
 DEFAULT_RELEVANCE_CONFIG = deepcopy(
     METHOD_DEFAULT_RELEVANCE_CONFIGS[METHOD_LEXICAL]
 )
@@ -320,7 +324,6 @@ def build_relevance_config(
         row_data,
     )
 
-    # 不允许数据库返回值改变本次请求的目标算法。
     config["search_method"] = search_method
 
     return config
