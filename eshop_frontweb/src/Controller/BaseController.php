@@ -175,7 +175,7 @@ class BaseController extends AbstractController
 
         if (!array_key_exists('bmsUrl', $parameters)) {
             $parameters['bmsUrl'] = rtrim(
-                (string) $this->getParameter('bms_url'),
+                (string) $this->getParameter('BMS_URL'),
                 '/'
             );
         }
