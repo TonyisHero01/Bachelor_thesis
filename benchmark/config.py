@@ -26,6 +26,8 @@ class Settings:
 
     esci_examples_path: str
     esci_query_limit: int
+    esci_random_seed: int
+
     elasticsearch_url: str
 
     queries: list[str]
@@ -85,24 +87,38 @@ def load_settings() -> Settings:
         database_url=database_url,
 
         benchmark_repeat_count=int(
-            os.getenv("BENCHMARK_REPEAT_COUNT", "5")
+            os.getenv(
+                "BENCHMARK_REPEAT_COUNT",
+                "5",
+            )
         ),
 
         report_dir=report_dir,
 
         esci_examples_path=os.getenv(
             "ESCI_EXAMPLES_PATH",
-            "/app/esci-data/shopping_queries_dataset/shopping_queries_dataset_examples.parquet",
+            "/app/esci-data/shopping_queries_dataset/"
+            "shopping_queries_dataset_examples.parquet",
         ),
 
         esci_query_limit=int(
-            os.getenv("ESCI_QUERY_LIMIT", "100")
+            os.getenv(
+                "ESCI_QUERY_LIMIT",
+                "100",
+            )
+        ),
+
+        esci_random_seed=int(
+            os.getenv(
+                "ESCI_RANDOM_SEED",
+                "42",
+            )
         ),
 
         elasticsearch_url=os.getenv(
             "ELASTICSEARCH_URL",
             "http://elasticsearch:9200",
-        ),
+        ).rstrip("/"),
 
         queries=queries,
     )

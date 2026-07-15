@@ -1,5 +1,7 @@
 import math
+import random
 import statistics
+import time
 from datetime import datetime
 
 import pandas as pd
@@ -10,12 +12,17 @@ from http_client import request_json
 
 
 RELEVANT_LABELS = {"E", "S"}
+
 LABEL_GAIN = {
     "E": 3,
     "S": 2,
     "C": 1,
     "I": 0,
 }
+
+EVALUATION_MAX_ATTEMPTS = 3
+EVALUATION_RETRY_DELAY_SECONDS = 0.5
+WARMUP_MAX_ATTEMPTS = 5
 
 
 def get_db_connection():
@@ -56,7 +63,7 @@ def load_esci_ground_truth(limit: int = 100):
         & (df["product_id"].isin(imported_skus))
     ]
 
-    ground_truth = {}
+    ground_truth: dict[str, dict[str, str]] = {}
 
     for _, row in df.iterrows():
         query = str(row["query"]).strip()
@@ -69,22 +76,33 @@ def load_esci_ground_truth(limit: int = 100):
         ground_truth.setdefault(query, {})
         ground_truth[query][product_id] = label
 
-    filtered = {}
+    eligible_queries = []
 
     for query, labels in ground_truth.items():
-        has_relevant = any(
+        has_relevant_product = any(
             label in RELEVANT_LABELS
             for label in labels.values()
         )
 
-        if has_relevant:
-            filtered[query] = labels
+        if has_relevant_product:
+            eligible_queries.append((query, labels))
 
-        if len(filtered) >= limit:
-            break
+    # Stabilní pořadí před náhodným výběrem.
+    eligible_queries.sort(key=lambda item: item[0])
 
-    return filtered
+    random_generator = random.Random(
+        settings.esci_random_seed
+    )
 
+    if len(eligible_queries) > limit:
+        selected_queries = random_generator.sample(
+            eligible_queries,
+            k=limit,
+        )
+    else:
+        selected_queries = eligible_queries
+
+    return dict(selected_queries)
 
 def fetch_products_by_skus(skus: list[str]):
     if not skus:
@@ -140,47 +158,84 @@ def extract_sku(item: dict, method: str):
     return str(item.get("sku", "")).strip()
 
 
-def call_search_method(method: str, query: str, limit: int):
+def call_search_method(
+    method: str,
+    query: str,
+    limit: int,
+    max_attempts: int = EVALUATION_MAX_ATTEMPTS,
+):
     endpoint = {
         "lexical": "/lexical/search",
         "semantic_vector": "/semantic/search",
         "elasticsearch_bm25": "/elastic/search",
     }[method]
 
-    status, data, elapsed_ms = request_json(
-        "POST",
-        f"{settings.search_url}{endpoint}",
-        json={
-            "query": query,
-            "limit": limit,
-        },
+    last_status = 0
+    last_elapsed_ms = 0.0
+    total_elapsed_ms = 0.0
+
+    for attempt in range(1, max_attempts + 1):
+        status, data, elapsed_ms = request_json(
+            "POST",
+            f"{settings.search_url}{endpoint}",
+            json={
+                "query": query,
+                "limit": limit,
+            },
+        )
+
+        last_status = status
+        last_elapsed_ms = elapsed_ms
+        total_elapsed_ms += elapsed_ms
+
+        if status == 200:
+            raw_results = (
+                data.get("results", [])
+                if isinstance(data, dict)
+                else []
+            )
+
+            skus = []
+
+            for item in raw_results:
+                if not isinstance(item, dict):
+                    continue
+
+                sku = extract_sku(item, method)
+
+                if sku:
+                    skus.append(sku)
+
+            products_by_sku = fetch_products_by_skus(skus)
+
+            results = []
+
+            for sku in skus:
+                product = products_by_sku.get(sku)
+
+                if product:
+                    results.append(product)
+
+            return (
+                status,
+                results,
+                elapsed_ms,
+                attempt,
+                total_elapsed_ms,
+            )
+
+        if attempt < max_attempts:
+            time.sleep(
+                EVALUATION_RETRY_DELAY_SECONDS * attempt
+            )
+
+    return (
+        last_status,
+        [],
+        last_elapsed_ms,
+        max_attempts,
+        total_elapsed_ms,
     )
-
-    raw_results = data.get("results", []) if status == 200 else []
-
-    skus = []
-
-    for item in raw_results:
-        if not isinstance(item, dict):
-            continue
-
-        sku = extract_sku(item, method)
-
-        if sku:
-            skus.append(sku)
-
-    products_by_sku = fetch_products_by_skus(skus)
-
-    results = []
-
-    for sku in skus:
-        product = products_by_sku.get(sku)
-
-        if product:
-            results.append(product)
-
-    return status, results, elapsed_ms
-
 
 def precision_at_k(results, labels):
     if not results:
@@ -217,18 +272,19 @@ def recall_at_k(results, labels):
 
     return found / relevant_total
 
-
-def dcg_at_k(results, labels):
+def dcg_at_k(results, labels, limit=10):
     score = 0.0
 
-    for index, result in enumerate(results, start=1):
+    for index, result in enumerate(
+        results[:limit],
+        start=1,
+    ):
         label = labels.get(result["sku"], "I")
         gain = LABEL_GAIN.get(label, 0)
 
         score += gain / math.log2(index + 1)
 
     return score
-
 
 def ndcg_at_k(results, labels, limit):
     ideal_gains = sorted(
@@ -241,14 +297,19 @@ def ndcg_at_k(results, labels, limit):
 
     ideal_dcg = 0.0
 
-    for index, gain in enumerate(ideal_gains, start=1):
+    for index, gain in enumerate(
+        ideal_gains,
+        start=1,
+    ):
         ideal_dcg += gain / math.log2(index + 1)
 
     if ideal_dcg == 0:
         return 0.0
 
-    return dcg_at_k(results, labels) / ideal_dcg
-
+    return (
+        dcg_at_k(results, labels, limit)
+        / ideal_dcg
+    )
 
 def mrr(results, labels):
     for index, result in enumerate(results, start=1):
@@ -318,8 +379,74 @@ def build_result_preview(results, labels, limit=5):
 
     return preview
 
+def percentile(values: list[float], quantile: float):
+    if not values:
+        return 0.0
 
-def evaluate_search(limit: int = 10):
+    ordered = sorted(values)
+
+    if len(ordered) == 1:
+        return ordered[0]
+
+    position = (len(ordered) - 1) * quantile
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+
+    if lower_index == upper_index:
+        return ordered[lower_index]
+
+    lower_value = ordered[lower_index]
+    upper_value = ordered[upper_index]
+    fraction = position - lower_index
+
+    return lower_value + (
+        upper_value - lower_value
+    ) * fraction
+
+def warm_up_search_methods(
+    methods: list[str],
+    query: str,
+    limit: int,
+):
+    warmup_results = {}
+
+    for method in methods:
+        (
+            status,
+            results,
+            elapsed_ms,
+            attempts,
+            total_elapsed_ms,
+        ) = call_search_method(
+            method=method,
+            query=query,
+            limit=limit,
+            max_attempts=WARMUP_MAX_ATTEMPTS,
+        )
+
+        warmup_results[method] = {
+            "status": status,
+            "result_count": len(results),
+            "response_time_ms": elapsed_ms,
+            "attempts": attempts,
+            "total_elapsed_ms": total_elapsed_ms,
+        }
+
+        if status != 200:
+            raise RuntimeError(
+                "Search evaluation warm-up failed: "
+                f"method={method}, "
+                f"query={query!r}, "
+                f"status={status}, "
+                f"attempts={attempts}"
+            )
+
+    return warmup_results
+
+def evaluate_search(
+    limit: int = 10,
+    strict: bool = True,
+):
     methods = [
         "lexical",
         "semantic_vector",
@@ -330,31 +457,84 @@ def evaluate_search(limit: int = 10):
         limit=settings.esci_query_limit
     )
 
+    if not ground_truth:
+        raise RuntimeError(
+            "No eligible ESCI queries were found."
+        )
+
+    warmup_query = next(iter(ground_truth))
+
+    warmup_results = warm_up_search_methods(
+        methods=methods,
+        query=warmup_query,
+        limit=limit,
+    )
+
     rows = []
 
     for query, labels in ground_truth.items():
         for method in methods:
-            status, results, elapsed_ms = call_search_method(
+            (
+                status,
+                results,
+                elapsed_ms,
+                attempts,
+                total_elapsed_ms,
+            ) = call_search_method(
                 method=method,
                 query=query,
                 limit=limit,
             )
 
-            precision = precision_at_k(results, labels)
-            recall = recall_at_k(results, labels)
-            ndcg = ndcg_at_k(results, labels, limit)
-            reciprocal_rank = mrr(results, labels)
-            f1 = f1_at_k(precision, recall)
-            ap = average_precision(results, labels)
-            hit_rate = hit_rate_at_k(results, labels)
+            precision = precision_at_k(
+                results,
+                labels,
+            )
+
+            recall = recall_at_k(
+                results,
+                labels,
+            )
+
+            ndcg = ndcg_at_k(
+                results,
+                labels,
+                limit,
+            )
+
+            reciprocal_rank = mrr(
+                results,
+                labels,
+            )
+
+            f1 = f1_at_k(
+                precision,
+                recall,
+            )
+
+            ap = average_precision(
+                results,
+                labels,
+                limit,
+            )
+
+            hit_rate = hit_rate_at_k(
+                results,
+                labels,
+            )
 
             rows.append({
                 "method": method,
                 "query": query,
                 "status": status,
                 "response_time_ms": elapsed_ms,
+                "total_request_time_ms": total_elapsed_ms,
+                "attempts": attempts,
                 "result_count": len(results),
-                "has_results": len(results) > 0,
+                "has_results": (
+                    status == 200
+                    and len(results) > 0
+                ),
                 "precision_at_k": precision,
                 "recall_at_k": recall,
                 "f1_at_k": f1,
@@ -362,80 +542,223 @@ def evaluate_search(limit: int = 10):
                 "hit_rate_at_k": hit_rate,
                 "ndcg_at_k": ndcg,
                 "mrr": reciprocal_rank,
-                "top_results": build_result_preview(results, labels),
+                "top_results": build_result_preview(
+                    results,
+                    labels,
+                ),
             })
+
+    failed_rows = [
+        row
+        for row in rows
+        if row["status"] != 200
+    ]
+
+    if strict and failed_rows:
+        failed_description = "; ".join(
+            (
+                f"{row['method']} / "
+                f"{row['query']!r} / "
+                f"status={row['status']} / "
+                f"attempts={row['attempts']}"
+            )
+            for row in failed_rows[:10]
+        )
+
+        raise RuntimeError(
+            "Search evaluation is incomplete. "
+            f"Failed requests: {len(failed_rows)}. "
+            f"Examples: {failed_description}"
+        )
 
     summary = {}
 
     for method in methods:
         method_rows = [
-            row for row in rows
-            if row["method"] == method and row["status"] == 200
+            row
+            for row in rows
+            if row["method"] == method
+        ]
+
+        successful_rows = [
+            row
+            for row in method_rows
+            if row["status"] == 200
+        ]
+
+        failed_method_rows = [
+            row
+            for row in method_rows
+            if row["status"] != 200
         ]
 
         with_results = [
-            row for row in method_rows
+            row
+            for row in method_rows
             if row["has_results"]
+        ]
+
+        successful_response_times = [
+            row["response_time_ms"]
+            for row in successful_rows
         ]
 
         summary[method] = {
             "queries_evaluated": len(method_rows),
-            "queries_with_results": len(with_results),
+
+            "successful_requests": len(
+                successful_rows
+            ),
+
+            "failed_requests": len(
+                failed_method_rows
+            ),
+
+            "request_success_rate": (
+                len(successful_rows)
+                / len(method_rows)
+                if method_rows
+                else 0.0
+            ),
+
+            "queries_with_results": len(
+                with_results
+            ),
+
+            # Jmenovatel zahrnuje všechny pokusy,
+            # nikoli pouze úspěšné HTTP požadavky.
             "result_return_rate": (
-                len(with_results) / len(method_rows)
-                if method_rows else 0
+                len(with_results)
+                / len(method_rows)
+                if method_rows
+                else 0.0
             ),
+
+            # Čas se počítá pouze z úspěšných odpovědí.
             "avg_response_time_ms": (
-                statistics.mean(row["response_time_ms"] for row in method_rows)
-                if method_rows else 0
+                statistics.mean(
+                    successful_response_times
+                )
+                if successful_response_times
+                else 0.0
             ),
+
+            "median_response_time_ms": (
+                statistics.median(
+                    successful_response_times
+                )
+                if successful_response_times
+                else 0.0
+            ),
+
+            "p95_response_time_ms": percentile(
+                successful_response_times,
+                0.95,
+            ),
+
+            # Neúspěšný požadavek má výsledky []
+            # a tedy nulové metriky.
             "avg_precision_at_k": (
-                statistics.mean(row["precision_at_k"] for row in method_rows)
-                if method_rows else 0
+                statistics.mean(
+                    row["precision_at_k"]
+                    for row in method_rows
+                )
+                if method_rows
+                else 0.0
             ),
+
             "avg_recall_at_k": (
-                statistics.mean(row["recall_at_k"] for row in method_rows)
-                if method_rows else 0
+                statistics.mean(
+                    row["recall_at_k"]
+                    for row in method_rows
+                )
+                if method_rows
+                else 0.0
             ),
+
             "avg_f1_at_k": (
-                statistics.mean(row["f1_at_k"] for row in method_rows)
-                if method_rows else 0
+                statistics.mean(
+                    row["f1_at_k"]
+                    for row in method_rows
+                )
+                if method_rows
+                else 0.0
             ),
+
             "avg_map": (
                 statistics.mean(
                     row["ap"]
                     for row in method_rows
                 )
-                if method_rows else 0
+                if method_rows
+                else 0.0
             ),
+
             "avg_hit_rate_at_k": (
                 statistics.mean(
                     row["hit_rate_at_k"]
                     for row in method_rows
                 )
-                if method_rows else 0
+                if method_rows
+                else 0.0
             ),
+
             "avg_ndcg_at_k": (
-                statistics.mean(row["ndcg_at_k"] for row in method_rows)
-                if method_rows else 0
+                statistics.mean(
+                    row["ndcg_at_k"]
+                    for row in method_rows
+                )
+                if method_rows
+                else 0.0
             ),
+
             "avg_mrr": (
-                statistics.mean(row["mrr"] for row in method_rows)
-                if method_rows else 0
+                statistics.mean(
+                    row["mrr"]
+                    for row in method_rows
+                )
+                if method_rows
+                else 0.0
             ),
+
+            "failed_queries": [
+                {
+                    "query": row["query"],
+                    "status": row["status"],
+                    "attempts": row["attempts"],
+                }
+                for row in failed_method_rows
+            ],
         }
+
+    all_requests_successful = all(
+        method_summary["failed_requests"] == 0
+        for method_summary in summary.values()
+    )
 
     return {
         "methods_compared": methods,
         "limit": limit,
         "query_count": len(ground_truth),
+        "random_seed": settings.esci_random_seed,
+        "warmup_query": warmup_query,
+        "warmup_results": warmup_results,
+        "all_requests_successful": (
+            all_requests_successful
+        ),
         "summary": summary,
         "details": rows,
     }
 
-
 def run_evaluation():
+    search_evaluation = evaluate_search(
+        limit=10,
+        strict=True,
+    )
+
     return {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
-        "search_evaluation": evaluate_search(),
+        "generated_at": (
+            datetime.utcnow().isoformat() + "Z"
+        ),
+        "search_evaluation": search_evaluation,
     }
