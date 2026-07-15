@@ -2,7 +2,7 @@ twig:
     file_name_pattern: '*.twig'
 
     globals:
-        bmsUrl: '%bms_url%'
+        bmsUrl: '%BMS_URL%'
 
 when@test:
     twig:

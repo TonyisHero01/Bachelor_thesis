@@ -22,7 +22,7 @@ security:
             form_login:
                 login_path: customer_login
                 check_path: customer_login
-                # 移除 default_target_path 以便 Symfony 自动处理返回路径
+
                 always_use_default_target_path: false
                 username_parameter: email
                 password_parameter: password
@@ -31,7 +31,7 @@ security:
                 target: customer_login
             remember_me:
                 secret: '%kernel.secret%'
-                lifetime: 604800 # 一周的有效时间
+                lifetime: 604800
                 path: /
 
 when@test:
