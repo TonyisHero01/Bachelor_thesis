@@ -1,47 +1,60 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tests\Repository;
 
-use App\Entity\Product;
 use App\Entity\Currency;
+use App\Entity\Product;
 use App\Repository\ProductRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
-use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-class ProductRepositoryTest extends KernelTestCase
+final class ProductRepositoryTest extends KernelTestCase
 {
+    private const TEST_SKU_PREFIX = 'TEST-REPOSITORY-';
+
     private ?EntityManagerInterface $em = null;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         self::ensureKernelShutdown();
         self::bootKernel();
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get('doctrine')->getManager();
-        $this->em = $em;
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()
+            ->get('doctrine')
+            ->getManager();
 
-        $classes = $em->getMetadataFactory()->getAllMetadata();
-        $schemaTool = new SchemaTool($em);
+        $this->em = $entityManager;
 
-        try {
-            $schemaTool->dropSchema($classes);
-        } catch (\Throwable $e) {
-        }
-        $schemaTool->createSchema($classes);
+        /*
+         * Remove data left by an interrupted previous test execution.
+         * Only test products with our dedicated prefix are deleted.
+         *
+         * The database structure and existing application data remain intact.
+         */
+        $this->removeTestProducts();
     }
 
     protected function tearDown(): void
     {
-        if ($this->em) {
-            $this->em->close();
-            $this->em = null;
+        if ($this->em !== null && $this->em->isOpen()) {
+            try {
+                $this->removeTestProducts();
+            } finally {
+                $this->em->clear();
+                $this->em->close();
+                $this->em = null;
+            }
         }
 
         self::ensureKernelShutdown();
+
         parent::tearDown();
     }
 
@@ -49,70 +62,161 @@ class ProductRepositoryTest extends KernelTestCase
     #[PreserveGlobalState(false)]
     public function testFindLatestVersionProductsReturnsOnlyMaxVersionPerSku(): void
     {
-        $em = $this->em;
-        $this->assertNotNull($em);
+        $em = $this->requireEntityManager();
+        $currency = $this->getOrCreateCurrency();
 
-        $currency = $this->makeCurrency();
-        $em->persist($currency);
+        $testId = strtoupper(bin2hex(random_bytes(6)));
 
-        // SKU A: v1, v2 (latest = v2)
-        $pA1 = $this->makeProduct('SKU-A', 1, 'A v1', $currency, new \DateTimeImmutable('2025-01-01 10:00:00'));
-        $pA2 = $this->makeProduct('SKU-A', 2, 'A v2', $currency, new \DateTimeImmutable('2025-01-02 10:00:00'));
+        $skuA = self::TEST_SKU_PREFIX . $testId . '-A';
+        $skuB = self::TEST_SKU_PREFIX . $testId . '-B';
 
-        // SKU B: v1, v3 (latest = v3)
-        $pB1 = $this->makeProduct('SKU-B', 1, 'B v1', $currency, new \DateTimeImmutable('2025-01-01 11:00:00'));
-        $pB3 = $this->makeProduct('SKU-B', 3, 'B v3', $currency, new \DateTimeImmutable('2025-01-03 09:00:00'));
+        // SKU A: v1 and v2; the latest version must be v2.
+        $productA1 = $this->makeProduct(
+            $skuA,
+            1,
+            'Repository test A v1',
+            $currency,
+            new \DateTimeImmutable('2025-01-01 10:00:00')
+        );
 
-        $em->persist($pA1);
-        $em->persist($pA2);
-        $em->persist($pB1);
-        $em->persist($pB3);
+        $productA2 = $this->makeProduct(
+            $skuA,
+            2,
+            'Repository test A v2',
+            $currency,
+            new \DateTimeImmutable('2025-01-02 10:00:00')
+        );
 
+        // SKU B: v1 and v3; the latest version must be v3.
+        $productB1 = $this->makeProduct(
+            $skuB,
+            1,
+            'Repository test B v1',
+            $currency,
+            new \DateTimeImmutable('2025-01-01 11:00:00')
+        );
+
+        $productB3 = $this->makeProduct(
+            $skuB,
+            3,
+            'Repository test B v3',
+            $currency,
+            new \DateTimeImmutable('2025-01-03 09:00:00')
+        );
+
+        $em->persist($productA1);
+        $em->persist($productA2);
+        $em->persist($productB1);
+        $em->persist($productB3);
         $em->flush();
         $em->clear();
 
-        /** @var ProductRepository $repo */
-        $repo = self::getContainer()->get(ProductRepository::class);
-        $result = $repo->findLatestVersionProducts();
+        /** @var ProductRepository $repository */
+        $repository = self::getContainer()->get(ProductRepository::class);
 
-        $this->assertCount(2, $result);
+        $allResults = $repository->findLatestVersionProducts();
 
-        $map = [];
-        foreach ($result as $p) {
-            $map[$p->getSku()] = $p->getVersion();
+        /*
+         * app_test is copied from app and can already contain products.
+         * Therefore, only products created by this test are evaluated.
+         */
+        $testResults = $this->filterProductsBySkus(
+            $allResults,
+            [$skuA, $skuB]
+        );
+
+        self::assertCount(
+            2,
+            $testResults,
+            'The repository should return exactly one latest product per test SKU.'
+        );
+
+        $versionsBySku = [];
+
+        foreach ($testResults as $product) {
+            $sku = $product->getSku();
+
+            if ($sku !== null) {
+                $versionsBySku[$sku] = $product->getVersion();
+            }
         }
 
-        $this->assertSame(2, $map['SKU-A'] ?? null);
-        $this->assertSame(3, $map['SKU-B'] ?? null);
+        self::assertSame(
+            2,
+            $versionsBySku[$skuA] ?? null,
+            'The highest version for SKU A should be returned.'
+        );
+
+        self::assertSame(
+            3,
+            $versionsBySku[$skuB] ?? null,
+            'The highest version for SKU B should be returned.'
+        );
     }
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
     public function testFindLatestVersionProductsOrderingByCreatedAtDescThenIdDesc(): void
     {
-        $em = $this->em;
-        $this->assertNotNull($em);
+        $em = $this->requireEntityManager();
+        $currency = $this->getOrCreateCurrency();
 
-        $currency = $this->makeCurrency();
-        $em->persist($currency);
+        $testId = strtoupper(bin2hex(random_bytes(6)));
 
-        $latest1 = $this->makeProduct('SKU-X', 5, 'X v5', $currency, new \DateTimeImmutable('2025-01-01 10:00:00'));
-        $latest2 = $this->makeProduct('SKU-Y', 2, 'Y v2', $currency, new \DateTimeImmutable('2025-01-02 10:00:00'));
+        $skuX = self::TEST_SKU_PREFIX . $testId . '-X';
+        $skuY = self::TEST_SKU_PREFIX . $testId . '-Y';
 
-        $em->persist($latest1);
-        $em->persist($latest2);
+        $productX = $this->makeProduct(
+            $skuX,
+            5,
+            'Repository ordering test X',
+            $currency,
+            new \DateTimeImmutable('2025-01-01 10:00:00')
+        );
 
+        $productY = $this->makeProduct(
+            $skuY,
+            2,
+            'Repository ordering test Y',
+            $currency,
+            new \DateTimeImmutable('2025-01-02 10:00:00')
+        );
+
+        $em->persist($productX);
+        $em->persist($productY);
         $em->flush();
         $em->clear();
 
-        /** @var ProductRepository $repo */
-        $repo = self::getContainer()->get(ProductRepository::class);
-        $result = $repo->findLatestVersionProducts();
+        /** @var ProductRepository $repository */
+        $repository = self::getContainer()->get(ProductRepository::class);
 
-        $this->assertCount(2, $result);
+        $allResults = $repository->findLatestVersionProducts();
 
-        $this->assertSame('SKU-Y', $result[0]->getSku());
-        $this->assertSame('SKU-X', $result[1]->getSku());
+        /*
+         * Preserve the order returned by the repository while removing
+         * unrelated products copied from the application database.
+         */
+        $testResults = $this->filterProductsBySkus(
+            $allResults,
+            [$skuX, $skuY]
+        );
+
+        self::assertCount(
+            2,
+            $testResults,
+            'Both test products should be returned.'
+        );
+
+        $returnedSkus = array_map(
+            static fn (Product $product): ?string => $product->getSku(),
+            $testResults
+        );
+
+        self::assertSame(
+            [$skuY, $skuX],
+            $returnedSkus,
+            'Products should be ordered by createdAt DESC and then id DESC.'
+        );
     }
 
     private function makeProduct(
@@ -122,79 +226,245 @@ class ProductRepositoryTest extends KernelTestCase
         Currency $currency,
         \DateTimeImmutable $createdAt
     ): Product {
-        $p = new Product();
-        $p->setSku($sku);
-        $p->setVersion($version);
-        $p->setName($name);
-
-        $p->setCurrency($currency);
-
-        $p->setNumberInStock(10);
-        $p->setPrice(123.45);
-        $p->setDiscount(100.0);
-        $p->setHidden(false);
-        $p->setTaxRate(21.0);
-
-        $p->setCreatedAt($createdAt);
-        $p->setUpdatedAt($createdAt);
-
-        return $p;
+        return (new Product())
+            ->setSku($sku)
+            ->setVersion($version)
+            ->setName($name)
+            ->setCurrency($currency)
+            ->setNumberInStock(10)
+            ->setPrice(123.45)
+            ->setDiscount(100.0)
+            ->setHidden(false)
+            ->setTaxRate(21.0)
+            ->setDescription('Product created by ProductRepositoryTest.')
+            ->setImageUrls([])
+            ->setAttributes([])
+            ->setCreatedAt($createdAt)
+            ->setUpdatedAt($createdAt);
     }
 
-    private function makeCurrency(): Currency
+    /**
+     * Reuse an existing currency from the copied database whenever possible.
+     *
+     * If the source database contains no currency, create one dynamically
+     * using Doctrine metadata so the test does not depend on a particular
+     * Currency entity implementation.
+     */
+    private function getOrCreateCurrency(): Currency
     {
-        $em = $this->em;
-        $this->assertNotNull($em);
+        $em = $this->requireEntityManager();
 
-        $c = new Currency();
-        $meta = $em->getClassMetadata(Currency::class);
+        $existingCurrency = $em
+            ->getRepository(Currency::class)
+            ->findOneBy([]);
 
-        foreach ($meta->fieldMappings as $field => $mapping) {
-            if (!empty($mapping['id'])) {
+        if ($existingCurrency instanceof Currency) {
+            return $existingCurrency;
+        }
+
+        $currency = new Currency();
+        $metadata = $em->getClassMetadata(Currency::class);
+
+        $randomCode = $this->generateCurrencyCode();
+
+        foreach ($metadata->fieldMappings as $field => $mapping) {
+            if ($this->isIdentifierMapping($mapping)) {
                 continue;
             }
 
-            $type = $mapping['type'] ?? null;
-            $nullable = $mapping['nullable'] ?? false;
+            $nullable = (bool) $this->mappingValue(
+                $mapping,
+                'nullable',
+                false
+            );
 
             if ($nullable) {
                 continue;
             }
 
-            $value = null;
+            $type = (string) $this->mappingValue(
+                $mapping,
+                'type',
+                ''
+            );
 
-            if ($type === 'string') {
-                $len = (int)($mapping['length'] ?? 255);
-                $value = ($len === 3) ? 'CZK' : str_repeat('A', max(1, min($len, 10)));
-            } elseif ($type === 'integer' || $type === 'smallint' || $type === 'bigint') {
-                $value = 1;
-            } elseif ($type === 'float' || $type === 'decimal') {
-                $value = 1.0;
-            } elseif ($type === 'boolean') {
-                $value = false;
-            } elseif ($type === 'datetime_immutable' || $type === 'datetimetz_immutable') {
-                $value = new \DateTimeImmutable('2025-01-01 00:00:00');
-            } elseif ($type === 'datetime' || $type === 'datetimetz') {
-                $value = new \DateTime('2025-01-01 00:00:00');
-            } elseif ($type === 'json') {
-                $value = [];
-            } else {
+            $length = (int) $this->mappingValue(
+                $mapping,
+                'length',
+                255
+            );
+
+            $value = $this->makeRequiredFieldValue(
+                $type,
+                $length,
+                $randomCode
+            );
+
+            if ($value === null) {
                 continue;
             }
 
-            $setter = 'set' . str_replace(' ', '', ucwords(str_replace('_', ' ', $field)));
-            if (method_exists($c, $setter)) {
-                $c->$setter($value);
-            } else {
-                $ref = new \ReflectionClass($c);
-                if ($ref->hasProperty($field)) {
-                    $prop = $ref->getProperty($field);
-                    $prop->setAccessible(true);
-                    $prop->setValue($c, $value);
-                }
-            }
+            $this->writeEntityField(
+                $currency,
+                (string) $field,
+                $value
+            );
         }
 
-        return $c;
+        $em->persist($currency);
+        $em->flush();
+
+        return $currency;
+    }
+
+    /**
+     * @param array<int, Product> $products
+     * @param array<int, string>  $skus
+     *
+     * @return array<int, Product>
+     */
+    private function filterProductsBySkus(
+        array $products,
+        array $skus
+    ): array {
+        return array_values(
+            array_filter(
+                $products,
+                static fn (Product $product): bool => in_array(
+                    $product->getSku(),
+                    $skus,
+                    true
+                )
+            )
+        );
+    }
+
+    private function removeTestProducts(): void
+    {
+        if ($this->em === null || !$this->em->isOpen()) {
+            return;
+        }
+
+        $this->em
+            ->createQuery(
+                <<<'DQL'
+DELETE FROM App\Entity\Product product
+WHERE product.sku LIKE :prefix
+DQL
+            )
+            ->setParameter('prefix', self::TEST_SKU_PREFIX . '%')
+            ->execute();
+
+        $this->em->clear();
+    }
+
+    private function requireEntityManager(): EntityManagerInterface
+    {
+        self::assertNotNull(
+            $this->em,
+            'The Doctrine EntityManager has not been initialized.'
+        );
+
+        return $this->em;
+    }
+
+    private function generateCurrencyCode(): string
+    {
+        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $code = '';
+
+        for ($index = 0; $index < 3; ++$index) {
+            $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
+
+        return $code;
+    }
+
+    private function makeRequiredFieldValue(
+        string $type,
+        int $length,
+        string $currencyCode
+    ): mixed {
+        return match ($type) {
+            'string' => $length === 3
+                ? $currencyCode
+                : substr('RepositoryTest', 0, max(1, $length)),
+
+            'integer',
+            'smallint',
+            'bigint' => 1,
+
+            'float' => 1.0,
+
+            'decimal' => '1.00',
+
+            'boolean' => false,
+
+            'datetime_immutable',
+            'datetimetz_immutable' => new \DateTimeImmutable(
+                '2025-01-01 00:00:00'
+            ),
+
+            'datetime',
+            'datetimetz' => new \DateTime(
+                '2025-01-01 00:00:00'
+            ),
+
+            'date_immutable' => new \DateTimeImmutable('2025-01-01'),
+
+            'date' => new \DateTime('2025-01-01'),
+
+            'json' => [],
+
+            default => null,
+        };
+    }
+
+    private function writeEntityField(
+        object $entity,
+        string $field,
+        mixed $value
+    ): void {
+        $setter = 'set' . str_replace(
+            ' ',
+            '',
+            ucwords(str_replace('_', ' ', $field))
+        );
+
+        if (method_exists($entity, $setter)) {
+            $entity->{$setter}($value);
+
+            return;
+        }
+
+        $reflection = new \ReflectionClass($entity);
+
+        if (!$reflection->hasProperty($field)) {
+            return;
+        }
+
+        $property = $reflection->getProperty($field);
+        $property->setValue($entity, $value);
+    }
+
+    private function isIdentifierMapping(mixed $mapping): bool
+    {
+        if (is_array($mapping)) {
+            return !empty($mapping['id']);
+        }
+
+        return isset($mapping->id) && (bool) $mapping->id;
+    }
+
+    private function mappingValue(
+        mixed $mapping,
+        string $property,
+        mixed $default = null
+    ): mixed {
+        if (is_array($mapping)) {
+            return $mapping[$property] ?? $default;
+        }
+
+        return $mapping->{$property} ?? $default;
     }
 }
