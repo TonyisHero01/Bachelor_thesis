@@ -12,6 +12,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.3",
         "doctrine/orm": "^3.0",
         "dompdf/dompdf": "^3.1",
+        "nelmio/api-doc-bundle": "^5.10",
         "nelmio/cors-bundle": "^2.5",
         "symfony/asset": "7.4.*",
         "symfony/asset-mapper": "7.4.*",
@@ -81,7 +82,7 @@
     },
     "extra": {
         "symfony": {
-            "allow-contrib": false,
+            "allow-contrib": true,
             "require": "7.4.*"
         }
     },

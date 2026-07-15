@@ -1,0 +1,20 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: E-shop Public API
+            description: Public HTTP API for external e-shop integrations.
+            version: 1.0.0
+
+        components:
+            securitySchemes:
+                ApiTokenAuth:
+                    type: apiKey
+                    in: header
+                    name: X-API-Token
+
+        security:
+            - ApiTokenAuth: []
+
+    areas:
+        path_patterns:
+            - '^/api/v1'
