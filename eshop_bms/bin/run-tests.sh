@@ -275,12 +275,8 @@ SQL
 }
 PHP
 
-echo "Running database migrations on '${TARGET_DATABASE}'..."
-
-php bin/console doctrine:migrations:migrate \
-    --env=test \
-    --no-interaction \
-    --allow-no-migration
+echo "Test database was copied from '${SOURCE_DATABASE}'."
+echo "Skipping migrations because schema and migration history were copied together."
 
 echo "Running PHPUnit..."
 
