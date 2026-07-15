@@ -33,10 +33,8 @@ final class ProductRepositoryTest extends KernelTestCase
         $this->em = $entityManager;
 
         /*
-         * Remove data left by an interrupted previous test execution.
-         * Only test products with our dedicated prefix are deleted.
-         *
-         * The database structure and existing application data remain intact.
+         * Remove products left by an interrupted earlier test run.
+         * Existing application products and database structure remain intact.
          */
         $this->removeTestProducts();
     }
@@ -62,15 +60,16 @@ final class ProductRepositoryTest extends KernelTestCase
     #[PreserveGlobalState(false)]
     public function testFindLatestVersionProductsReturnsOnlyMaxVersionPerSku(): void
     {
-        $em = $this->requireEntityManager();
+        $entityManager = $this->requireEntityManager();
         $currency = $this->getOrCreateCurrency();
 
-        $testId = strtoupper(bin2hex(random_bytes(6)));
+        $testPrefix = self::TEST_SKU_PREFIX
+            . strtoupper(bin2hex(random_bytes(6)));
 
-        $skuA = self::TEST_SKU_PREFIX . $testId . '-A';
-        $skuB = self::TEST_SKU_PREFIX . $testId . '-B';
+        $skuA = $testPrefix . '-A';
+        $skuB = $testPrefix . '-B';
 
-        // SKU A: v1 and v2; the latest version must be v2.
+        // SKU A: versions 1 and 2; version 2 must be returned.
         $productA1 = $this->makeProduct(
             $skuA,
             1,
@@ -87,7 +86,7 @@ final class ProductRepositoryTest extends KernelTestCase
             new \DateTimeImmutable('2025-01-02 10:00:00')
         );
 
-        // SKU B: v1 and v3; the latest version must be v3.
+        // SKU B: versions 1 and 3; version 3 must be returned.
         $productB1 = $this->makeProduct(
             $skuB,
             1,
@@ -104,36 +103,53 @@ final class ProductRepositoryTest extends KernelTestCase
             new \DateTimeImmutable('2025-01-03 09:00:00')
         );
 
-        $em->persist($productA1);
-        $em->persist($productA2);
-        $em->persist($productB1);
-        $em->persist($productB3);
-        $em->flush();
-        $em->clear();
+        $entityManager->persist($productA1);
+        $entityManager->persist($productA2);
+        $entityManager->persist($productB1);
+        $entityManager->persist($productB3);
 
-        /** @var ProductRepository $repository */
-        $repository = self::getContainer()->get(ProductRepository::class);
-
-        $allResults = $repository->findLatestVersionProducts();
+        $entityManager->flush();
+        $entityManager->clear();
 
         /*
-         * app_test is copied from app and can already contain products.
-         * Therefore, only products created by this test are evaluated.
+         * Verify that all four product rows were actually saved.
          */
-        $testResults = $this->filterProductsBySkus(
-            $allResults,
-            [$skuA, $skuB]
+        $savedProducts = $entityManager
+            ->getRepository(Product::class)
+            ->findBy([
+                'sku' => [$skuA, $skuB],
+            ]);
+
+        self::assertCount(
+            4,
+            $savedProducts,
+            'All four product versions should exist in the test database.'
+        );
+
+        /** @var ProductRepository $repository */
+        $repository = self::getContainer()->get(
+            ProductRepository::class
+        );
+
+        /*
+         * Use the repository SKU filter so products copied from app do not
+         * affect pagination or the result count.
+         */
+        $result = $repository->findLatestVersionProducts(
+            limit: 20,
+            offset: 0,
+            skuFilter: $testPrefix
         );
 
         self::assertCount(
             2,
-            $testResults,
-            'The repository should return exactly one latest product per test SKU.'
+            $result,
+            'The repository should return one latest row for each test SKU.'
         );
 
         $versionsBySku = [];
 
-        foreach ($testResults as $product) {
+        foreach ($result as $product) {
             $sku = $product->getSku();
 
             if ($sku !== null) {
@@ -144,78 +160,84 @@ final class ProductRepositoryTest extends KernelTestCase
         self::assertSame(
             2,
             $versionsBySku[$skuA] ?? null,
-            'The highest version for SKU A should be returned.'
+            'The repository should return version 2 for SKU A.'
         );
 
         self::assertSame(
             3,
             $versionsBySku[$skuB] ?? null,
-            'The highest version for SKU B should be returned.'
+            'The repository should return version 3 for SKU B.'
         );
     }
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
-    public function testFindLatestVersionProductsOrderingByCreatedAtDescThenIdDesc(): void
+    public function testFindLatestVersionProductsOrdersBySkuAscending(): void
     {
-        $em = $this->requireEntityManager();
+        $entityManager = $this->requireEntityManager();
         $currency = $this->getOrCreateCurrency();
 
-        $testId = strtoupper(bin2hex(random_bytes(6)));
+        $testPrefix = self::TEST_SKU_PREFIX
+            . strtoupper(bin2hex(random_bytes(6)));
 
-        $skuX = self::TEST_SKU_PREFIX . $testId . '-X';
-        $skuY = self::TEST_SKU_PREFIX . $testId . '-Y';
+        $skuA = $testPrefix . '-A';
+        $skuB = $testPrefix . '-B';
 
-        $productX = $this->makeProduct(
-            $skuX,
+        /*
+         * Creation dates intentionally use the opposite order.
+         * The repository should still order by SKU ASC.
+         */
+        $productA = $this->makeProduct(
+            $skuA,
             5,
-            'Repository ordering test X',
-            $currency,
-            new \DateTimeImmutable('2025-01-01 10:00:00')
-        );
-
-        $productY = $this->makeProduct(
-            $skuY,
-            2,
-            'Repository ordering test Y',
+            'Repository ordering test A',
             $currency,
             new \DateTimeImmutable('2025-01-02 10:00:00')
         );
 
-        $em->persist($productX);
-        $em->persist($productY);
-        $em->flush();
-        $em->clear();
-
-        /** @var ProductRepository $repository */
-        $repository = self::getContainer()->get(ProductRepository::class);
-
-        $allResults = $repository->findLatestVersionProducts();
+        $productB = $this->makeProduct(
+            $skuB,
+            2,
+            'Repository ordering test B',
+            $currency,
+            new \DateTimeImmutable('2025-01-01 10:00:00')
+        );
 
         /*
-         * Preserve the order returned by the repository while removing
-         * unrelated products copied from the application database.
+         * Persist B first so database ID order also differs from SKU order.
          */
-        $testResults = $this->filterProductsBySkus(
-            $allResults,
-            [$skuX, $skuY]
+        $entityManager->persist($productB);
+        $entityManager->persist($productA);
+
+        $entityManager->flush();
+        $entityManager->clear();
+
+        /** @var ProductRepository $repository */
+        $repository = self::getContainer()->get(
+            ProductRepository::class
+        );
+
+        $result = $repository->findLatestVersionProducts(
+            limit: 20,
+            offset: 0,
+            skuFilter: $testPrefix
         );
 
         self::assertCount(
             2,
-            $testResults,
+            $result,
             'Both test products should be returned.'
         );
 
         $returnedSkus = array_map(
             static fn (Product $product): ?string => $product->getSku(),
-            $testResults
+            $result
         );
 
         self::assertSame(
-            [$skuY, $skuX],
+            [$skuA, $skuB],
             $returnedSkus,
-            'Products should be ordered by createdAt DESC and then id DESC.'
+            'Products should be ordered by SKU in ascending order.'
         );
     }
 
@@ -231,12 +253,12 @@ final class ProductRepositoryTest extends KernelTestCase
             ->setVersion($version)
             ->setName($name)
             ->setCurrency($currency)
+            ->setDescription('Product created by ProductRepositoryTest.')
             ->setNumberInStock(10)
             ->setPrice(123.45)
             ->setDiscount(100.0)
             ->setHidden(false)
             ->setTaxRate(21.0)
-            ->setDescription('Product created by ProductRepositoryTest.')
             ->setImageUrls([])
             ->setAttributes([])
             ->setCreatedAt($createdAt)
@@ -244,17 +266,16 @@ final class ProductRepositoryTest extends KernelTestCase
     }
 
     /**
-     * Reuse an existing currency from the copied database whenever possible.
+     * Reuse an existing currency copied from app.
      *
-     * If the source database contains no currency, create one dynamically
-     * using Doctrine metadata so the test does not depend on a particular
-     * Currency entity implementation.
+     * If no currency exists, dynamically create one based on Doctrine
+     * metadata so the test does not depend on the exact Currency fields.
      */
     private function getOrCreateCurrency(): Currency
     {
-        $em = $this->requireEntityManager();
+        $entityManager = $this->requireEntityManager();
 
-        $existingCurrency = $em
+        $existingCurrency = $entityManager
             ->getRepository(Currency::class)
             ->findOneBy([]);
 
@@ -263,9 +284,7 @@ final class ProductRepositoryTest extends KernelTestCase
         }
 
         $currency = new Currency();
-        $metadata = $em->getClassMetadata(Currency::class);
-
-        $randomCode = $this->generateCurrencyCode();
+        $metadata = $entityManager->getClassMetadata(Currency::class);
 
         foreach ($metadata->fieldMappings as $field => $mapping) {
             if ($this->isIdentifierMapping($mapping)) {
@@ -296,8 +315,7 @@ final class ProductRepositoryTest extends KernelTestCase
 
             $value = $this->makeRequiredFieldValue(
                 $type,
-                $length,
-                $randomCode
+                $length
             );
 
             if ($value === null) {
@@ -311,32 +329,10 @@ final class ProductRepositoryTest extends KernelTestCase
             );
         }
 
-        $em->persist($currency);
-        $em->flush();
+        $entityManager->persist($currency);
+        $entityManager->flush();
 
         return $currency;
-    }
-
-    /**
-     * @param array<int, Product> $products
-     * @param array<int, string>  $skus
-     *
-     * @return array<int, Product>
-     */
-    private function filterProductsBySkus(
-        array $products,
-        array $skus
-    ): array {
-        return array_values(
-            array_filter(
-                $products,
-                static fn (Product $product): bool => in_array(
-                    $product->getSku(),
-                    $skus,
-                    true
-                )
-            )
-        );
     }
 
     private function removeTestProducts(): void
@@ -352,7 +348,10 @@ DELETE FROM App\Entity\Product product
 WHERE product.sku LIKE :prefix
 DQL
             )
-            ->setParameter('prefix', self::TEST_SKU_PREFIX . '%')
+            ->setParameter(
+                'prefix',
+                self::TEST_SKU_PREFIX . '%'
+            )
             ->execute();
 
         $this->em->clear();
@@ -368,27 +367,18 @@ DQL
         return $this->em;
     }
 
-    private function generateCurrencyCode(): string
-    {
-        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        $code = '';
-
-        for ($index = 0; $index < 3; ++$index) {
-            $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
-        }
-
-        return $code;
-    }
-
     private function makeRequiredFieldValue(
         string $type,
-        int $length,
-        string $currencyCode
+        int $length
     ): mixed {
         return match ($type) {
             'string' => $length === 3
-                ? $currencyCode
-                : substr('RepositoryTest', 0, max(1, $length)),
+                ? 'TST'
+                : substr(
+                    'RepositoryTest',
+                    0,
+                    max(1, $length)
+                ),
 
             'integer',
             'smallint',
@@ -410,9 +400,13 @@ DQL
                 '2025-01-01 00:00:00'
             ),
 
-            'date_immutable' => new \DateTimeImmutable('2025-01-01'),
+            'date_immutable' => new \DateTimeImmutable(
+                '2025-01-01'
+            ),
 
-            'date' => new \DateTime('2025-01-01'),
+            'date' => new \DateTime(
+                '2025-01-01'
+            ),
 
             'json' => [],
 
@@ -428,7 +422,9 @@ DQL
         $setter = 'set' . str_replace(
             ' ',
             '',
-            ucwords(str_replace('_', ' ', $field))
+            ucwords(
+                str_replace('_', ' ', $field)
+            )
         );
 
         if (method_exists($entity, $setter)) {

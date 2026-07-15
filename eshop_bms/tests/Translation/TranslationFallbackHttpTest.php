@@ -1,11 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tests\Translation;
 
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Doctrine\ORM\EntityManagerInterface;
-
 use App\Entity\Employee;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class TranslationFallbackHttpTest extends WebTestCase
 {
@@ -14,30 +15,39 @@ final class TranslationFallbackHttpTest extends WebTestCase
 
     protected function tearDown(): void
     {
-        if ($this->createdTemplatePath && file_exists($this->createdTemplatePath)) {
+        if (
+            $this->createdTemplatePath !== null
+            && file_exists($this->createdTemplatePath)
+        ) {
             @unlink($this->createdTemplatePath);
         }
 
-        if ($this->createdLangDir && is_dir($this->createdLangDir)) {
-            $this->removeDirIfEmpty($this->createdLangDir . '/accounting');
+        if (
+            $this->createdLangDir !== null
+            && is_dir($this->createdLangDir)
+        ) {
+            $this->removeDirIfEmpty(
+                $this->createdLangDir . '/accounting'
+            );
+
             $this->removeDirIfEmpty($this->createdLangDir);
         }
 
         if (static::$kernel !== null) {
             try {
-                /** @var EntityManagerInterface $em */
-                $em = static::getContainer()->get(EntityManagerInterface::class);
-                $em->clear();
-                $em->getConnection()->close();
-            } catch (\Throwable $e) {
-                // ignore
+                /** @var EntityManagerInterface $entityManager */
+                $entityManager = static::getContainer()->get(
+                    EntityManagerInterface::class
+                );
+
+                $entityManager->clear();
+                $entityManager->getConnection()->close();
+            } catch (\Throwable) {
+                // Ignore cleanup failures.
             }
         }
 
         static::ensureKernelShutdown();
-
-        while (restore_exception_handler()) {}
-        while (restore_error_handler()) {}
 
         parent::tearDown();
     }
@@ -46,61 +56,110 @@ final class TranslationFallbackHttpTest extends WebTestCase
     {
         $client = static::createClient();
 
-        /** @var EntityManagerInterface $em */
-        $em = static::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(
+            EntityManagerInterface::class
+        );
 
-        $user = $this->createAccountingEmployee($em);
-        $em->flush();
+        $user = $this->createAccountingEmployee($entityManager);
+
+        $entityManager->flush();
+
         $client->loginUser($user);
 
         $marker = '<<<LOCALE_ZZ_MARKER>>>';
-        $this->createLocalizedTemplateForAccountingIndex('ZZ', $marker);
 
-        $client->request('GET', '/bms/accounting?_locale=ZZ');
+        $this->createLocalizedTemplateForAccountingIndex(
+            'ZZ',
+            $marker
+        );
 
-        $this->assertResponseStatusCodeSame(200);
+        $client->request(
+            'GET',
+            '/bms/accounting?_locale=ZZ'
+        );
+
+        self::assertResponseStatusCodeSame(200);
+
         $content = $client->getResponse()->getContent();
-        $this->assertNotFalse($content);
-        $this->assertStringContainsString($marker, $content, 'Should render localized template when it exists.');
+
+        self::assertNotFalse($content);
+
+        self::assertStringContainsString(
+            $marker,
+            $content,
+            'Should render localized template when it exists.'
+        );
     }
 
     public function testFallbackToDefaultTemplateWhenLocalizedMissing(): void
     {
         $client = static::createClient();
 
-        /** @var EntityManagerInterface $em */
-        $em = static::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = static::getContainer()->get(
+            EntityManagerInterface::class
+        );
 
-        $user = $this->createAccountingEmployee($em);
-        $em->flush();
+        $user = $this->createAccountingEmployee($entityManager);
+
+        $entityManager->flush();
+
         $client->loginUser($user);
 
         $marker = '<<<LOCALE_ZZ_MARKER>>>';
-        $this->createLocalizedTemplateForAccountingIndex('ZZ', $marker);
 
-        $client->request('GET', '/bms/accounting?_locale=YY');
+        $this->createLocalizedTemplateForAccountingIndex(
+            'ZZ',
+            $marker
+        );
 
-        $this->assertResponseStatusCodeSame(200);
+        $client->request(
+            'GET',
+            '/bms/accounting?_locale=YY'
+        );
+
+        self::assertResponseStatusCodeSame(200);
+
         $content = $client->getResponse()->getContent();
-        $this->assertNotFalse($content);
 
-        $this->assertStringNotContainsString($marker, $content, 'Should fallback to default template when localized one is missing.');
+        self::assertNotFalse($content);
+
+        self::assertStringNotContainsString(
+            $marker,
+            $content,
+            'Should fall back to the default template when the localized template is missing.'
+        );
     }
 
-    private function createLocalizedTemplateForAccountingIndex(string $lang, string $marker): void
-    {
-        $kernel = static::getKernel();
-        $projectDir = $kernel->getProjectDir();
+    private function createLocalizedTemplateForAccountingIndex(
+        string $lang,
+        string $marker
+    ): void {
+        $projectDir = static::getContainer()->getParameter(
+            'kernel.project_dir'
+        );
+
+        self::assertIsString($projectDir);
 
         $langDir = $projectDir . '/templates/locale/' . $lang;
         $accountingDir = $langDir . '/accounting';
         $filePath = $accountingDir . '/index.html.twig';
 
-        if (!is_dir($accountingDir)) {
-            @mkdir($accountingDir, 0777, true);
+        if (
+            !is_dir($accountingDir)
+            && !mkdir($accountingDir, 0777, true)
+            && !is_dir($accountingDir)
+        ) {
+            self::fail(
+                sprintf(
+                    'Unable to create directory "%s".',
+                    $accountingDir
+                )
+            );
         }
 
-        $tpl = <<<TWIG
+        $template = <<<TWIG
 {# Auto-created by TranslationFallbackHttpTest #}
 <!doctype html>
 <html>
@@ -110,22 +169,37 @@ final class TranslationFallbackHttpTest extends WebTestCase
 </html>
 TWIG;
 
-        file_put_contents($filePath, $tpl);
+        $writtenBytes = file_put_contents(
+            $filePath,
+            $template
+        );
+
+        self::assertNotFalse(
+            $writtenBytes,
+            'Unable to create localized test template.'
+        );
 
         $this->createdTemplatePath = $filePath;
         $this->createdLangDir = $langDir;
     }
 
-    private function createAccountingEmployee(EntityManagerInterface $em): Employee
-    {
+    private function createAccountingEmployee(
+        EntityManagerInterface $entityManager
+    ): Employee {
         $user = new Employee();
 
         if (method_exists($user, 'setEmail')) {
-            $user->setEmail('accounting_test_' . uniqid() . '@example.com');
+            $user->setEmail(
+                'accounting_test_'
+                . bin2hex(random_bytes(8))
+                . '@example.com'
+            );
         }
+
         if (method_exists($user, 'setRoles')) {
             $user->setRoles(['ROLE_ACCOUNTING']);
         }
+
         if (method_exists($user, 'setPassword')) {
             $user->setPassword('dummy');
         }
@@ -133,30 +207,41 @@ TWIG;
         if (method_exists($user, 'setSurname')) {
             $user->setSurname('Accounting');
         }
+
         if (method_exists($user, 'setName')) {
             $user->setName('Test');
         }
+
         if (method_exists($user, 'setFirstName')) {
             $user->setFirstName('Test');
         }
+
         if (method_exists($user, 'setLastName')) {
             $user->setLastName('Accounting');
         }
+
         if (method_exists($user, 'setPhone')) {
             $user->setPhone('000000000');
         }
 
-        $em->persist($user);
+        $entityManager->persist($user);
+
         return $user;
     }
 
-    private function removeDirIfEmpty(string $dir): void
+    private function removeDirIfEmpty(string $directory): void
     {
-        if (!is_dir($dir)) return;
+        if (!is_dir($directory)) {
+            return;
+        }
 
-        $files = array_diff(scandir($dir) ?: [], ['.', '..']);
-        if (count($files) === 0) {
-            @rmdir($dir);
+        $files = array_diff(
+            scandir($directory) ?: [],
+            ['.', '..']
+        );
+
+        if ($files === []) {
+            @rmdir($directory);
         }
     }
 }
