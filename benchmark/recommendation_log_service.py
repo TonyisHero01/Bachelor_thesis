@@ -359,19 +359,20 @@ def fetch_recommendation_event_log_report(filters: dict | None = None):
     }
 
 def normalize_csv_log_filters(filters: dict | None):
-    filters = normalize_log_filters(filters)
-
-    limit = filters.get("limit", 5000)
+    raw_filters = dict(filters or {})
 
     try:
-        limit = int(limit)
-    except Exception:
-        limit = 5000
+        csv_limit = int(raw_filters.get("limit", 5000))
+    except (TypeError, ValueError):
+        csv_limit = 5000
 
-    filters["limit"] = max(20, min(limit, 10000))
+    normalized = normalize_log_filters(raw_filters)
+    normalized["limit"] = max(
+        20,
+        min(csv_limit, 10000),
+    )
 
-    return filters
-
+    return normalized
 
 def fetch_recommendation_event_log_csv(filters: dict | None = None):
     filters = normalize_csv_log_filters(filters)
