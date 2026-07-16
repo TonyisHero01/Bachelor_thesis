@@ -765,6 +765,11 @@ class SemanticSearchService:
             )
         )
 
+        deleted = (
+            self.repository
+            .delete_embedding_by_sku(sku)
+        )
+
         self.repository.save_embedding(
             product_id,
             pgvector,
@@ -776,7 +781,7 @@ class SemanticSearchService:
             "sku": sku,
             "product_id": product_id,
             "updated": 1,
-            "deleted": 0,
+            "deleted": deleted,
             "document": document,
         }
 
