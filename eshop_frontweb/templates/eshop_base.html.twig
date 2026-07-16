@@ -17,7 +17,7 @@
   |trim('/')
 %}
 
-{% set bmsBaseUrl = (bmsUrl|default(''))|trim('/') %}
+{% set bmsBaseUrl = (BMS_URL|default(''))|trim('/') %}
 
 {% set shopLogoUrl = shopLogo and bmsBaseUrl
   ? bmsBaseUrl ~ '/images/' ~ shopLogo
