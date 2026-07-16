@@ -161,7 +161,7 @@ search_relevance_config.search_method
 
 Supported search methods:
 
-- `tfidf`
+- `lexical`
 - `semantic_vector`
 - `elasticsearch_bm25`
 
@@ -174,9 +174,9 @@ The active search method is used consistently for both:
 
 ## Search Methods
 
-### TF-IDF Search
+### Lexical Search
 
-The TF-IDF method uses document vectors generated from product data.
+The Lexical method uses document vectors generated from product data.
 
 It supports:
 
