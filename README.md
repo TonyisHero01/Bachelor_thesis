@@ -24,12 +24,14 @@ The local environment runs from prebuilt images, so no local build is required b
 
 - Docker 28.3.0+
 - Docker Compose
+- Git
 
 Check installation:
 
 ```sh
 docker --version
 docker compose version
+git --version
 ```
 
 ---
@@ -85,10 +87,11 @@ docker compose pull
 docker compose up -d
 ```
 
+
 Check running containers:
 
 ```sh
-docker ps
+docker compose ps
 ```
 
 ---
@@ -400,12 +403,25 @@ This creates more realistic recommendation evaluation compared to fully random d
 
 ## Generate Benchmark Dataset
 
-To generate test data, enter the benchmark container and run:
+The e-shop must be initialized before running the benchmark data generator. At minimum, complete the initial BMS setup first:
 
 ```sh
-docker exec -it eshop_benchmark sh
-python product_data_generator.py
+docker exec -it eshop_bms bash
+php bin/console app:create-super-admin
+php bin/console app:init-shopinfo
+exit
 ```
+
+The Amazon ESCI dataset must also be available inside the Benchmark container. The optional download procedure is described in the final section of this README.
+
+After both conditions are satisfied, run the generator from the project root:
+
+```sh
+docker compose exec benchmark \
+  python /app/product_data_generator.py
+```
+
+Running `product_data_generator.py` before the e-shop initialization is complete can fail because required database records and application configuration are not yet available.
 
 The generator will:
 
@@ -414,16 +430,6 @@ The generator will:
 3. generate realistic customer behavior
 4. create search, order, wishlist, and product-view history
 5. trigger full search reindexing
-
----
-
-## Amazon ESCI Dataset
-
-The benchmark module uses the Amazon ESCI dataset package that is already included in the project.
-
-No manual download is required.
-
-The data generator automatically imports and uses the included Amazon dataset when generating benchmark and evaluation data.
 
 ---
 
@@ -509,8 +515,95 @@ All protected API endpoints require authentication using an API token.
 - `.env` is not committed.
 - Use `.env.example` as the base environment file.
 - Search indexes are initialized lazily on first use.
-- To generate test data, enter the benchmark container and run:
+---
+
+## Optional: Download the Amazon ESCI Dataset
+
+The Amazon ESCI dataset is required only when benchmark data or evaluation data must be generated. It is not committed to this repository because the required Parquet files are larger than 1 GB.
+
+The dataset is downloaded directly from the official Amazon Science repository:
+
+```text
+https://github.com/amazon-science/esci-data.git
+```
+
+### Install Git LFS on Ubuntu or WSL
 
 ```sh
-python product_data_generator.py
+sudo apt update
+sudo apt install -y git-lfs
+git lfs install
+```
+
+Verify the installation:
+
+```sh
+git lfs version
+```
+
+### Clone the dataset if needed
+
+Run the following commands from the project root only if the ESCI dataset is needed:
+
+```sh
+cd benchmark
+git clone https://github.com/amazon-science/esci-data.git
+cd ..
+```
+
+Git LFS downloads the large Parquet files during cloning. The expected host paths are:
+
+```text
+benchmark/esci-data/shopping_queries_dataset/shopping_queries_dataset_examples.parquet
+benchmark/esci-data/shopping_queries_dataset/shopping_queries_dataset_products.parquet
+benchmark/esci-data/shopping_queries_dataset/shopping_queries_dataset_sources.csv
+```
+
+Verify the downloaded files:
+
+```sh
+ls -lh benchmark/esci-data/shopping_queries_dataset
+```
+
+The directory should contain approximately:
+
+```text
+49M  shopping_queries_dataset_examples.parquet
+1.1G shopping_queries_dataset_products.parquet
+1.7M shopping_queries_dataset_sources.csv
+```
+
+If the repository was cloned before Git LFS was installed, download the actual LFS files with:
+
+```sh
+cd benchmark/esci-data
+git lfs pull
+cd ../..
+```
+
+Docker Compose mounts the dataset read-only into the Benchmark container:
+
+```text
+Host:      ./benchmark/esci-data
+Container: /app/esci-data
+```
+
+After downloading the dataset, recreate the Benchmark container. A normal `docker compose up -d` may keep the existing container without applying the new bind-mount contents:
+
+```sh
+docker compose up -d --force-recreate benchmark
+```
+
+Verify that the files are visible inside the container:
+
+```sh
+docker compose exec benchmark \
+  ls -lh /app/esci-data/shopping_queries_dataset
+```
+
+Only after the e-shop initialization is complete and this verification succeeds should the benchmark dataset generator be executed:
+
+```sh
+docker compose exec benchmark \
+  python /app/product_data_generator.py
 ```
