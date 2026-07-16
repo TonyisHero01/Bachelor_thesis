@@ -153,10 +153,13 @@ class HomeController extends BaseController
         }
 
         $topProducts = $entityManager->createQueryBuilder()
-            ->select('oi.productName AS product_name')
+            ->select('oi.sku AS product_name')
             ->addSelect('SUM(oi.quantity) AS total_quantity')
             ->from(\App\Entity\OrderItem::class, 'oi')
-            ->groupBy('oi.productName')
+            ->where('oi.sku IS NOT NULL')
+            ->andWhere('oi.sku <> :emptySku')
+            ->setParameter('emptySku', '')
+            ->groupBy('oi.sku')
             ->orderBy('total_quantity', 'DESC')
             ->setMaxResults(5)
             ->getQuery()
